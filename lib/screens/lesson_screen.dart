@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../models/lesson.dart';
+import '../services/analytics_service.dart';
 import '../services/audio_recorder_service.dart';
 import '../services/feedback_messages.dart';
 import '../services/progress_store.dart';
@@ -19,6 +20,7 @@ class LessonScreen extends StatefulWidget {
     required this.lesson,
     required this.assessor,
     this.store,
+    this.analytics,
   });
 
   final Lesson lesson;
@@ -26,6 +28,8 @@ class LessonScreen extends StatefulWidget {
 
   /// Quando presente, o tempo aprovado é persistido (barra das 484h).
   final ProgressStore? store;
+
+  final AnalyticsService? analytics;
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
@@ -119,6 +123,19 @@ class _LessonScreenState extends State<LessonScreen> {
         wavAudio: audio.wavBytes,
         referenceText: _item.text,
       );
+      final attempt = _step == _Step.listen ? 1 : 2;
+      final approved = widget.lesson
+          .approves(result.accuracy, result.minPhoneme, result.prosody);
+      widget.analytics?.log('attempt_assessed', {
+        'lesson': widget.lesson.id,
+        'item': _item.text,
+        'attempt': attempt,
+        'accuracy': result.accuracy,
+        'min_phoneme': result.minPhoneme,
+        'prosody': result.prosody,
+        'approved': approved,
+        'audio_seconds': audio.duration.inMilliseconds / 1000,
+      });
       setState(() {
         _result = result;
         _audioSent += audio.duration;
@@ -126,8 +143,7 @@ class _LessonScreenState extends State<LessonScreen> {
         if (_step == _Step.listen) {
           _step = _Step.feedbackFirst;
         } else if (_step == _Step.livroAberto) {
-          if (widget.lesson.approves(
-              result.accuracy, result.minPhoneme, result.prosody)) {
+          if (approved) {
             _approved += audio.duration;
             widget.store?.addApproved(audio.duration);
           }
@@ -148,6 +164,11 @@ class _LessonScreenState extends State<LessonScreen> {
       if (_isLastItem) {
         _step = _Step.finished;
         widget.store?.markLessonCompleted(widget.lesson.id);
+        widget.analytics?.log('lesson_completed', {
+          'lesson': widget.lesson.id,
+          'approved_seconds': _approved.inSeconds,
+          'audio_sent_seconds': _audioSent.inSeconds,
+        });
       } else {
         _index++;
         _step = _Step.listen;
@@ -229,7 +250,11 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: () => setState(() => _step = _Step.listen),
+            onPressed: () {
+              widget.analytics
+                  ?.log('lesson_started', {'lesson': widget.lesson.id});
+              setState(() => _step = _Step.listen);
+            },
             child: const Text('Começar'),
           ),
         ]);

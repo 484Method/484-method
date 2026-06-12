@@ -8,6 +8,7 @@ import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
 import 'package:method484/screens/practice_screen.dart';
+import 'package:method484/services/analytics_service.dart';
 import 'package:method484/services/progress_store.dart';
 import 'package:method484/services/pronunciation_assessor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -113,6 +114,16 @@ void main() {
     await store.markLessonCompleted('fase1-licao01');
     expect(store.isLessonCompleted('fase1-licao01'), isTrue);
     expect(store.isLessonCompleted('fase1-licao02'), isFalse);
+  });
+
+  test('analytics guarda eventos e respeita o limite', () async {
+    SharedPreferences.setMockInitialValues({});
+    final analytics = await AnalyticsService.load();
+    await analytics.log('lesson_started', {'lesson': 'fase1-licao01'});
+    await analytics.log('attempt_assessed', {'approved': true});
+    final events = analytics.dump();
+    expect(events, hasLength(2));
+    expect(events.first, contains('lesson_started'));
   });
 
   test('apagar dados zera progresso e consentimento (LGPD)', () async {

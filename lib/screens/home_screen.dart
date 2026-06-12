@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/fase1.dart';
 import '../models/lesson.dart';
+import '../services/analytics_service.dart';
 import '../services/progress_store.dart';
 import '../services/pronunciation_assessor.dart';
 import 'lesson_screen.dart';
@@ -15,11 +16,13 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.store,
     required this.assessor,
+    this.analytics,
     this.onDataCleared,
   });
 
   final ProgressStore store;
   final PronunciationAssessor assessor;
+  final AnalyticsService? analytics;
 
   /// Chamado após a exclusão de dados (o app volta ao onboarding).
   final VoidCallback? onDataCleared;
@@ -61,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
         lesson: lesson,
         assessor: widget.assessor,
         store: widget.store,
+        analytics: widget.analytics,
       ),
     ));
     setState(() {}); // progresso pode ter mudado

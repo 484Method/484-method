@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'services/analytics_service.dart';
 import 'services/progress_store.dart';
 import 'services/pronunciation_assessor.dart';
 
@@ -13,13 +14,15 @@ const _azureRegion =
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = await ProgressStore.load();
-  runApp(Method484App(store: store));
+  final analytics = await AnalyticsService.load();
+  runApp(Method484App(store: store, analytics: analytics));
 }
 
 class Method484App extends StatefulWidget {
-  const Method484App({super.key, required this.store});
+  const Method484App({super.key, required this.store, this.analytics});
 
   final ProgressStore store;
+  final AnalyticsService? analytics;
 
   @override
   State<Method484App> createState() => _Method484AppState();
@@ -44,6 +47,7 @@ class _Method484AppState extends State<Method484App> {
           subscriptionKey: _azureKey,
           region: _azureRegion,
         ),
+        analytics: widget.analytics,
         // Exclusão de dados derruba o consentimento → volta ao onboarding.
         onDataCleared: () => setState(() {}),
       );
