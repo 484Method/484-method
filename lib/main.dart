@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'data/fase1.dart';
+import 'screens/lesson_screen.dart';
 import 'screens/practice_screen.dart';
 import 'services/pronunciation_assessor.dart';
 
@@ -20,15 +22,37 @@ class Method484App extends StatelessWidget {
     return MaterialApp(
       title: '484 Method',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: _azureKey.isEmpty
-          ? const _MissingKeyScreen()
-          : PracticeScreen(
-              assessor: AzurePronunciationAssessor(
-                subscriptionKey: _azureKey,
-                region: _azureRegion,
-              ),
-            ),
+      home: _azureKey.isEmpty ? const _MissingKeyScreen() : const _Home(),
     );
+  }
+}
+
+class _Home extends StatelessWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context) {
+    final assessor = AzurePronunciationAssessor(
+      subscriptionKey: _azureKey,
+      region: _azureRegion,
+    );
+    return Stack(children: [
+      LessonScreen(lesson: licao01, assessor: assessor),
+      // Acesso à bancada de testes de pronúncia (palavra livre).
+      Positioned(
+        right: 8,
+        bottom: 8,
+        child: IconButton(
+          tooltip: 'Bancada de testes',
+          icon: const Icon(Icons.science_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PracticeScreen(assessor: assessor),
+            ),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 

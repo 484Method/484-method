@@ -2,7 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:method484/data/fase1.dart';
 import 'package:method484/main.dart';
+import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/practice_screen.dart';
 import 'package:method484/services/pronunciation_assessor.dart';
 
@@ -38,5 +40,18 @@ void main() {
     expect(find.text('apple'), findsOneWidget);
     expect(find.text('Gravar'), findsOneWidget);
     expect(find.textContaining('Áudio enviado ao Azure'), findsOneWidget);
+  });
+
+  testWidgets('lição começa pela introdução e não mostra a palavra antes',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: LessonScreen(lesson: licao01, assessor: _FakeAssessor()),
+    ));
+    expect(find.textContaining('Regra do jogo'), findsOneWidget);
+    await tester.tap(find.text('Começar'));
+    await tester.pump();
+    // Etapa "ouça": a palavra não pode estar escrita em lugar nenhum.
+    expect(find.text('banana'), findsNothing);
+    expect(find.text('Ouvir'), findsOneWidget);
   });
 }
