@@ -126,7 +126,8 @@ class _LessonScreenState extends State<LessonScreen> {
         if (_step == _Step.listen) {
           _step = _Step.feedbackFirst;
         } else if (_step == _Step.livroAberto) {
-          if (result.pronScore >= widget.lesson.approvalThreshold) {
+          if (widget.lesson.approves(
+              result.accuracy, result.minPhoneme, result.prosody)) {
             _approved += audio.duration;
             widget.store?.addApproved(audio.duration);
           }
@@ -259,9 +260,9 @@ class _LessonScreenState extends State<LessonScreen> {
           Text('Sua primeira tentativa',
               style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          _scoreBadge(theme, r.pronScore),
+          _scoreBadge(theme, r.accuracy),
           const SizedBox(height: 16),
-          Text(feedbackFor(r, widget.lesson.approvalThreshold),
+          Text(feedbackFor(r, widget.lesson),
               style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
           const SizedBox(height: 24),
           FilledButton.icon(
@@ -306,10 +307,15 @@ class _LessonScreenState extends State<LessonScreen> {
 
       case _Step.resultFinal:
         final r = _result!;
-        final approved = r.pronScore >= widget.lesson.approvalThreshold;
+        final approved =
+            widget.lesson.approves(r.accuracy, r.minPhoneme, r.prosody);
         return _centered([
-          _scoreBadge(theme, r.pronScore),
+          _scoreBadge(theme, r.accuracy),
           const SizedBox(height: 12),
+          if (!approved)
+            Text(feedbackFor(r, widget.lesson),
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center),
           Text(
             approved
                 ? '✅ Aprovada! Esse tempo conta para as suas 484 horas.'

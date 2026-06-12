@@ -1,8 +1,11 @@
 import '../models/lesson.dart';
 
 /// Lições da Fase 1 conforme docs/curriculo-fase1.md, na ordem de
-/// desbloqueio. Threshold permissivo (60) em toda a fase: o objetivo
-/// pedagógico aqui é confiança, não rigor.
+/// desbloqueio.
+///
+/// Calibração 2026-06 (ver Lesson.approvalThreshold): accuracy ≥ 75 +
+/// fonema mínimo ≥ 65 separa pronúncia razoável de aportuguesada sem
+/// exigir perfeição nativa. Ajustar com dados de beta, não por opinião.
 const fase1Lessons = [
   licao01, licao02, licao03, licao04, licao05,
   licao06, licao07, licao08, licao09, licao10,
@@ -13,7 +16,7 @@ const licao01 = Lesson(
   title: 'Você já sabe inglês',
   objective: 'Você vai falar 5 palavras em inglês que já conhece — '
       'e descobrir que seu inglês já começou.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'banana',
@@ -59,7 +62,7 @@ const licao02 = Lesson(
   title: 'Palavras do celular',
   objective: 'Estas 5 palavras estão no seu celular agora mesmo — '
       'você só vai aprender o som certo delas.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'app',
@@ -105,7 +108,7 @@ const licao03 = Lesson(
   title: 'Comida',
   objective: 'Comida é o inglês mais gostoso de treinar — '
       'e o que você mais vai usar em viagem.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'coffee',
@@ -151,7 +154,7 @@ const licao04 = Lesson(
   title: 'Viagem',
   objective: 'As 5 palavras que te levam do aeroporto ao hotel — '
       'inglês de sobrevivência.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'airport',
@@ -197,7 +200,7 @@ const licao05 = Lesson(
   title: 'Trabalho',
   objective: 'Inglês de carreira: 5 palavras que aparecem em toda '
       'reunião, vaga e LinkedIn.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'meeting',
@@ -244,7 +247,9 @@ const licao06 = Lesson(
   title: 'Palavras com ritmo diferente',
   objective: 'Você conhece estas palavras — mas o ritmo em inglês é '
       'diferente. Ouça onde está a força e copie.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
+  // Lição de ritmo: a prosódia entra no critério (pega sílaba forte errada).
+  minProsody: 70,
   items: [
     LessonItem(
       text: 'hospital',
@@ -290,7 +295,7 @@ const licao07 = Lesson(
   title: 'Primeiros chunks',
   objective: 'Agora você sai da palavra solta: 5 frases curtas que '
       'saem prontas, sem montar palavra por palavra.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'I like it',
@@ -336,7 +341,7 @@ const licao08 = Lesson(
   title: 'Frases de cortesia',
   objective: 'As frases que destravam qualquer conversa: educação '
       'funciona em qualquer país.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'Thank you',
@@ -382,7 +387,7 @@ const licao09 = Lesson(
   title: 'Pequenos pedidos',
   objective: 'Pedir é a fala mais útil que existe: café, ajuda e '
       'tempo — tudo em frases prontas.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'Can I have a coffee',
@@ -429,7 +434,7 @@ const licao10 = Lesson(
   title: 'Revisão guiada',
   objective: 'Tudo que você já treinou, misturado: prove pra você '
       'mesmo o quanto avançou.',
-  approvalThreshold: 60,
+  approvalThreshold: 75,
   items: [
     LessonItem(
       text: 'hospital',

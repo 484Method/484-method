@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/main.dart';
+import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/practice_screen.dart';
 import 'package:method484/services/progress_store.dart';
@@ -60,6 +61,26 @@ void main() {
     // Etapa "ouça": a palavra não pode estar escrita em lugar nenhum.
     expect(find.text('banana'), findsNothing);
     expect(find.text('Ouvir'), findsOneWidget);
+  });
+
+  test('aprovação multicritério barra pronúncia aportuguesada', () {
+    const lesson = Lesson(
+      id: 't',
+      title: 't',
+      objective: 't',
+      approvalThreshold: 75,
+      minProsody: 70,
+      items: [],
+    );
+    // Scores medidos no experimento de 2026-06-12 (TTS pt-BR lendo o texto
+    // em inglês simula o sotaque aportuguesado; argumentos: accuracy,
+    // fonema mínimo, prosódia):
+    expect(lesson.approves(72, 38, 82.1), isFalse, // chocolate aportuguesado
+        reason: 'fonema em 38 deve reprovar mesmo com accuracy 72');
+    expect(lesson.approves(96, 78, 65.9), isFalse, // hotel aportuguesado
+        reason: 'prosódia 66 deve reprovar em lição de ritmo');
+    expect(lesson.approves(98, 94, 87.8), isTrue); // chocolate nativo
+    expect(lesson.approves(100, 100, 83.9), isTrue); // hotel nativo
   });
 
   test('conclusão de lição persiste e não duplica', () async {

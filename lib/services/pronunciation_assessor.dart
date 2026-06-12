@@ -23,6 +23,7 @@ class PronunciationResult {
     required this.pronScore,
     required this.recognizedText,
     required this.words,
+    this.prosody,
   });
 
   /// Escalas 0-100 do Azure Pronunciation Assessment.
@@ -30,18 +31,67 @@ class PronunciationResult {
   final double fluency;
   final double completeness;
   final double pronScore;
+
+  /// Stress, entonação e ritmo — o detector de "som aportuguesado com
+  /// sílaba forte errada". Null se o serviço não retornar.
+  final double? prosody;
+
   final String recognizedText;
   final List<WordScore> words;
+
+  /// O fonema mais fraco de toda a tentativa. O PronScore médio esconde um
+  /// som errado isolado (ex.: "chocolate" aportuguesado tem média 85 com um
+  /// fonema em 38); o mínimo é o que pega pronúncia de português.
+  double get minPhoneme {
+    var min = 100.0;
+    for (final w in words) {
+      for (final p in w.phonemes) {
+        if (p < min) min = p;
+      }
+    }
+    return min;
+  }
+
+  /// A sílaba mais fraca (para feedback acionável: "o trecho 'cho'...").
+  SyllableScore? get worstSyllable {
+    SyllableScore? worst;
+    for (final w in words) {
+      for (final s in w.syllables) {
+        if (worst == null || s.accuracy < worst.accuracy) worst = s;
+      }
+    }
+    return worst;
+  }
 }
 
 class WordScore {
-  const WordScore({required this.word, required this.accuracy, this.errorType});
+  const WordScore({
+    required this.word,
+    required this.accuracy,
+    this.errorType,
+    this.syllables = const [],
+    this.phonemes = const [],
+  });
 
   final String word;
   final double accuracy;
 
   /// Ex.: "Mispronunciation", "Omission". Null quando não há erro.
   final String? errorType;
+
+  final List<SyllableScore> syllables;
+
+  /// Accuracy de cada fonema, na ordem falada.
+  final List<double> phonemes;
+}
+
+class SyllableScore {
+  const SyllableScore({required this.grapheme, required this.accuracy});
+
+  /// O trecho escrito correspondente (ex.: "cho" em chocolate) — é o que
+  /// faz sentido mostrar ao aluno.
+  final String grapheme;
+  final double accuracy;
 }
 
 class PronunciationAssessmentException implements Exception {
@@ -84,6 +134,7 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
       'GradingSystem': 'HundredMark',
       'Granularity': 'Phoneme',
       'Dimension': 'Comprehensive',
+      'EnableProsodyAssessment': 'True',
     })));
 
     final response = await _client.post(
@@ -122,6 +173,15 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
         errorType: word['ErrorType'] == 'None'
             ? null
             : word['ErrorType'] as String?,
+        syllables: (word['Syllables'] as List? ?? [])
+            .map((s) => SyllableScore(
+                  grapheme: (s['Grapheme'] ?? s['Syllable'] ?? '') as String,
+                  accuracy: (s['AccuracyScore'] as num?)?.toDouble() ?? 0,
+                ))
+            .toList(),
+        phonemes: (word['Phonemes'] as List? ?? [])
+            .map((p) => (p['AccuracyScore'] as num?)?.toDouble() ?? 0)
+            .toList(),
       );
     }).toList();
 
@@ -130,6 +190,7 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
       fluency: (best['FluencyScore'] as num).toDouble(),
       completeness: (best['CompletenessScore'] as num).toDouble(),
       pronScore: (best['PronScore'] as num).toDouble(),
+      prosody: (best['ProsodyScore'] as num?)?.toDouble(),
       recognizedText: best['Display'] as String? ?? '',
       words: words,
     );

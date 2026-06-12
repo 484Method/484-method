@@ -200,12 +200,16 @@ class _ResultCard extends StatelessWidget {
             _scoreRow('Accuracy', result.accuracy),
             _scoreRow('Fluency', result.fluency),
             _scoreRow('Completeness', result.completeness),
+            if (result.prosody != null)
+              _scoreRow('Prosody (ritmo)', result.prosody!),
+            _scoreRow('Fonema mínimo', result.minPhoneme),
             if (result.words.isNotEmpty) ...[
               const Divider(),
               for (final w in result.words)
                 Text(
                   '${w.word}: ${w.accuracy.toStringAsFixed(0)}'
-                  '${w.errorType != null ? ' (${w.errorType})' : ''}',
+                  '${w.errorType != null ? ' (${w.errorType})' : ''}'
+                  '${w.syllables.isNotEmpty ? ' · ${w.syllables.map((s) => '${s.grapheme} ${s.accuracy.toStringAsFixed(0)}').join(' · ')}' : ''}',
                 ),
             ],
           ],
