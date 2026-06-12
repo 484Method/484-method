@@ -3,7 +3,11 @@ import '../models/lesson.dart';
 /// Lições da Fase 1 conforme docs/curriculo-fase1.md, na ordem de
 /// desbloqueio. Threshold permissivo (60) em toda a fase: o objetivo
 /// pedagógico aqui é confiança, não rigor.
-const fase1Lessons = [licao01, licao02, licao03, licao04];
+const fase1Lessons = [
+  licao01, licao02, licao03, licao04, licao05,
+  licao06, licao07, licao08, licao09, licao10,
+];
+
 const licao01 = Lesson(
   id: 'fase1-licao01',
   title: 'Você já sabe inglês',
@@ -183,6 +187,284 @@ const licao04 = Lesson(
       example: 'I lost my ticket.',
       exampleTranslation: 'Eu perdi minha passagem.',
       audioAsset: 'audio/fase1/licao04/ticket.mp3',
+    ),
+  ],
+);
+
+/// Lição 5 — "Trabalho": conexão com carreira.
+const licao05 = Lesson(
+  id: 'fase1-licao05',
+  title: 'Trabalho',
+  objective: 'Inglês de carreira: 5 palavras que aparecem em toda '
+      'reunião, vaga e LinkedIn.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'meeting',
+      translation: 'reunião',
+      example: 'The meeting starts at ten.',
+      exampleTranslation: 'A reunião começa às dez.',
+      audioAsset: 'audio/fase1/licao05/meeting.mp3',
+    ),
+    LessonItem(
+      text: 'manager',
+      translation: 'gerente / gestor',
+      example: 'She is my manager.',
+      exampleTranslation: 'Ela é minha gestora.',
+      audioAsset: 'audio/fase1/licao05/manager.mp3',
+    ),
+    LessonItem(
+      text: 'project',
+      translation: 'projeto',
+      example: 'This project is important.',
+      exampleTranslation: 'Este projeto é importante.',
+      audioAsset: 'audio/fase1/licao05/project.mp3',
+    ),
+    LessonItem(
+      text: 'office',
+      translation: 'escritório',
+      example: 'I work at the office on Mondays.',
+      exampleTranslation: 'Eu trabalho no escritório às segundas.',
+      audioAsset: 'audio/fase1/licao05/office.mp3',
+    ),
+    LessonItem(
+      text: 'job',
+      translation: 'emprego / trabalho',
+      example: 'I love my job.',
+      exampleTranslation: 'Eu amo meu trabalho.',
+      audioAsset: 'audio/fase1/licao05/job.mp3',
+    ),
+  ],
+);
+
+/// Lição 6 — "Ritmo diferente": palavras familiares com sílaba forte
+/// traiçoeira para brasileiros (foco em stress, não em vocabulário).
+const licao06 = Lesson(
+  id: 'fase1-licao06',
+  title: 'Palavras com ritmo diferente',
+  objective: 'Você conhece estas palavras — mas o ritmo em inglês é '
+      'diferente. Ouça onde está a força e copie.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'hospital',
+      translation: 'hospital',
+      example: 'The hospital is open all night.',
+      exampleTranslation: 'O hospital fica aberto a noite toda.',
+      audioAsset: 'audio/fase1/licao06/hospital.mp3',
+    ),
+    LessonItem(
+      text: 'chocolate',
+      translation: 'chocolate',
+      example: 'I want some chocolate.',
+      exampleTranslation: 'Eu quero um chocolate.',
+      audioAsset: 'audio/fase1/licao06/chocolate.mp3',
+    ),
+    LessonItem(
+      text: 'camera',
+      translation: 'câmera',
+      example: 'Turn on your camera, please.',
+      exampleTranslation: 'Liga sua câmera, por favor.',
+      audioAsset: 'audio/fase1/licao06/camera.mp3',
+    ),
+    LessonItem(
+      text: 'restaurant',
+      translation: 'restaurante',
+      example: 'This restaurant is new.',
+      exampleTranslation: 'Este restaurante é novo.',
+      audioAsset: 'audio/fase1/licao06/restaurant.mp3',
+    ),
+    LessonItem(
+      text: 'comfortable',
+      translation: 'confortável',
+      example: 'This chair is comfortable.',
+      exampleTranslation: 'Esta cadeira é confortável.',
+      audioAsset: 'audio/fase1/licao06/comfortable.mp3',
+    ),
+  ],
+);
+
+/// Lição 7 — "Primeiros chunks": da palavra isolada à frase curta.
+const licao07 = Lesson(
+  id: 'fase1-licao07',
+  title: 'Primeiros chunks',
+  objective: 'Agora você sai da palavra solta: 5 frases curtas que '
+      'saem prontas, sem montar palavra por palavra.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'I like it',
+      translation: 'eu gosto (disso)',
+      example: 'Nice idea. I like it!',
+      exampleTranslation: 'Boa ideia. Eu gosto!',
+      audioAsset: 'audio/fase1/licao07/I_like_it.mp3',
+    ),
+    LessonItem(
+      text: 'I need it',
+      translation: 'eu preciso (disso)',
+      example: 'Where is my phone? I need it.',
+      exampleTranslation: 'Cadê meu celular? Eu preciso dele.',
+      audioAsset: 'audio/fase1/licao07/I_need_it.mp3',
+    ),
+    LessonItem(
+      text: 'I want this',
+      translation: 'eu quero este(a)',
+      example: 'Look at this one. I want this.',
+      exampleTranslation: 'Olha este aqui. Eu quero este.',
+      audioAsset: 'audio/fase1/licao07/I_want_this.mp3',
+    ),
+    LessonItem(
+      text: 'I love it',
+      translation: 'eu adoro (isso)',
+      example: 'This song? I love it!',
+      exampleTranslation: 'Essa música? Eu adoro!',
+      audioAsset: 'audio/fase1/licao07/I_love_it.mp3',
+    ),
+    LessonItem(
+      text: 'I got it',
+      translation: 'entendi / deixa comigo',
+      example: 'No problem, I got it.',
+      exampleTranslation: 'Sem problema, deixa comigo.',
+      audioAsset: 'audio/fase1/licao07/I_got_it.mp3',
+    ),
+  ],
+);
+
+/// Lição 8 — "Frases de cortesia": comunicação imediata.
+const licao08 = Lesson(
+  id: 'fase1-licao08',
+  title: 'Frases de cortesia',
+  objective: 'As frases que destravam qualquer conversa: educação '
+      'funciona em qualquer país.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'Thank you',
+      translation: 'obrigado(a)',
+      example: 'Thank you so much!',
+      exampleTranslation: 'Muito obrigado!',
+      audioAsset: 'audio/fase1/licao08/Thank_you.mp3',
+    ),
+    LessonItem(
+      text: 'See you',
+      translation: 'até mais',
+      example: 'Bye! See you tomorrow.',
+      exampleTranslation: 'Tchau! Até amanhã.',
+      audioAsset: 'audio/fase1/licao08/See_you.mp3',
+    ),
+    LessonItem(
+      text: 'Excuse me',
+      translation: 'com licença',
+      example: 'Excuse me, is this seat free?',
+      exampleTranslation: 'Com licença, este lugar está livre?',
+      audioAsset: 'audio/fase1/licao08/Excuse_me.mp3',
+    ),
+    LessonItem(
+      text: "It's okay",
+      translation: 'tudo bem / está tudo certo',
+      example: "Don't worry, it's okay.",
+      exampleTranslation: 'Não se preocupe, está tudo bem.',
+      audioAsset: "audio/fase1/licao08/It's_okay.mp3",
+    ),
+    LessonItem(
+      text: 'No problem',
+      translation: 'sem problema',
+      example: 'Thanks for waiting. — No problem!',
+      exampleTranslation: 'Valeu por esperar. — Sem problema!',
+      audioAsset: 'audio/fase1/licao08/No_problem.mp3',
+    ),
+  ],
+);
+
+/// Lição 9 — "Pequenos pedidos": fala funcional.
+const licao09 = Lesson(
+  id: 'fase1-licao09',
+  title: 'Pequenos pedidos',
+  objective: 'Pedir é a fala mais útil que existe: café, ajuda e '
+      'tempo — tudo em frases prontas.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'Can I have a coffee',
+      translation: 'pode me ver um café?',
+      example: 'Hi! Can I have a coffee?',
+      exampleTranslation: 'Oi! Pode me ver um café?',
+      audioAsset: 'audio/fase1/licao09/Can_I_have_a_coffee.mp3',
+    ),
+    LessonItem(
+      text: 'I need help',
+      translation: 'eu preciso de ajuda',
+      example: 'Sorry, I need help here.',
+      exampleTranslation: 'Desculpe, preciso de ajuda aqui.',
+      audioAsset: 'audio/fase1/licao09/I_need_help.mp3',
+    ),
+    LessonItem(
+      text: 'One coffee, please',
+      translation: 'um café, por favor',
+      example: 'One coffee, please. To go.',
+      exampleTranslation: 'Um café, por favor. Pra viagem.',
+      audioAsset: 'audio/fase1/licao09/One_coffee,_please.mp3',
+    ),
+    LessonItem(
+      text: 'Can you help me',
+      translation: 'você pode me ajudar?',
+      example: "Excuse me, can you help me?",
+      exampleTranslation: 'Com licença, você pode me ajudar?',
+      audioAsset: 'audio/fase1/licao09/Can_you_help_me.mp3',
+    ),
+    LessonItem(
+      text: 'Just a minute',
+      translation: 'só um minuto',
+      example: 'Just a minute, I am almost ready.',
+      exampleTranslation: 'Só um minuto, estou quase pronto.',
+      audioAsset: 'audio/fase1/licao09/Just_a_minute.mp3',
+    ),
+  ],
+);
+
+/// Lição 10 — "Revisão guiada": mistura das lições anteriores,
+/// reusando os áudios já gerados (consolidação de hábito).
+const licao10 = Lesson(
+  id: 'fase1-licao10',
+  title: 'Revisão guiada',
+  objective: 'Tudo que você já treinou, misturado: prove pra você '
+      'mesmo o quanto avançou.',
+  approvalThreshold: 60,
+  items: [
+    LessonItem(
+      text: 'hospital',
+      translation: 'hospital',
+      example: 'The hospital is open all night.',
+      exampleTranslation: 'O hospital fica aberto a noite toda.',
+      audioAsset: 'audio/fase1/licao06/hospital.mp3',
+    ),
+    LessonItem(
+      text: 'coffee',
+      translation: 'café',
+      example: 'I need a coffee right now.',
+      exampleTranslation: 'Eu preciso de um café agora.',
+      audioAsset: 'audio/fase1/licao03/coffee.mp3',
+    ),
+    LessonItem(
+      text: 'airport',
+      translation: 'aeroporto',
+      example: 'The airport is far from here.',
+      exampleTranslation: 'O aeroporto é longe daqui.',
+      audioAsset: 'audio/fase1/licao04/airport.mp3',
+    ),
+    LessonItem(
+      text: 'I need it',
+      translation: 'eu preciso (disso)',
+      example: 'Where is my phone? I need it.',
+      exampleTranslation: 'Cadê meu celular? Eu preciso dele.',
+      audioAsset: 'audio/fase1/licao07/I_need_it.mp3',
+    ),
+    LessonItem(
+      text: 'Thank you',
+      translation: 'obrigado(a)',
+      example: 'Thank you so much!',
+      exampleTranslation: 'Muito obrigado!',
+      audioAsset: 'audio/fase1/licao08/Thank_you.mp3',
     ),
   ],
 );
