@@ -351,6 +351,10 @@ class _LessonScreenState extends State<LessonScreen> {
         return _centered([
           _scoreBadge(theme, r.accuracy),
           const SizedBox(height: 12),
+          // Mapa de sílabas colorido: a escrita já foi liberada no Livro
+          // Aberto, então mostrar os grafemas aqui não fere o som-first.
+          _SyllableMap(result: r),
+          const SizedBox(height: 12),
           if (gain >= 5)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -457,5 +461,58 @@ class _LessonScreenState extends State<LessonScreen> {
     final m = d.inMinutes;
     final s = d.inSeconds % 60;
     return '${m}min ${s}s';
+  }
+}
+
+/// Mapa de pronúncia por sílaba: mostra cada pedaço da palavra colorido
+/// pela accuracy (verde = nativo, amarelo = quase, vermelho = som de
+/// português). Torna visível ONDE o som falhou, não só a nota geral.
+class _SyllableMap extends StatelessWidget {
+  const _SyllableMap({required this.result});
+
+  final PronunciationResult result;
+
+  static Color _colorFor(double accuracy) {
+    if (accuracy >= 80) return Colors.green.shade600;
+    if (accuracy >= 60) return Colors.orange.shade700;
+    return Colors.red.shade600;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final syllables = [
+      for (final w in result.words)
+        ...w.syllables.where((s) => s.grapheme.isNotEmpty)
+    ];
+    if (syllables.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final s in syllables)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _colorFor(s.accuracy).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _colorFor(s.accuracy)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(s.grapheme,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _colorFor(s.accuracy),
+                    )),
+                Text(s.accuracy.toStringAsFixed(0),
+                    style: const TextStyle(fontSize: 11)),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
