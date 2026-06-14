@@ -55,6 +55,7 @@ class _LessonScreenState extends State<LessonScreen> {
   int _index = 0;
   bool _hasListened = false;
   PronunciationResult? _result;
+  double? _firstAccuracy; // accuracy da 1ª tentativa, p/ medir a melhora
   String? _error;
   Duration _approved = Duration.zero;
   Duration _audioSent = Duration.zero;
@@ -141,6 +142,7 @@ class _LessonScreenState extends State<LessonScreen> {
         _audioSent += audio.duration;
         _recPhase = _RecPhase.idle;
         if (_step == _Step.listen) {
+          _firstAccuracy = result.accuracy;
           _step = _Step.feedbackFirst;
         } else if (_step == _Step.livroAberto) {
           if (approved) {
@@ -174,6 +176,7 @@ class _LessonScreenState extends State<LessonScreen> {
         _step = _Step.listen;
         _hasListened = false;
         _result = null;
+        _firstAccuracy = null;
         _error = null;
       }
     });
@@ -334,9 +337,30 @@ class _LessonScreenState extends State<LessonScreen> {
         final r = _result!;
         final approved =
             widget.lesson.approves(r.accuracy, r.minPhoneme, r.prosody);
+        // Melhora da 1ª tentativa (de ouvido) para a final (com apoio):
+        // é o que o método chama de "transformar repetição em progresso".
+        final gain = _firstAccuracy == null
+            ? 0.0
+            : r.accuracy - _firstAccuracy!;
         return _centered([
           _scoreBadge(theme, r.accuracy),
           const SizedBox(height: 12),
+          if (gain >= 5)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '📈 Você melhorou ${gain.toStringAsFixed(0)} pontos da '
+                'primeira tentativa para esta. É exatamente isso que treina '
+                'o ouvido.',
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          if (gain >= 5) const SizedBox(height: 12),
           if (!approved)
             Text(feedbackFor(r, widget.lesson),
                 style: theme.textTheme.bodyMedium,

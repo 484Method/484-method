@@ -6,7 +6,13 @@ import 'pronunciation_assessor.dart';
 /// Nesta fase as mensagens são fixas; depois a Claude API gera variações.
 String feedbackFor(PronunciationResult r, Lesson lesson) {
   if (lesson.approves(r.accuracy, r.minPhoneme, r.prosody)) {
-    return 'Muito bom! Tente mais uma vez com o mesmo ritmo do áudio.';
+    if (r.accuracy >= 95) {
+      return 'Perfeito! Som limpo, do jeito nativo. Pode repetir pra fixar.';
+    }
+    if (r.accuracy >= 85) {
+      return 'Muito bom! Tente mais uma vez com o mesmo ritmo do áudio.';
+    }
+    return 'Boa! Passou no critério. Mais uma tentativa deixa ainda melhor.';
   }
   if (r.completeness < 100) {
     return 'Faltou um pedaço — fale a palavra inteira, até o fim.';

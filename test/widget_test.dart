@@ -8,6 +8,7 @@ import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
 import 'package:method484/screens/practice_screen.dart';
+import 'package:method484/services/feedback_messages.dart';
 import 'package:method484/services/analytics_service.dart';
 import 'package:method484/services/progress_store.dart';
 import 'package:method484/services/pronunciation_assessor.dart';
@@ -85,6 +86,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.hasVoiceConsent, isTrue);
     expect(done, isTrue);
+  });
+
+  test('feedback varia por desempenho e aponta o som fraco', () {
+    const lesson = Lesson(
+      id: 't', title: 't', objective: 't', approvalThreshold: 75, items: [],
+    );
+    PronunciationResult mk(double acc, double minPhon, {String syl = ''}) =>
+        PronunciationResult(
+          accuracy: acc, fluency: 100, completeness: 100, pronScore: acc,
+          recognizedText: 't',
+          words: [
+            WordScore(
+              word: 't', accuracy: acc,
+              phonemes: [minPhon, 100],
+              syllables: [SyllableScore(grapheme: syl, accuracy: minPhon)],
+            ),
+          ],
+        );
+    expect(feedbackFor(mk(98, 96), lesson), contains('Perfeito'));
+    expect(feedbackFor(mk(88, 85), lesson), contains('Muito bom'));
+    expect(feedbackFor(mk(78, 80), lesson), contains('Boa'));
+    // Fonema fraco com sílaba conhecida → aponta o trecho.
+    expect(feedbackFor(mk(72, 40, syl: 'cho'), lesson), contains('"cho"'));
   });
 
   test('aprovação multicritério barra pronúncia aportuguesada', () {
