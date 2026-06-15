@@ -17,7 +17,9 @@ set +a
 
 flutter build web \
   --dart-define=AZURE_SPEECH_KEY="${AZURE_SPEECH_KEY:-}" \
-  --dart-define=AZURE_SPEECH_REGION="${AZURE_SPEECH_REGION:-brazilsouth}"
+  --dart-define=AZURE_SPEECH_REGION="${AZURE_SPEECH_REGION:-brazilsouth}" \
+  --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
+  --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
 # Derruba o que estiver na porta e sobe o servidor estático.
 lsof -ti :8484 | xargs kill -9 2>/dev/null || true

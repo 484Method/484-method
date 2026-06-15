@@ -3,18 +3,23 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/analytics_service.dart';
+import 'services/backend.dart';
 import 'services/progress_store.dart';
 import 'services/pronunciation_assessor.dart';
 
-// Injetadas em tempo de build pelo tool/run_web.sh (que lê o .env).
+// Injetadas em tempo de build pelos scripts em tool/ (que leem o .env).
 const _azureKey = String.fromEnvironment('AZURE_SPEECH_KEY');
 const _azureRegion =
     String.fromEnvironment('AZURE_SPEECH_REGION', defaultValue: 'brazilsouth');
+const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = await ProgressStore.load();
-  final analytics = await AnalyticsService.load();
+  // Sem credenciais Supabase, Backend.instance fica null e o app roda local.
+  await Backend.init(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+  final store = await ProgressStore.load(backend: Backend.instance);
+  final analytics = await AnalyticsService.load(backend: Backend.instance);
   runApp(Method484App(store: store, analytics: analytics));
 }
 
