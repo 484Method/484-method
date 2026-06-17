@@ -66,6 +66,25 @@ class Backend {
     }
   }
 
+  /// Feedback de pronúncia gerado pela Edge Function (Claude). Retorna null
+  /// em qualquer falha (função não configurada, offline, timeout) — o app
+  /// usa a mensagem fixa nesse caso.
+  Future<String?> generateFeedback(Map<String, Object?> params) async {
+    if (userId == null) return null;
+    try {
+      final res = await client.functions
+          .invoke('feedback', body: params)
+          .timeout(const Duration(seconds: 6));
+      if (res.status != 200) return null;
+      final data = res.data;
+      final message = (data is Map) ? data['message'] as String? : null;
+      return (message != null && message.trim().isNotEmpty) ? message : null;
+    } catch (e) {
+      debugPrint('[backend] generateFeedback falhou: $e');
+      return null;
+    }
+  }
+
   /// Progresso remoto (para hidratar o cache local em outro dispositivo).
   Future<Map<String, dynamic>?> pullProgress() async {
     final uid = userId;
