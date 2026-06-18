@@ -23,9 +23,9 @@ comercial é "Inglês que Você Já Conhece".
 | 1 | Você já sabe inglês | banana, cinema, hotel, internet, pizza | Confiança e familiaridade | Gravar ≥1 vez; regravar após feedback |
 | 2 | Palavras do celular | app, online, email, login, video | Inglês digital cotidiano | Accuracy leve + completude |
 | 3 | Comida | coffee, burger, sandwich, cake, water | Vocabulário simples e útil | Repetição clara, finalizar a palavra |
-| 4 | Viagem | hotel, airport, taxi, bus, passport | Inglês de sobrevivência | Pronúncia + associação com situação |
+| 4 | Viagem | airport, taxi, bus, passport, ticket | Inglês de sobrevivência | Pronúncia + associação com situação |
 | 5 | Trabalho | meeting, manager, project, office, job | Conexão com carreira | Stress básico e clareza |
-| 6 | Ritmo diferente | hospital, cinema, chocolate, camera, restaurant | Sílaba forte e redução | Repetir com sílaba forte correta |
+| 6 | Ritmo diferente | hospital, chocolate, camera, restaurant, comfortable | Sílaba forte e redução | Repetir com sílaba forte correta |
 | 7 | Primeiros chunks | I like it, I need it, I want this | Da palavra isolada à frase curta | Completeness + fluency |
 | 8 | Frases de cortesia | Thank you, See you, Excuse me, It's okay | Comunicação imediata | Completeness + fluency |
 | 9 | Pequenos pedidos | Can I have..., I need help, One coffee please | Fala funcional | Completeness + fluency |

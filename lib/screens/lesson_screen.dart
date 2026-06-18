@@ -494,10 +494,19 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   Widget _centered(List<Widget> children) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
+    // Centraliza quando o conteúdo cabe; rola quando não cabe (telas baixas
+    // e paisagem) — evita overflow na tela de resultado, que é a mais alta.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ),
     );
   }
 

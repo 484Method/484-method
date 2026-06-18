@@ -53,6 +53,12 @@ Ações de infraestrutura (sem commit):
 
 > Dias sem commit: 13/06 e 16/06.
 
+### 18/06 — Semana 1 "redondinho" (sprint de 4 dias)
+- **Dia 1** (`4184ee3`): `NSMicrophoneUsageDescription` (faltava → crash no iOS); mensagens de erro do Azure/player deixaram de vazar exceção crua. Lição 10 confirmada jogável (reusa áudios — era falso alarme).
+- **Dia 2** (`8e434fa`): tela de paywall "Beta Fundador" (substitui SnackBar); tela de política de privacidade (LGPD) no onboarding e no menu; exclusão de dados passou a apagar também o remoto no Supabase.
+- **Dia 3** (`68acf4b`): **bug LGPD corrigido** — faltavam policies de DELETE (RLS negava todo delete → exclusão remota não apagava nada). RLS verificado, dados chegando, testes 11→13.
+- **Dia 4**: QA de conteúdo (10 lições vs currículo — só doc dessincronizado, corrigido); integridade de áudio (50 refs resolvem); **fix de responsividade** (tela de resultado estourava em telas baixas → agora rola).
+
 ---
 
 ## Estado atual vs. escopo do MVP
@@ -67,8 +73,9 @@ Ações de infraestrutura (sem commit):
 | Threshold configurável por lição | Pronto |
 | Onboarding + LGPD | Pronto |
 | Analytics de eventos | Pronto |
-| Paywall (RevenueCat real) | Parcial — gating pronto; venda real bloqueada |
-| App rodando no iPhone (TestFlight) | Bloqueado |
+| Paywall — tela + gating | Pronto (tela "Beta Fundador" + 3 grátis) |
+| Paywall — venda real (RevenueCat) | Bloqueado (conta Apple) |
+| App rodando no iPhone (TestFlight) | Bloqueado (conta Apple) |
 
 ---
 
