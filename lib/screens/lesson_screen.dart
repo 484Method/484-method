@@ -362,6 +362,19 @@ class _LessonScreenState extends State<LessonScreen> {
               style: theme.textTheme.displayMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center),
+          // Fonética: IPA (preciso) + simplificada PT-BR (acessível). Só aqui,
+          // depois da 1ª tentativa de ouvido — nunca antes (regra som-first).
+          if (_item.ipa != null)
+            Text(_item.ipa!,
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: theme.colorScheme.primary),
+                textAlign: TextAlign.center),
+          if (_item.phonetic != null)
+            Text(_item.phonetic!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant),
+                textAlign: TextAlign.center),
+          const SizedBox(height: 8),
           Text(_item.translation,
               style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 16),

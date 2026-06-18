@@ -70,6 +70,8 @@ class LessonItem {
     required this.example,
     required this.exampleTranslation,
     required this.audioAsset,
+    this.ipa,
+    this.phonetic,
   });
 
   /// Palavra ou chunk em inglês — é o ReferenceText da avaliação.
@@ -80,4 +82,12 @@ class LessonItem {
 
   /// Caminho do MP3 pré-gerado (relativo a assets/, como o audioplayers usa).
   final String audioAsset;
+
+  /// Fonética em IPA (inglês americano), ex.: /bəˈnænə/. Mostrada no Livro
+  /// Aberto (depois da 1ª tentativa oral), nunca antes.
+  final String? ipa;
+
+  /// Fonética simplificada em PT-BR, sílaba forte em MAIÚSCULA (ex.: ba-NÉ-na).
+  /// Apoio para quem não lê IPA — o público falso-iniciante da Fase 1.
+  final String? phonetic;
 }
