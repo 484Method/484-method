@@ -209,6 +209,13 @@ class _LessonScreenState extends State<LessonScreen> {
     });
   }
 
+  /// Regrava a tentativa final: volta ao Livro Aberto (palavra visível, dá
+  /// pra ouvir de novo). Mantém _firstAccuracy para a melhora seguir medida
+  /// desde a 1ª tentativa de ouvido. Sem prender — é sempre opcional.
+  void _retryFinal() {
+    setState(() => _step = _Step.livroAberto);
+  }
+
   void _nextItem() {
     setState(() {
       if (_isLastItem) {
@@ -428,10 +435,32 @@ class _LessonScreenState extends State<LessonScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _nextItem,
-            child: Text(_isLastItem ? 'Concluir lição' : 'Próxima palavra'),
-          ),
+          // Passo 8: regravar é sempre possível, sem prender. Aprovou → seguir
+          // é o destaque (regravar fica discreto, pra fixar). Reprovou →
+          // regravar é o destaque (seguir continua disponível).
+          if (approved) ...[
+            FilledButton(
+              onPressed: _nextItem,
+              child:
+                  Text(_isLastItem ? 'Concluir lição' : 'Próxima palavra'),
+            ),
+            TextButton.icon(
+              onPressed: _retryFinal,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Gravar de novo pra fixar'),
+            ),
+          ] else ...[
+            FilledButton.icon(
+              onPressed: _retryFinal,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Gravar de novo'),
+            ),
+            TextButton(
+              onPressed: _nextItem,
+              child: Text(
+                  _isLastItem ? 'Concluir mesmo assim' : 'Próxima palavra'),
+            ),
+          ],
         ]);
 
       case _Step.finished:
