@@ -51,16 +51,24 @@ Deno.serve(async (req) => {
       `/speech/recognition/conversation/cognitiveservices/v1` +
       `?language=en-US&format=detailed`;
 
-    const azureRes = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
-        "Pronunciation-Assessment": config,
-        "Accept": "application/json",
-      },
-      body: audio,
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    let azureRes: Response;
+    try {
+      azureRes = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": key,
+          "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+          "Pronunciation-Assessment": config,
+          "Accept": "application/json",
+        },
+        body: audio,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     // Passa o corpo do Azure adiante (sucesso ou erro), preservando o status.
     const text = await azureRes.text();
