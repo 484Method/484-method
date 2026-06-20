@@ -210,7 +210,7 @@ void main() {
     expect(ent2.hasFounderAccess, isTrue);
   });
 
-  test('regra de produto: 3 lições grátis antes do paywall', () {
-    expect(kFreeLessonCount, 3);
+  test('regra de produto: 7 lições grátis antes do paywall', () {
+    expect(kFreeLessonCount, 7);
   });
 }
