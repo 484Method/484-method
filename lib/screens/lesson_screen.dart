@@ -477,30 +477,74 @@ class _LessonScreenState extends State<LessonScreen> {
         ]);
 
       case _Step.finished:
+        final approvedSecs = _approved.inSeconds;
         return _centered([
-          Text('🎉 Lição concluída!',
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center),
-          const SizedBox(height: 16),
+          Text('🎉', style: theme.textTheme.displayLarge),
+          const SizedBox(height: 8),
           Text(
-            'Você praticou ${widget.lesson.items.length} palavras e somou '
-            '${_formatMin(_approved)} de treino aprovado.',
-            style: theme.textTheme.bodyLarge,
+            'Lição concluída!',
+            style: theme.textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          OutlinedButton(
+          _statRow(theme, '🗣️', 'Palavras praticadas',
+              '${widget.lesson.items.length}'),
+          const SizedBox(height: 8),
+          _statRow(theme, '⏱️', 'Treino aprovado',
+              approvedSecs > 0 ? _formatMin(_approved) : '—'),
+          const SizedBox(height: 32),
+          Text(
+            approvedSecs > 0
+                ? 'Esse tempo já conta para as suas 484 horas. Continue amanhã para manter o ritmo.'
+                : 'Você completou a lição. Cada repetição treina o ouvido.',
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Ver meu progresso'),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
             onPressed: () => setState(() {
               _index = 0;
               _step = _Step.intro;
               _hasListened = false;
               _result = null;
               _approved = Duration.zero;
+              _aiFeedback = null;
+              _firstAccuracy = null;
+              _error = null;
             }),
             child: const Text('Praticar de novo'),
           ),
         ]);
     }
+  }
+
+  Widget _statRow(ThemeData theme, String emoji, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Text(label, style: theme.textTheme.bodyMedium),
+          ]),
+          Text(value,
+              style: theme.textTheme.bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 
   Widget _recordButton({required String label}) {
