@@ -9,7 +9,6 @@ import '../services/pronunciation_assessor.dart';
 import '../services/backend.dart';
 import 'lesson_screen.dart';
 import 'paywall_screen.dart';
-import 'practice_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'stats_screen.dart';
 
@@ -133,13 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('484 Method'),
         actions: [
-          IconButton(
-            tooltip: 'Bancada de testes',
-            icon: const Icon(Icons.science_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => PracticeScreen(assessor: widget.assessor),
-            )),
-          ),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'clear') _confirmClearData();
@@ -153,12 +145,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: 'stats',
                   child: Text('Painel de uso'),
                 ),
-              PopupMenuItem(
-                value: 'toggle_founder',
-                child: Text(widget.entitlement.hasFounderAccess
-                    ? '[dev] Desligar Beta Fundador'
-                    : '[dev] Ligar Beta Fundador'),
-              ),
               const PopupMenuItem(
                 value: 'privacy',
                 child: Text('Política de privacidade'),
@@ -193,17 +179,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '${_format(total)} de treino aprovado',
+                        total.inSeconds > 0
+                            ? '${_format(total)} de treino aprovado'
+                            : 'Comece o primeiro treino hoje.',
                         style: theme.textTheme.bodyLarge,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.store.streakDays > 0
-                            ? '🔥 ${widget.store.streakDays} '
-                                '${widget.store.streakDays == 1 ? "dia" : "dias"} seguidos'
-                            : 'Pratique hoje para começar seu streak.',
-                        style: theme.textTheme.bodyMedium,
-                      ),
+                      if (widget.store.streakDays > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '🔥 ${widget.store.streakDays} '
+                          '${widget.store.streakDays == 1 ? "dia" : "dias"} seguidos',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
                     ],
                   ),
                 ),
