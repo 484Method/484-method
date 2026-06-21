@@ -6,10 +6,12 @@ import '../services/analytics_service.dart';
 import '../services/entitlement_service.dart';
 import '../services/progress_store.dart';
 import '../services/pronunciation_assessor.dart';
+import '../services/backend.dart';
 import 'lesson_screen.dart';
 import 'paywall_screen.dart';
 import 'practice_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'stats_screen.dart';
 
 /// Dashboard: a barra das 484 horas, o streak e a porta de entrada das
 /// lições. É a tela que o aluno vê todo dia — precisa mostrar progresso
@@ -94,6 +96,14 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
+  void _openStats() {
+    final backend = Backend.instance;
+    if (backend == null) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StatsScreen(backend: backend),
+    ));
+  }
+
   /// Alterna o acesso na implementação fake (web/dev) para testar os dois
   /// estados do gating sem loja. Some quando a impl real (RevenueCat) entrar.
   Future<void> _toggleFounderAccess() async {
@@ -135,8 +145,14 @@ class _HomeScreenState extends State<HomeScreen> {
               if (v == 'clear') _confirmClearData();
               if (v == 'toggle_founder') _toggleFounderAccess();
               if (v == 'privacy') _openPrivacyPolicy();
+              if (v == 'stats') _openStats();
             },
             itemBuilder: (_) => [
+              if (Backend.instance != null)
+                const PopupMenuItem(
+                  value: 'stats',
+                  child: Text('Painel de uso'),
+                ),
               PopupMenuItem(
                 value: 'toggle_founder',
                 child: Text(widget.entitlement.hasFounderAccess
