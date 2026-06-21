@@ -19,8 +19,8 @@ set -a
 source .env
 set +a
 
-REPO="https://github.com/geovaneparanayba/484-method.git"
-URL="https://geovaneparanayba.github.io/484-method/"
+REPO="https://github.com/Method484/484-method.git"
+URL="https://method484.github.io/484-method/"
 
 flutter build web --release --base-href /484-method/ --pwa-strategy=none \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
