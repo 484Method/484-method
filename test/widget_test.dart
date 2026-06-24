@@ -20,6 +20,7 @@ class _FakeAssessor implements PronunciationAssessor {
   Future<PronunciationResult> assess({
     required Uint8List wavAudio,
     required String referenceText,
+    int attempt = 1,
   }) async {
     return const PronunciationResult(
       accuracy: 90,

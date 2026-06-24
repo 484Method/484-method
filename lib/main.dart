@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
@@ -45,6 +46,74 @@ class Method484App extends StatefulWidget {
 }
 
 class _Method484AppState extends State<Method484App> {
+  static const _navy  = Color(0xFF1B2D4F);
+  static const _gold  = Color(0xFFC9A252);
+  static const _cream = Color(0xFFF5F2EB);
+
+  static ThemeData _buildTheme() {
+    final cs = ColorScheme.fromSeed(seedColor: _navy).copyWith(
+      primary: _navy,
+      onPrimary: Colors.white,
+      secondary: _gold,
+      onSecondary: Colors.white,
+      tertiary: _gold,
+      onTertiary: Colors.white,
+      surface: _cream,
+      onSurface: _navy,
+      surfaceContainerHighest: const Color(0xFFEBE7DE),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: cs,
+      fontFamily: GoogleFonts.inter().fontFamily,
+      textTheme: TextTheme(
+        headlineLarge:  GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
+        headlineMedium: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold, height: 1.2),
+        headlineSmall:  GoogleFonts.playfairDisplay(fontWeight: FontWeight.w600),
+        titleLarge:     GoogleFonts.playfairDisplay(fontWeight: FontWeight.w600),
+        titleMedium:    GoogleFonts.playfairDisplay(fontWeight: FontWeight.w500, fontSize: 16),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: _navy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleTextStyle: GoogleFonts.playfairDisplay(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 2,
+        shadowColor: _navy.withValues(alpha: 0.12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: _gold,
+          foregroundColor: Colors.white,
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? _gold : null,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? _gold.withValues(alpha: 0.4) : null,
+        ),
+      ),
+    );
+  }
+
   // Landing antes do onboarding: enquadra a demo pra quem abre o link cold.
   // Em memória (some no reload) — o usuário recorrente já tem consentimento
   // e cai direto no app, sem ver a landing nem o onboarding.
@@ -76,7 +145,7 @@ class _Method484AppState extends State<Method484App> {
     }
     return MaterialApp(
       title: '484 Method',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      theme: _buildTheme(),
       home: home,
     );
   }

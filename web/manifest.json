@@ -1,13 +1,15 @@
 {
-    "name": "method484",
-    "short_name": "method484",
+    "name": "484 Method",
+    "short_name": "484",
+    "description": "Treino oral de inglês para brasileiros. Escute, repita, grave e receba feedback em português.",
+    "lang": "pt-BR",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1B2D4F",
+    "theme_color": "#1B2D4F",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["education"],
     "icons": [
         {
             "src": "icons/Icon-192.png",

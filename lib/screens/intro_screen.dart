@@ -24,6 +24,32 @@ class IntroScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: theme.colorScheme.secondary),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'PROTÓTIPO',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.secondary,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '484 Method',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
                   Text(
                     'Você entende inglês,\nmas trava quando precisa falar?',
                     style: theme.textTheme.headlineMedium
@@ -49,13 +75,7 @@ class IntroScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Demo grátis no navegador. Use seu microfone. Sem cartão.',
-                    style: theme.textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 36),
-                  Text(
-                    'Baseado no 484 Method.',
+                    'Gratuito para começar. Sem cadastro.',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.outline),
                     textAlign: TextAlign.center,

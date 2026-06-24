@@ -1,5 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/lesson.dart';
 import '../services/analytics_service.dart';
@@ -51,7 +52,8 @@ enum _Step {
 
 enum _RecPhase { idle, preparing, recording, sending }
 
-class _LessonScreenState extends State<LessonScreen> {
+class _LessonScreenState extends State<LessonScreen>
+    with SingleTickerProviderStateMixin {
   final AudioRecorderService _recorder = AudioRecorderService();
   AudioPlayer? _player;
 
@@ -71,17 +73,38 @@ class _LessonScreenState extends State<LessonScreen> {
   Duration _approved = Duration.zero;
   Duration _audioSent = Duration.zero;
 
+  /// Accuracy final de cada palavra (capturada ao avançar). Usada para
+  /// calcular a média exibida na tela de conclusão.
+  final List<double> _wordAccuracies = [];
+
   LessonItem get _item => widget.lesson.items[_index];
   bool get _isLastItem => _index == widget.lesson.items.length - 1;
 
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _pulseScale = Tween<double>(begin: 1.0, end: 1.07).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
   @override
   void dispose() {
+    _pulseController.dispose();
     _player?.dispose();
     _recorder.dispose();
     super.dispose();
   }
 
   Future<void> _play() async {
+    if (_recPhase == _RecPhase.recording || _recPhase == _RecPhase.preparing) return;
     // Libera a gravação imediatamente: o destrave da UI não pode depender
     // do ciclo de vida do player (no web, stop/play podem demorar).
     if (!_hasListened) setState(() => _hasListened = true);
@@ -102,6 +125,7 @@ class _LessonScreenState extends State<LessonScreen> {
           setState(() => _error = 'Permita o acesso ao microfone.');
           return;
         }
+        if (_player?.state == PlayerState.playing) await _player!.stop();
         setState(() {
           _recPhase = _RecPhase.preparing;
           _error = null;
@@ -109,6 +133,7 @@ class _LessonScreenState extends State<LessonScreen> {
         await _recorder.start(onAutoStop: _stopAndAssess);
         if (mounted && _recPhase == _RecPhase.preparing) {
           setState(() => _recPhase = _RecPhase.recording);
+          _pulseController.repeat(reverse: true);
         }
       case _RecPhase.recording:
         await _stopAndAssess();
@@ -121,6 +146,8 @@ class _LessonScreenState extends State<LessonScreen> {
   Future<void> _stopAndAssess() async {
     if (_recPhase != _RecPhase.recording) return;
     setState(() => _recPhase = _RecPhase.sending);
+    _pulseController.stop();
+    _pulseController.reset();
 
     final audio = await _recorder.stop();
     if (audio == null) {
@@ -131,12 +158,14 @@ class _LessonScreenState extends State<LessonScreen> {
       return;
     }
 
+    // Calcula attempt antes do assess — o servidor precisa para gerar feedback.
+    final attempt = _step == _Step.listen ? 1 : 2;
     try {
       final result = await widget.assessor.assess(
         wavAudio: audio.wavBytes,
         referenceText: _item.text,
+        attempt: attempt,
       );
-      final attempt = _step == _Step.listen ? 1 : 2;
       final approved = widget.lesson.approves(
           result.accuracy, result.minPhoneme, result.prosody,
           rigorous: widget.rigorous);
@@ -152,7 +181,7 @@ class _LessonScreenState extends State<LessonScreen> {
       });
       setState(() {
         _result = result;
-        _aiFeedback = null; // nova tentativa: descarta feedback anterior
+        _aiFeedback = result.aiFeedback; // vem junto com o assess quando disponível
         _audioSent += audio.duration;
         _recPhase = _RecPhase.idle;
         if (_step == _Step.listen) {
@@ -166,7 +195,10 @@ class _LessonScreenState extends State<LessonScreen> {
           _step = _Step.resultFinal;
         }
       });
-      _maybeFetchAiFeedback(result, attempt, approved);
+      // Fallback: busca Claude separado só se o servidor não trouxe feedback.
+      if (result.aiFeedback == null) {
+        _maybeFetchAiFeedback(result, attempt, approved);
+      }
     } catch (e) {
       debugPrint('[licao] avaliação falhou: $e');
       setState(() {
@@ -217,6 +249,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _nextItem() {
+    if (_result != null) _wordAccuracies.add(_result!.accuracy);
     setState(() {
       if (_isLastItem) {
         _step = _Step.finished;
@@ -257,35 +290,50 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _buildStep(theme)),
-                if (_error != null)
-                  Card(
-                    color: theme.colorScheme.errorContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(_error!),
-                    ),
+      body: Column(
+        children: [
+          if (_step != _Step.intro && _step != _Step.finished)
+            LinearProgressIndicator(
+              value: (_index + 1) / widget.lesson.items.length,
+              minHeight: 4,
+              borderRadius: BorderRadius.zero,
+              color: theme.colorScheme.secondary,
+              backgroundColor:
+                  theme.colorScheme.secondary.withValues(alpha: 0.15),
+            ),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _buildStep(theme)),
+                      if (_error != null)
+                        Card(
+                          color: theme.colorScheme.errorContainer,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(_error!),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Minutos aprovados: ${_formatMin(_approved)} · '
+                        'áudio enviado: ${_audioSent.inSeconds}s',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  'Minutos aprovados: ${_formatMin(_approved)} · '
-                  'áudio enviado: ${_audioSent.inSeconds}s',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -294,7 +342,7 @@ class _LessonScreenState extends State<LessonScreen> {
     switch (_step) {
       case _Step.intro:
         return _centered([
-          Text('Lição ${widget.lesson.title}',
+          Text('Lição: ${widget.lesson.title}',
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center),
           const SizedBox(height: 16),
@@ -327,7 +375,7 @@ class _LessonScreenState extends State<LessonScreen> {
               style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
           const SizedBox(height: 24),
           OutlinedButton.icon(
-            onPressed: _play,
+            onPressed: _recPhase == _RecPhase.idle ? _play : null,
             icon: const Icon(Icons.volume_up, size: 32),
             label: const Text('Ouvir'),
             style: OutlinedButton.styleFrom(
@@ -394,7 +442,7 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: _play,
+            onPressed: _recPhase == _RecPhase.idle ? _play : null,
             icon: const Icon(Icons.volume_up),
             label: const Text('Ouvir de novo'),
           ),
@@ -478,6 +526,10 @@ class _LessonScreenState extends State<LessonScreen> {
 
       case _Step.finished:
         final approvedSecs = _approved.inSeconds;
+        final avgAccuracy = _wordAccuracies.isEmpty
+            ? null
+            : _wordAccuracies.reduce((a, b) => a + b) /
+                _wordAccuracies.length;
         return _centered([
           Text('🎉', style: theme.textTheme.displayLarge),
           const SizedBox(height: 8),
@@ -491,6 +543,11 @@ class _LessonScreenState extends State<LessonScreen> {
           _statRow(theme, '🗣️', 'Palavras praticadas',
               '${widget.lesson.items.length}'),
           const SizedBox(height: 8),
+          if (avgAccuracy != null) ...[
+            _statRow(theme, '🎯', 'Média de pronúncia',
+                '${avgAccuracy.round()}/100'),
+            const SizedBox(height: 8),
+          ],
           _statRow(theme, '⏱️', 'Treino aprovado',
               approvedSecs > 0 ? _formatMin(_approved) : '—'),
           const SizedBox(height: 32),
@@ -507,6 +564,18 @@ class _LessonScreenState extends State<LessonScreen> {
             child: const Text('Ver meu progresso'),
           ),
           const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => _shareWhatsApp(avgAccuracy),
+            icon: const Icon(Icons.share, size: 18),
+            label: const Text('Compartilhar no WhatsApp'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF25D366),
+              side: const BorderSide(color: Color(0xFF25D366)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 4),
           TextButton(
             onPressed: () => setState(() {
               _index = 0;
@@ -516,12 +585,25 @@ class _LessonScreenState extends State<LessonScreen> {
               _approved = Duration.zero;
               _aiFeedback = null;
               _firstAccuracy = null;
+              _wordAccuracies.clear();
               _error = null;
             }),
             child: const Text('Praticar de novo'),
           ),
         ]);
     }
+  }
+
+  Future<void> _shareWhatsApp(double? avgAccuracy) async {
+    final score = avgAccuracy != null ? '${avgAccuracy.round()}/100' : null;
+    final scoreLine = score != null ? '\nMinha pronúncia: $score 🎯' : '';
+    final text =
+        'Acabei de treinar inglês no 484 Method 🎙️\n'
+        'Lição: "${widget.lesson.title}"$scoreLine\n\n'
+        'Experimenta você (grátis): https://method484.github.io/484-method';
+    final uri = Uri.parse(
+        'https://wa.me/?text=${Uri.encodeComponent(text)}');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   Widget _statRow(ThemeData theme, String emoji, String label, String value) {
@@ -548,7 +630,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   Widget _recordButton({required String label}) {
-    return FilledButton.icon(
+    final button = FilledButton.icon(
       onPressed: _recPhase == _RecPhase.sending ||
               _recPhase == _RecPhase.preparing
           ? null
@@ -570,13 +652,46 @@ class _LessonScreenState extends State<LessonScreen> {
         backgroundColor: _recPhase == _RecPhase.recording ? Colors.red : null,
       ),
     );
+    if (_recPhase == _RecPhase.recording) {
+      return ScaleTransition(scale: _pulseScale, child: button);
+    }
+    if (_recPhase == _RecPhase.sending) {
+      final theme = Theme.of(context);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          button,
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            borderRadius: BorderRadius.circular(4),
+            color: theme.colorScheme.secondary,
+            backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Analisando sua pronúncia...',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      );
+    }
+    return button;
   }
 
   Widget _scoreBadge(ThemeData theme, double score) {
-    return Column(children: [
-      Text(score.toStringAsFixed(0), style: theme.textTheme.displayMedium),
-      LinearProgressIndicator(value: score / 100, minHeight: 8),
-    ]);
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('score_${_step.name}_${score.round()}'),
+      tween: Tween(begin: 0, end: score),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOut,
+      builder: (context, value, _) => Column(children: [
+        Text(value.toStringAsFixed(0), style: theme.textTheme.displayMedium),
+        LinearProgressIndicator(value: value / 100, minHeight: 8),
+      ]),
+    );
   }
 
   Widget _centered(List<Widget> children) {

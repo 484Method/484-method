@@ -27,28 +27,27 @@ class PaywallScreen extends StatelessWidget {
                 Icon(Icons.workspace_premium,
                     size: 64, color: theme.colorScheme.primary),
                 const SizedBox(height: 16),
-                Text('Beta Fundador',
+                Text('Desbloqueie a Fase 1 completa',
                     style: theme.textTheme.headlineMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 Text(
-                  'As $kFreeLessonCount primeiras lições são suas, de graça. '
-                  'O Beta Fundador abre a Fase 1 completa.',
+                  'Você já provou que consegue. '
+                  'As próximas ${ 10 - kFreeLessonCount } lições continuam de onde você parou.',
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 _benefit(theme, Icons.hearing,
-                    '10 lições som-first — ouça, repita e destrave a fala'),
+                    'Ouça, repita e desbloqueie palavras que você já conhece'),
                 _benefit(theme, Icons.record_voice_over,
-                    'Feedback de pronúncia em português, na sua tentativa'),
+                    'Feedback de pronúncia em português, em cada tentativa'),
                 _benefit(theme, Icons.fitness_center,
-                    'Modo desafio para chegar perto da pronúncia nativa'),
+                    'Modo desafio para quem quer precisão nativa'),
                 _benefit(theme, Icons.trending_up,
-                    'Progresso medido em minutos de fala aprovada'),
+                    'Progresso em minutos reais de fala aprovada'),
                 const SizedBox(height: 24),
-                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       vertical: 20, horizontal: 16),
@@ -70,8 +69,7 @@ class PaywallScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Não é assinatura. É um voto de confiança em uma ideia '
-                      'que ainda está nascendo — e que você ajuda a moldar.',
+                      'Pagamento único. Sem assinatura.',
                       style: theme.textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
@@ -82,7 +80,7 @@ class PaywallScreen extends StatelessWidget {
                   onPressed: onSubscribe,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Apoiar o Method 484'),
+                    child: Text('Quero continuar treinando'),
                   ),
                 ),
                 TextButton(

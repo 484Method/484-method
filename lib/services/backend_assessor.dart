@@ -18,6 +18,7 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
   Future<PronunciationResult> assess({
     required Uint8List wavAudio,
     required String referenceText,
+    int attempt = 1,
   }) async {
     try {
       final res = await _backend.client.functions.invoke(
@@ -25,6 +26,7 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
         body: {
           'referenceText': referenceText,
           'audioBase64': base64.encode(wavAudio),
+          'attempt': attempt,
         },
       );
       if (res.status != 200) {

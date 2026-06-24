@@ -12,6 +12,7 @@ abstract interface class PronunciationAssessor {
   Future<PronunciationResult> assess({
     required Uint8List wavAudio,
     required String referenceText,
+    int attempt = 1,
   });
 }
 
@@ -24,6 +25,7 @@ class PronunciationResult {
     required this.recognizedText,
     required this.words,
     this.prosody,
+    this.aiFeedback,
   });
 
   /// Escalas 0-100 do Azure Pronunciation Assessment.
@@ -35,6 +37,11 @@ class PronunciationResult {
   /// Stress, entonação e ritmo — o detector de "som aportuguesado com
   /// sílaba forte errada". Null se o serviço não retornar.
   final double? prosody;
+
+  /// Feedback gerado pela Claude Haiku no servidor (junto com o assess).
+  /// Null quando o servidor não tem ANTHROPIC_API_KEY ou Claude falhou —
+  /// o cliente usa feedbackFor() como fallback imediato.
+  final String? aiFeedback;
 
   final String recognizedText;
   final List<WordScore> words;
@@ -122,6 +129,7 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
   Future<PronunciationResult> assess({
     required Uint8List wavAudio,
     required String referenceText,
+    int attempt = 1,
   }) async {
     final uri = Uri.https(
       '$region.stt.speech.microsoft.com',
@@ -200,5 +208,6 @@ PronunciationResult parseAzureResponse(Map<String, dynamic> json) {
     prosody: (best['ProsodyScore'] as num?)?.toDouble(),
     recognizedText: best['Display'] as String? ?? '',
     words: words,
+    aiFeedback: json['aiFeedback'] as String?,
   );
 }
