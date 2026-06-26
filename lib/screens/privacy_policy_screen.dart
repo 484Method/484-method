@@ -42,8 +42,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   'O que coletamos',
                   'Para avaliar sua pronúncia, o app grava sua voz durante os '
                       'exercícios. Guardamos também seu progresso (minutos de '
-                      'prática aprovada, lições concluídas, streak) e eventos '
-                      'de uso do app.',
+                      'prática aprovada, lições concluídas, streak), eventos '
+                      'de uso do app e dados técnicos agregados (navegador, '
+                      'sistema operacional, idioma do dispositivo) — nunca '
+                      'localização precisa por GPS.',
                 ),
                 section(
                   'Como usamos sua voz',

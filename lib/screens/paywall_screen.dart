@@ -1,15 +1,29 @@
 import 'package:flutter/material.dart';
 
+import '../data/fase1.dart';
+import '../services/analytics_service.dart';
 import '../services/entitlement_service.dart';
 
 /// Oferta "Beta Fundador" — aparece quando o usuário toca numa lição além
 /// das gratuitas. A compra real entra via RevenueCat no mobile; por ora o
 /// CTA chama [onSubscribe], que anuncia a disponibilidade (o menu de dev
 /// libera o acesso para teste na web).
-class PaywallScreen extends StatelessWidget {
-  const PaywallScreen({super.key, required this.onSubscribe});
+class PaywallScreen extends StatefulWidget {
+  const PaywallScreen({super.key, required this.onSubscribe, this.analytics});
 
   final VoidCallback onSubscribe;
+  final AnalyticsService? analytics;
+
+  @override
+  State<PaywallScreen> createState() => _PaywallScreenState();
+}
+
+class _PaywallScreenState extends State<PaywallScreen> {
+  @override
+  void initState() {
+    super.initState();
+    widget.analytics?.log('paywall_viewed');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +48,7 @@ class PaywallScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Você já provou que consegue. '
-                  'As próximas ${ 10 - kFreeLessonCount } lições continuam de onde você parou.',
+                  'As próximas ${fase1Lessons.length - kFreeLessonCount} lições continuam de onde você parou.',
                   style: theme.textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -77,14 +91,20 @@ class PaywallScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: onSubscribe,
+                  onPressed: () {
+                    widget.analytics?.log('paywall_subscribe_clicked');
+                    widget.onSubscribe();
+                  },
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text('Quero continuar treinando'),
                   ),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    widget.analytics?.log('paywall_dismissed');
+                    Navigator.of(context).pop();
+                  },
                   child: const Text('Agora não'),
                 ),
               ],

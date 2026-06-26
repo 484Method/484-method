@@ -45,4 +45,10 @@ gen compras_dinheiro "cash" "credit card" "discount" "voucher" "cashback"
 gen bonus_vocabulario "calendar" "celebrity" "vegetable" "elevator" "umbrella"
 gen bonus_ritmo "necessary" "temperature" "government" "photography" "vocabulary"
 gen bonus_pedidos "Could you help me, please" "I'd like to order a coffee" "Do you have a discount" "Where is the restroom" "Can I get a receipt"
-# Lições de revisão (06, 12, 19) reusam áudios das lições anteriores — nada a gerar.
+gen bloco4_saudacoes "How are you" "How are you doing" "How's it going" "How have you been" "How's your day going"
+gen bloco4_respostas "I'm good, thanks" "I'm doing well" "I'm great, thank you" "Pretty good, actually" "I'm feeling good today"
+gen bloco4_clima "It's sunny today" "It's a bit cloudy today" "It's really hot today" "It's a little cold today" "The weather is nice today"
+gen bloco4_dia_bonito "It's a beautiful day to go outside" "It's a beautiful day to have a walk" "It's a beautiful day to study English" "It's a beautiful day to drink some coffee" "It's a beautiful day to enjoy the morning"
+gen bloco4_planos "What's the plan for today" "What's the plan for this morning" "What's the plan for the afternoon" "What's the plan after class" "What's the plan for the weekend"
+gen bloco4_bonus "How have you been doing lately" "I've been pretty busy, but I'm good" "It looks like it might rain later" "It's the perfect day to relax outside" "Do you have any plans for the weekend"
+# Lições de revisão (06, 12, 19, 26) reusam áudios das lições anteriores — nada a gerar.

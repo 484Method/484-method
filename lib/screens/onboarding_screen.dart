@@ -9,10 +9,19 @@ import 'privacy_policy_screen.dart';
 /// aceite. O app não grava nada sem este consentimento explícito, e o
 /// usuário não chega ao dashboard sem passar por aqui.
 class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({super.key, required this.store, required this.onDone});
+  const OnboardingScreen({
+    super.key,
+    required this.store,
+    required this.onDone,
+    this.onBack,
+  });
 
   final ProgressStore store;
   final VoidCallback onDone;
+
+  /// Permite recuar para a landing sem aceitar — quem está em dúvida não
+  /// fica preso só entre "aceitar" e nada mais.
+  final VoidCallback? onBack;
 
   Future<void> _acceptAndStart() async {
     await store.grantVoiceConsent();
@@ -23,6 +32,14 @@ class OnboardingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      appBar: onBack == null
+          ? null
+          : AppBar(
+              leading: BackButton(onPressed: onBack),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              foregroundColor: theme.colorScheme.onSurface,
+            ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -45,6 +62,8 @@ class OnboardingScreen extends StatelessWidget {
                     '(Microsoft Azure).\n\n'
                     '• O áudio é usado apenas para avaliar a pronúncia\n'
                     '• Não é usado para treinar modelos de IA\n'
+                    '• Também registramos dados técnicos agregados (navegador, '
+                    'sistema operacional, idioma) para entender o uso do app\n'
                     '• Você pode apagar seus dados quando quiser',
                     style: theme.textTheme.bodyLarge,
                   ),

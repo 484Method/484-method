@@ -9,22 +9,39 @@ import 'package:record/record.dart';
 /// devolve um WAV pronto para envio.
 ///
 /// Regras de custo embutidas (o Azure cobra por segundo de áudio enviado):
-/// - auto-stop em [maxDuration] para nenhuma tentativa passar do limite;
+/// - auto-stop quando detecta [_silenceStopDelay] de silêncio depois que a
+///   pessoa já começou a falar — dispensa o clique manual de "parar" na
+///   maioria das tentativas, sem precisar adivinhar a duração certa pra
+///   palavra curta vs. frase longa;
+/// - [maxDuration] é só um teto de segurança (ruído contínuo, mic aberto);
 /// - gravação que é só silêncio retorna null e não deve ser enviada.
 class AudioRecorderService {
   final AudioRecorder _recorder = AudioRecorder();
   final BytesBuilder _chunks = BytesBuilder(copy: false);
   StreamSubscription<Uint8List>? _subscription;
   Timer? _autoStopTimer;
+  Timer? _silenceStopTimer;
+  bool? _liveIsFloat32;
 
   static const int sampleRate = 16000;
   static const Duration maxDuration = Duration(seconds: 10);
 
+  /// Silêncio contínuo depois da fala que encerra a gravação sozinha.
+  /// Curto o suficiente pra não atrasar palavras isoladas, longo o
+  /// suficiente pra não cortar pausas naturais dentro de uma frase.
+  static const Duration _silenceStopDelay = Duration(milliseconds: 700);
+
   /// RMS mínimo (int16) que a janela mais alta do áudio precisa atingir
   /// para contar como fala. Ruído ambiente fica tipicamente abaixo de ~150;
-  /// fala, mesmo baixa, passa de 300.
+  /// fala, mesmo baixa, passa de 300. Usado só na checagem pós-gravação
+  /// (descarta tentativa que é silêncio puro).
   static const double _silenceRmsThreshold = 250;
   static const int _windowMs = 100;
+
+  /// Limiar usado em tempo real pra (re)armar o timer de auto-stop. Mais
+  /// alto que [_silenceRmsThreshold] de propósito: ruído de ambiente (fan,
+  /// sala) passa fácil de 250 e nunca deixaria o timer de silêncio disparar.
+  static const double _liveSpeechRmsThreshold = 600;
 
   Future<bool> hasPermission() => _recorder.hasPermission();
 
@@ -36,6 +53,7 @@ class AudioRecorderService {
   /// depois que este future completar.
   Future<void> start({required void Function() onAutoStop}) async {
     _chunks.clear();
+    _liveIsFloat32 = null;
     final firstChunk = Completer<void>();
     final stream = await _recorder.startStream(const RecordConfig(
       encoder: AudioEncoder.pcm16bits,
@@ -45,15 +63,61 @@ class AudioRecorderService {
     _subscription = stream.listen((chunk) {
       if (!firstChunk.isCompleted) firstChunk.complete();
       _chunks.add(chunk);
+      // Só decide o formato (int16 vs float32) num chunk com sinal real —
+      // num chunk de silêncio puro (bytes zerados) a heurística sempre bate
+      // como "float32" (0.0 está em qualquer faixa), travando a leitura
+      // errada pro resto da gravação.
+      if (_liveIsFloat32 == null && chunk.any((b) => b != 0)) {
+        _liveIsFloat32 = _looksLikeFloat32(chunk);
+      }
+      if (_liveIsFloat32 != null) {
+        _feedSilenceDetector(chunk, _liveIsFloat32!, onAutoStop);
+      }
     });
     await firstChunk.future;
     _startedAt = DateTime.now();
     _autoStopTimer = Timer(maxDuration, onAutoStop);
   }
 
+  /// A cada chunk que chega, mede o volume; se passar do limiar de fala,
+  /// (re)arma o timer de silêncio. Sem fala detectada ainda, não arma nada
+  /// — silêncio antes da pessoa começar a falar não deve parar a gravação.
+  void _feedSilenceDetector(
+    Uint8List chunk,
+    bool isFloat32,
+    void Function() onAutoStop,
+  ) {
+    final rms = _chunkRms(chunk, isFloat32);
+    if (kDebugMode) debugPrint('[silence-calibration] rms=${rms.round()}');
+    if (rms < _liveSpeechRmsThreshold) return;
+    _silenceStopTimer?.cancel();
+    _silenceStopTimer = Timer(_silenceStopDelay, onAutoStop);
+  }
+
+  double _chunkRms(Uint8List chunk, bool isFloat32) {
+    final buffer = Uint8List.fromList(chunk).buffer;
+    if (isFloat32) {
+      final floats = buffer.asFloat32List(0, chunk.length ~/ 4);
+      if (floats.isEmpty) return 0;
+      var sumSquares = 0.0;
+      for (final v in floats) {
+        sumSquares += v * v;
+      }
+      return math.sqrt(sumSquares / floats.length) * 32768;
+    }
+    final ints = buffer.asInt16List(0, chunk.length ~/ 2);
+    if (ints.isEmpty) return 0;
+    var sumSquares = 0.0;
+    for (final v in ints) {
+      sumSquares += v * v;
+    }
+    return math.sqrt(sumSquares / ints.length);
+  }
+
   /// Encerra a gravação e devolve o WAV, ou null se for silêncio.
   Future<RecordedAudio?> stop() async {
     _autoStopTimer?.cancel();
+    _silenceStopTimer?.cancel();
     await _recorder.stop();
     await _subscription?.cancel();
     final raw = _chunks.takeBytes();
@@ -148,7 +212,11 @@ class AudioRecorderService {
     return inRange / checked > 0.95;
   }
 
-  Future<void> dispose() => _recorder.dispose();
+  Future<void> dispose() {
+    _autoStopTimer?.cancel();
+    _silenceStopTimer?.cancel();
+    return _recorder.dispose();
+  }
 
   bool _isSilence(Uint8List pcm) {
     final samples = pcm.buffer.asInt16List(0, pcm.length ~/ 2);

@@ -7,6 +7,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/backend.dart';
 import 'services/backend_assessor.dart';
+import 'services/device_info.dart';
 import 'services/entitlement_service.dart';
 import 'services/progress_store.dart';
 
@@ -23,6 +24,8 @@ Future<void> main() async {
   await Backend.init(url: _supabaseUrl, anonKey: _supabaseAnonKey);
   final store = await ProgressStore.load(backend: Backend.instance);
   final analytics = await AnalyticsService.load(backend: Backend.instance);
+  // Uma vez por sessão: browser/SO/idioma agregados, nunca o user-agent cru.
+  analytics.log('device_info', collectDeviceInfo());
   // Web/dev usa o fake local; mobile trocará por RevenueCat na mesma interface.
   final entitlement = await LocalEntitlementService.load();
   runApp(Method484App(
@@ -130,9 +133,16 @@ class _Method484AppState extends State<Method484App> {
       home = _introSeen
           ? OnboardingScreen(
               store: widget.store,
-              onDone: () => setState(() {}),
+              onDone: () {
+                widget.analytics?.log('onboarding_consent_accepted');
+                setState(() {});
+              },
+              onBack: () => setState(() => _introSeen = false),
             )
-          : IntroScreen(onStart: () => setState(() => _introSeen = true));
+          : IntroScreen(onStart: () {
+              widget.analytics?.log('onboarding_cta_clicked');
+              setState(() => _introSeen = true);
+            });
     } else {
       home = HomeScreen(
         store: widget.store,

@@ -7,7 +7,7 @@ ouvir → repetir → gravar → corrigir → regravar.
 **Nunca** chamar esta fase de "Phonics" ou "Sons Críticos" na UI — o nome
 comercial é "Inglês que Você Já Conhece".
 
-A fase é organizada em **3 blocos pedagógicos internos** (não são fases
+A fase é organizada em **4 blocos pedagógicos internos** (não são fases
 comerciais novas — Fase 1 continua sendo um único módulo/oferta):
 
 1. **Reconhecimento e confiança** — vocabulário familiar, baixa ameaça
@@ -16,6 +16,8 @@ comerciais novas — Fase 1 continua sendo um único módulo/oferta):
    (palavras parecidas com português, mas com som ou uso diferente).
 3. **Da palavra à frase** — chunks, cortesia, pedidos e situações reais do
    dia a dia.
+4. **Conversa do dia a dia** — small talk: saudações, respostas, clima e
+   planos, em frases prontas para usar.
 
 ## Escala de dificuldade do banco de palavras (120–300 palavras)
 
@@ -26,7 +28,7 @@ comerciais novas — Fase 1 continua sendo um único módulo/oferta):
 | Familiar com som enganoso | business, comfortable, interesting, manager, project | Reduzir pronúncia aportuguesada |
 | Familiar com uso diferente | outdoor, notebook, shopping, home office, chips | Explicar uso real quando necessário |
 
-## As 20 microlições (5–10 min cada): 17 obrigatórias + 3 bônus opcionais
+## As 27 microlições (5–10 min cada): 23 obrigatórias + 4 bônus opcionais
 
 Cada bloco termina com uma revisão (obrigatória) e um bônus (`Lesson.bonus =
 true`, opcional): mesmo assunto do bloco, palavras/frases mais difíceis. O
@@ -67,6 +69,18 @@ ela a partir da revisão anterior.
 | 18 | Compras e dinheiro | cash, credit card, discount, voucher, cashback | Inglês prático de consumo | Accuracy + completude |
 | 19 | Revisão final | 1 item de cada lição 14–18 | Fecha o básico, evolução visível | Minutos aprovados, evolução visível |
 | 20 | **Bônus** — Desafio: pedidos mais longos | Could you help me please, I'd like to order a coffee, Do you have a discount, Where is the restroom, Can I get a receipt | Pedidos educados mais longos | Completeness + fluency (opcional) |
+
+### Bloco 4 — Conversa do dia a dia
+
+| # | Tema | Palavras/frases | Foco | Critério de aprovação |
+|---|---|---|---|---|
+| 21 | Variações de "How are you?" | How are you?, How are you doing?, How's it going?, How have you been?, How's your day going? | Abrir qualquer conversa | Completeness + fluency |
+| 22 | Respondendo que está bem | I'm good thanks, I'm doing well, I'm great thank you, Pretty good actually, I'm feeling good today | Resposta automática ao "how are you" | Completeness + fluency |
+| 23 | Falando do dia / weather | It's sunny today, It's a bit cloudy today, It's really hot today, It's a little cold today, The weather is nice today | Small talk universal | Accuracy + completude |
+| 24 | "It's a beautiful day to…" | go outside, have a walk, study English, drink some coffee, enjoy the morning | Molde único, 5 finais | Completeness + fluency |
+| 25 | "What's the plan…?" | for today, for this morning, for the afternoon, after class, for the weekend | Combinar atividades | Completeness + fluency |
+| 26 | Revisão Bloco 4 | 1 frase de cada lição 21–25 | Progresso visível | Minutos aprovados |
+| 27 | **Bônus** — Desafio: conversa mais natural | How have you been doing lately, I've been pretty busy but I'm good, It looks like it might rain later, It's the perfect day to relax outside, Do you have any plans for the weekend | Mesmo small talk, frases mais longas e naturais | Completeness + fluency (opcional) |
 
 ## Regra de liberação da escrita
 Uma tentativa oral é obrigatória antes de qualquer texto. Após a tentativa e

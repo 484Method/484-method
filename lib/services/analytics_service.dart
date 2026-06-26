@@ -18,6 +18,11 @@ class AnalyticsService {
   static const _key = 'analytics_events';
   static const _maxEvents = 500;
 
+  /// Bump junto com a `version:` do pubspec.yaml — entra em todo evento pra
+  /// dar pra comparar métricas antes/depois de um deploy (ex.: confirmar que
+  /// uma correção de bug mudou o número de verdade, não só por acaso).
+  static const kAppVersion = '1.0.0+1';
+
   final SharedPreferences _prefs;
   final Backend? backend;
 
@@ -37,7 +42,7 @@ class AnalyticsService {
       events.removeRange(0, events.length - _maxEvents);
     }
     await _prefs.setStringList(_key, events);
-    backend?.pushEvent(event, props); // espelho durável p/ métricas do MVP
+    backend?.pushEvent(event, {...props, 'app_version': kAppVersion}); // espelho durável p/ métricas do MVP
   }
 
   /// Eventos brutos (JSON por linha) — para inspeção/export durante o beta.

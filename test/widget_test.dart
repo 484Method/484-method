@@ -7,7 +7,6 @@ import 'package:method484/main.dart';
 import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
-import 'package:method484/screens/practice_screen.dart';
 import 'package:method484/services/feedback_messages.dart';
 import 'package:method484/services/analytics_service.dart';
 import 'package:method484/services/entitlement_service.dart';
@@ -46,16 +45,6 @@ void main() {
       entitlement: await LocalEntitlementService.load(),
     ));
     expect(find.textContaining('Supabase não configurado'), findsOneWidget);
-  });
-
-  testWidgets('tela de prática mostra palavra-alvo e botão de gravar',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: PracticeScreen(assessor: _FakeAssessor()),
-    ));
-    expect(find.text('apple'), findsOneWidget);
-    expect(find.text('Gravar'), findsOneWidget);
-    expect(find.textContaining('Áudio enviado ao Azure'), findsOneWidget);
   });
 
   testWidgets('lição começa pela introdução e não mostra a palavra antes',
@@ -211,7 +200,7 @@ void main() {
     expect(ent2.hasFounderAccess, isTrue);
   });
 
-  test('regra de produto: 7 lições grátis antes do paywall', () {
-    expect(kFreeLessonCount, 7);
+  test('regra de produto: todas as lições estão grátis por enquanto', () {
+    expect(kFreeLessonCount, fase1Lessons.length);
   });
 }

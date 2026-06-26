@@ -6,6 +6,7 @@ import '../models/lesson.dart';
 /// Bloco 1 (1-7)   — Reconhecimento e confiança: vocabulário familiar.
 /// Bloco 2 (8-13)  — Som e sílaba forte: ritmo e armadilhas de pronúncia.
 /// Bloco 3 (14-20) — Da palavra à frase: chunks, cortesia e situações reais.
+/// Bloco 4 (21-27) — Conversa do dia a dia: small talk, saudações e planos.
 ///
 /// Cada bloco termina com uma revisão (obrigatória) e um bônus (opcional,
 /// `Lesson.bonus = true`): mesmo assunto do bloco, mas com palavras/frases
@@ -25,6 +26,7 @@ const fase1Lessons = [
   licao01, licao02, licao03, licao04, licao05, licao06, licao07,
   licao08, licao09, licao10, licao11, licao12, licao13,
   licao14, licao15, licao16, licao17, licao18, licao19, licao20,
+  licao21, licao22, licao23, licao24, licao25, licao26, licao27,
 ];
 
 // ---------------------------------------------------------------------------
@@ -1160,6 +1162,427 @@ const licao20 = Lesson(
       audioAsset: 'audio/fase1/bonus_pedidos/Can_I_get_a_receipt.mp3',
       ipa: '/kæn aɪ ɡɛt ə rɪˈsiːt/',
       phonetic: 'ken ai guét e ri-SÍT',
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// BLOCO 4 — Conversa do dia a dia
+// ---------------------------------------------------------------------------
+
+/// Lição 21 — "Variações de How are you?": pergunta de abertura de qualquer
+/// conversa, em 5 formas diferentes de soar natural.
+const licao21 = Lesson(
+  id: 'fase1-licao21',
+  title: 'Variações de "How are you?"',
+  objective: 'A pergunta que abre toda conversa em inglês, em 5 jeitos '
+      'diferentes de perguntar a mesma coisa.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'How are you?',
+      translation: 'como você está?',
+      example: 'Hi! How are you?',
+      exampleTranslation: 'Oi! Como você está?',
+      audioAsset: 'audio/fase1/bloco4_saudacoes/How_are_you.mp3',
+      ipa: '/haʊ ər juː/',
+      phonetic: 'rráu ar iú',
+    ),
+    LessonItem(
+      text: 'How are you doing?',
+      translation: 'como você está indo? / como vai?',
+      example: 'Hey! How are you doing?',
+      exampleTranslation: 'Ei! Como vai?',
+      audioAsset: 'audio/fase1/bloco4_saudacoes/How_are_you_doing.mp3',
+      ipa: '/haʊ ər juː ˈduːɪŋ/',
+      phonetic: 'rráu ar iú DÚ-in',
+    ),
+    LessonItem(
+      text: "How's it going?",
+      translation: 'como estão as coisas?',
+      example: "Hi, how's it going?",
+      exampleTranslation: 'Oi, como estão as coisas?',
+      audioAsset: "audio/fase1/bloco4_saudacoes/How's_it_going.mp3",
+      ipa: '/haʊz ɪt ˈɡoʊɪŋ/',
+      phonetic: 'rráuz it GÔU-in',
+    ),
+    LessonItem(
+      text: 'How have you been?',
+      translation: 'como você tem estado?',
+      example: "It's been a while. How have you been?",
+      exampleTranslation: 'Já faz tempo. Como você tem estado?',
+      audioAsset: 'audio/fase1/bloco4_saudacoes/How_have_you_been.mp3',
+      ipa: '/haʊ həv juː bɪn/',
+      phonetic: 'rráu rrev iú BIN',
+    ),
+    LessonItem(
+      text: "How's your day going?",
+      translation: 'como está indo seu dia?',
+      example: "Hey! How's your day going?",
+      exampleTranslation: 'Ei! Como está indo seu dia?',
+      audioAsset: "audio/fase1/bloco4_saudacoes/How's_your_day_going.mp3",
+      ipa: '/haʊz jʊr deɪ ˈɡoʊɪŋ/',
+      phonetic: 'rráuz iór dêi GÔU-in',
+    ),
+  ],
+);
+
+/// Lição 22 — "Respondendo que está bem": a resposta automática a
+/// "How are you?", em 5 variações.
+const licao22 = Lesson(
+  id: 'fase1-licao22',
+  title: 'Respondendo que está bem',
+  objective: 'Agora a resposta: 5 jeitos de dizer que você está bem sem '
+      'travar.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: "I'm good, thanks.",
+      translation: 'estou bem, obrigado(a).',
+      example: "How are you? — I'm good, thanks.",
+      exampleTranslation: 'Como você está? — Estou bem, obrigado.',
+      audioAsset: "audio/fase1/bloco4_respostas/I'm_good,_thanks.mp3",
+      ipa: '/aɪm ɡʊd θæŋks/',
+      phonetic: 'aim GÚD, ténks',
+    ),
+    LessonItem(
+      text: "I'm doing well.",
+      translation: 'estou indo bem.',
+      example: "I'm doing well, and you?",
+      exampleTranslation: 'Estou indo bem, e você?',
+      audioAsset: "audio/fase1/bloco4_respostas/I'm_doing_well.mp3",
+      ipa: '/aɪm ˈduːɪŋ wɛl/',
+      phonetic: 'aim DÚ-in uél',
+    ),
+    LessonItem(
+      text: "I'm great, thank you.",
+      translation: 'estou ótimo, obrigado(a).',
+      example: "I'm great, thank you for asking.",
+      exampleTranslation: 'Estou ótimo, obrigado por perguntar.',
+      audioAsset: "audio/fase1/bloco4_respostas/I'm_great,_thank_you.mp3",
+      ipa: '/aɪm ɡreɪt θæŋk juː/',
+      phonetic: 'aim GRÊIT, ténk iu',
+    ),
+    LessonItem(
+      text: 'Pretty good, actually.',
+      translation: 'bem bom, na verdade.',
+      example: 'Pretty good, actually. Thanks for asking.',
+      exampleTranslation: 'Bem bom, na verdade. Obrigado por perguntar.',
+      audioAsset: 'audio/fase1/bloco4_respostas/Pretty_good,_actually.mp3',
+      ipa: '/ˈprɪti ɡʊd ˈæktʃuəli/',
+      phonetic: 'PRÍ-ti gud ÉK-chu-a-li',
+    ),
+    LessonItem(
+      text: "I'm feeling good today.",
+      translation: 'estou me sentindo bem hoje.',
+      example: "I'm feeling good today, thanks.",
+      exampleTranslation: 'Estou me sentindo bem hoje, obrigado.',
+      audioAsset: "audio/fase1/bloco4_respostas/I'm_feeling_good_today.mp3",
+      ipa: '/aɪm ˈfiːlɪŋ ɡʊd təˈdeɪ/',
+      phonetic: 'aim FÍ-lin gud tu-DÊI',
+    ),
+  ],
+);
+
+/// Lição 23 — "Falando do dia / weather": small talk sobre o clima, o
+/// assunto mais universal de qualquer conversa em inglês.
+const licao23 = Lesson(
+  id: 'fase1-licao23',
+  title: 'Falando do dia / weather',
+  objective: 'O assunto mais usado em qualquer conversa pequena em inglês: '
+      'o tempo. 5 frases para nunca travar nisso.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: "It's sunny today.",
+      translation: 'está ensolarado hoje.',
+      example: "It's sunny today, let's go outside.",
+      exampleTranslation: 'Está ensolarado hoje, vamos sair.',
+      audioAsset: "audio/fase1/bloco4_clima/It's_sunny_today.mp3",
+      ipa: '/ɪts ˈsʌni təˈdeɪ/',
+      phonetic: 'its SÂ-ni tu-DÊI',
+    ),
+    LessonItem(
+      text: "It's a bit cloudy today.",
+      translation: 'está um pouco nublado hoje.',
+      example: "It's a bit cloudy today, bring a jacket.",
+      exampleTranslation: 'Está um pouco nublado hoje, leve uma jaqueta.',
+      audioAsset: "audio/fase1/bloco4_clima/It's_a_bit_cloudy_today.mp3",
+      ipa: '/ɪts ə bɪt ˈklaʊdi təˈdeɪ/',
+      phonetic: 'its e bit KLÁU-di tu-DÊI',
+    ),
+    LessonItem(
+      text: "It's really hot today.",
+      translation: 'está muito calor hoje.',
+      example: "It's really hot today, drink some water.",
+      exampleTranslation: 'Está muito calor hoje, beba água.',
+      audioAsset: "audio/fase1/bloco4_clima/It's_really_hot_today.mp3",
+      ipa: '/ɪts ˈrɪli hɑːt təˈdeɪ/',
+      phonetic: 'its RÍ-li rrót tu-DÊI',
+    ),
+    LessonItem(
+      text: "It's a little cold today.",
+      translation: 'está um pouco frio hoje.',
+      example: "It's a little cold today, wear a coat.",
+      exampleTranslation: 'Está um pouco frio hoje, use um casaco.',
+      audioAsset: "audio/fase1/bloco4_clima/It's_a_little_cold_today.mp3",
+      ipa: '/ɪts ə ˈlɪtəl koʊld təˈdeɪ/',
+      phonetic: 'its e LÍ-tou kôuld tu-DÊI',
+    ),
+    LessonItem(
+      text: 'The weather is nice today.',
+      translation: 'o tempo está bom hoje.',
+      example: 'The weather is nice today, perfect for a walk.',
+      exampleTranslation: 'O tempo está bom hoje, perfeito pra uma caminhada.',
+      audioAsset: 'audio/fase1/bloco4_clima/The_weather_is_nice_today.mp3',
+      ipa: '/ðə ˈwɛðər ɪz naɪs təˈdeɪ/',
+      phonetic: 'de UÉ-der iz náis tu-DÊI',
+    ),
+  ],
+);
+
+/// Lição 24 — "It's a beautiful day to…": chunk de abertura para convidar
+/// alguém a fazer algo, reaproveitando o mesmo molde 5 vezes.
+const licao24 = Lesson(
+  id: 'fase1-licao24',
+  title: '"It\'s a beautiful day to…"',
+  objective: 'Um molde só, 5 finais diferentes — assim você fala de um dia '
+      'bonito sem decorar frase nova cada vez.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: "It's a beautiful day to go outside.",
+      translation: 'é um dia bonito para sair.',
+      example: "It's a beautiful day to go outside and relax.",
+      exampleTranslation: 'É um dia bonito para sair e relaxar.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_go_outside.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu ɡoʊ ˌaʊtˈsaɪd/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu gôu áut-sáid',
+    ),
+    LessonItem(
+      text: "It's a beautiful day to have a walk.",
+      translation: 'é um dia bonito para dar uma caminhada.',
+      example: "Let's go. It's a beautiful day to have a walk.",
+      exampleTranslation: 'Vamos. É um dia bonito para dar uma caminhada.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_have_a_walk.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu hæv ə wɔːk/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu rrév e uók',
+    ),
+    LessonItem(
+      text: "It's a beautiful day to study English.",
+      translation: 'é um dia bonito para estudar inglês.',
+      example: "It's a beautiful day to study English outside.",
+      exampleTranslation: 'É um dia bonito para estudar inglês ao ar livre.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_study_English.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu ˈstʌdi ˈɪŋɡlɪʃ/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu STÂ-di ÍN-glich',
+    ),
+    LessonItem(
+      text: "It's a beautiful day to drink some coffee.",
+      translation: 'é um dia bonito para beber um café.',
+      example: "It's a beautiful day to drink some coffee outside.",
+      exampleTranslation: 'É um dia bonito para beber um café ao ar livre.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_drink_some_coffee.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu drɪŋk səm ˈkɔːfi/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu drink sâm CÓ-fi',
+    ),
+    LessonItem(
+      text: "It's a beautiful day to enjoy the morning.",
+      translation: 'é um dia bonito para aproveitar a manhã.',
+      example: "It's a beautiful day to enjoy the morning with coffee.",
+      exampleTranslation: 'É um dia bonito para aproveitar a manhã com café.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_enjoy_the_morning.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu ɪnˈdʒɔɪ ðə ˈmɔːrnɪŋ/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu in-DJÓI de MÓR-nin',
+    ),
+  ],
+);
+
+/// Lição 25 — "What's the plan…?": pergunta funcional para combinar
+/// qualquer atividade, em 5 momentos diferentes do dia/semana.
+const licao25 = Lesson(
+  id: 'fase1-licao25',
+  title: '"What\'s the plan…?"',
+  objective: 'A pergunta que organiza qualquer combinação — do café da '
+      'manhã ao fim de semana — em 5 momentos diferentes.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: "What's the plan for today?",
+      translation: 'qual é o plano para hoje?',
+      example: "Good morning! What's the plan for today?",
+      exampleTranslation: 'Bom dia! Qual é o plano para hoje?',
+      audioAsset: "audio/fase1/bloco4_planos/What's_the_plan_for_today.mp3",
+      ipa: '/wʌts ðə plæn fɔːr təˈdeɪ/',
+      phonetic: 'uáts de PLÉN for tu-DÊI',
+    ),
+    LessonItem(
+      text: "What's the plan for this morning?",
+      translation: 'qual é o plano para esta manhã?',
+      example: "What's the plan for this morning? Coffee first?",
+      exampleTranslation: 'Qual é o plano para esta manhã? Café primeiro?',
+      audioAsset:
+          "audio/fase1/bloco4_planos/What's_the_plan_for_this_morning.mp3",
+      ipa: '/wʌts ðə plæn fɔːr ðɪs ˈmɔːrnɪŋ/',
+      phonetic: 'uáts de PLÉN for dis MÓR-nin',
+    ),
+    LessonItem(
+      text: "What's the plan for the afternoon?",
+      translation: 'qual é o plano para a tarde?',
+      example: "What's the plan for the afternoon? Do you want to go out?",
+      exampleTranslation: 'Qual é o plano para a tarde? Você quer saír?',
+      audioAsset:
+          "audio/fase1/bloco4_planos/What's_the_plan_for_the_afternoon.mp3",
+      ipa: '/wʌts ðə plæn fɔːr ði ˌæftərˈnuːn/',
+      phonetic: 'uáts de PLÉN for di éf-ter-NÚN',
+    ),
+    LessonItem(
+      text: "What's the plan after class?",
+      translation: 'qual é o plano depois da aula?',
+      example: "What's the plan after class today?",
+      exampleTranslation: 'Qual é o plano depois da aula hoje?',
+      audioAsset: "audio/fase1/bloco4_planos/What's_the_plan_after_class.mp3",
+      ipa: '/wʌts ðə plæn ˈæftər klæs/',
+      phonetic: 'uáts de PLÉN éf-ter klés',
+    ),
+    LessonItem(
+      text: "What's the plan for the weekend?",
+      translation: 'qual é o plano para o fim de semana?',
+      example: "It's Friday! What's the plan for the weekend?",
+      exampleTranslation: 'É sexta! Qual é o plano para o fim de semana?',
+      audioAsset:
+          "audio/fase1/bloco4_planos/What's_the_plan_for_the_weekend.mp3",
+      ipa: '/wʌts ðə plæn fɔːr ðə ˈwiːkɛnd/',
+      phonetic: 'uáts de PLÉN for de UÍK-end',
+    ),
+  ],
+);
+
+/// Lição 26 — "Revisão Bloco 4": uma frase de cada lição do bloco,
+/// reaproveitando 100% dos áudios já gerados.
+const licao26 = Lesson(
+  id: 'fase1-licao26',
+  title: 'Revisão Bloco 4',
+  objective: 'Uma frase de cada lição que você já fez neste bloco. Veja '
+      'como está sua conversa do dia a dia até aqui.',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'How are you?',
+      translation: 'como você está?',
+      example: "Hey, long time no see! How are you?",
+      exampleTranslation: 'Ei, há quanto tempo! Como você está?',
+      audioAsset: 'audio/fase1/bloco4_saudacoes/How_are_you.mp3',
+      ipa: '/haʊ ər juː/',
+      phonetic: 'rráu ar iú',
+    ),
+    LessonItem(
+      text: "I'm doing well.",
+      translation: 'estou indo bem.',
+      example: "I'm doing well these days.",
+      exampleTranslation: 'Estou indo bem nesses dias.',
+      audioAsset: "audio/fase1/bloco4_respostas/I'm_doing_well.mp3",
+      ipa: '/aɪm ˈduːɪŋ wɛl/',
+      phonetic: 'aim DÚ-in uél',
+    ),
+    LessonItem(
+      text: "It's sunny today.",
+      translation: 'está ensolarado hoje.',
+      example: "Look outside, it's sunny today.",
+      exampleTranslation: 'Olha lá fora, está ensolarado hoje.',
+      audioAsset: "audio/fase1/bloco4_clima/It's_sunny_today.mp3",
+      ipa: '/ɪts ˈsʌni təˈdeɪ/',
+      phonetic: 'its SÂ-ni tu-DÊI',
+    ),
+    LessonItem(
+      text: "It's a beautiful day to study English.",
+      translation: 'é um dia bonito para estudar inglês.',
+      example: "Come on, it's a beautiful day to study English.",
+      exampleTranslation: 'Vamos, é um dia bonito para estudar inglês.',
+      audioAsset:
+          "audio/fase1/bloco4_dia_bonito/It's_a_beautiful_day_to_study_English.mp3",
+      ipa: '/ɪts ə ˈbjuːtəfəl deɪ tu ˈstʌdi ˈɪŋɡlɪʃ/',
+      phonetic: 'its e BIÚ-ti-foul dêi tu STÂ-di ÍN-glich',
+    ),
+    LessonItem(
+      text: "What's the plan for the weekend?",
+      translation: 'qual é o plano para o fim de semana?',
+      example: "So, what's the plan for the weekend?",
+      exampleTranslation: 'Então, qual é o plano para o fim de semana?',
+      audioAsset:
+          "audio/fase1/bloco4_planos/What's_the_plan_for_the_weekend.mp3",
+      ipa: '/wʌts ðə plæn fɔːr ðə ˈwiːkɛnd/',
+      phonetic: 'uáts de PLÉN for de UÍK-end',
+    ),
+  ],
+);
+
+/// Lição 27 — BÔNUS Bloco 4 — "Desafio: conversa mais natural". Opcional:
+/// mesmo assunto do bloco (small talk do dia a dia), frases mais longas e
+/// naturais. Fecha a Fase 1 para quem quer ir além do básico.
+const licao27 = Lesson(
+  id: 'fase1-licao27',
+  title: 'Desafio: conversa mais natural',
+  objective: 'Bônus opcional — o mesmo small talk do bloco, mas em frases '
+      'mais longas e naturais. Não precisa fazer para concluir a Fase 1.',
+  approvalThreshold: 75,
+  bonus: true,
+  items: [
+    LessonItem(
+      text: 'How have you been doing lately?',
+      translation: 'como você tem estado ultimamente?',
+      example: "Hey! How have you been doing lately?",
+      exampleTranslation: 'Ei! Como você tem estado ultimamente?',
+      audioAsset:
+          'audio/fase1/bloco4_bonus/How_have_you_been_doing_lately.mp3',
+      ipa: '/haʊ həv juː bɪn ˈduːɪŋ ˈleɪtli/',
+      phonetic: 'rráu rrev iú bin DÚ-in LÊIT-li',
+    ),
+    LessonItem(
+      text: "I've been pretty busy, but I'm good.",
+      translation: 'eu tenho estado bem ocupado(a), mas estou bem.',
+      example: "I've been pretty busy, but I'm good, thanks.",
+      exampleTranslation:
+          'Eu tenho estado bem ocupado, mas estou bem, obrigado.',
+      audioAsset:
+          "audio/fase1/bloco4_bonus/I've_been_pretty_busy,_but_I'm_good.mp3",
+      ipa: '/aɪv bɪn ˈprɪti ˈbɪzi bʌt aɪm ɡʊd/',
+      phonetic: 'aiv bin PRÍ-ti BÍ-zi bât aim GÚD',
+    ),
+    LessonItem(
+      text: 'It looks like it might rain later.',
+      translation: 'parece que vai chover mais tarde.',
+      example: 'It looks like it might rain later, bring an umbrella.',
+      exampleTranslation: 'Parece que vai chover mais tarde, leve um guarda-chuva.',
+      audioAsset: 'audio/fase1/bloco4_bonus/It_looks_like_it_might_rain_later.mp3',
+      ipa: '/ɪt lʊks laɪk ɪt maɪt reɪn ˈleɪtər/',
+      phonetic: 'it luks láik it máit rêin LÊI-ter',
+    ),
+    LessonItem(
+      text: "It's the perfect day to relax outside.",
+      translation: 'é o dia perfeito para relaxar ao ar livre.',
+      example: "It's the perfect day to relax outside with a book.",
+      exampleTranslation: 'É o dia perfeito para relaxar ao ar livre com um livro.',
+      audioAsset:
+          "audio/fase1/bloco4_bonus/It's_the_perfect_day_to_relax_outside.mp3",
+      ipa: '/ɪts ðə ˈpɜːrfɪkt deɪ tu rɪˈlæks ˌaʊtˈsaɪd/',
+      phonetic: 'its de PÉR-fekt dêi tu ri-LÉKS áut-sáid',
+    ),
+    LessonItem(
+      text: 'Do you have any plans for the weekend?',
+      translation: 'você tem algum plano para o fim de semana?',
+      example: 'Do you have any plans for the weekend? Want to hang out?',
+      exampleTranslation:
+          'Você tem algum plano para o fim de semana? Quer sair?',
+      audioAsset:
+          'audio/fase1/bloco4_bonus/Do_you_have_any_plans_for_the_weekend.mp3',
+      ipa: '/du ju hæv ˈɛni plænz fɔːr ðə ˈwiːkɛnd/',
+      phonetic: 'du iu rrév É-ni plénz for de UÍK-end',
     ),
   ],
 );

@@ -8,6 +8,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 /// Toda chamada de rede é fire-and-forget e protegida: o local é a fonte de
 /// verdade da UI; o Supabase é o espelho durável (cross-device + analytics).
+/// Senha errada no painel de uso — distinta de outras falhas (rede,
+/// secret não configurado) para a UI poder dizer "senha incorreta".
+class DevStatsAuthException implements Exception {
+  const DevStatsAuthException();
+}
+
 class Backend {
   Backend._(this.client);
 
@@ -66,25 +72,6 @@ class Backend {
     }
   }
 
-  /// Feedback de pronúncia gerado pela Edge Function (Claude). Retorna null
-  /// em qualquer falha (função não configurada, offline, timeout) — o app
-  /// usa a mensagem fixa nesse caso.
-  Future<String?> generateFeedback(Map<String, Object?> params) async {
-    if (userId == null) return null;
-    try {
-      final res = await client.functions
-          .invoke('feedback', body: params)
-          .timeout(const Duration(seconds: 6));
-      if (res.status != 200) return null;
-      final data = res.data;
-      final message = (data is Map) ? data['message'] as String? : null;
-      return (message != null && message.trim().isNotEmpty) ? message : null;
-    } catch (e) {
-      debugPrint('[backend] generateFeedback falhou: $e');
-      return null;
-    }
-  }
-
   /// LGPD: apaga os dados remotos do usuário (progresso + eventos). Chamado
   /// pela exclusão de dados do app, fechando o ciclo "apagar = some de tudo".
   /// Falha silenciosa não impede a limpeza local (fonte de verdade da UI).
@@ -97,6 +84,22 @@ class Backend {
     } catch (e) {
       debugPrint('[backend] deleteRemoteData falhou: $e');
     }
+  }
+
+  /// Painel de uso interno. A senha é checada pela Edge Function `dev-stats`
+  /// (secret DEV_STATS_PASSWORD) — get_dev_stats() não é mais chamável direto
+  /// pelo cliente (EXECUTE revogado de anon/authenticated), então não basta
+  /// ter a anon key pública para ler os agregados de todos os usuários.
+  Future<Map<String, dynamic>> fetchDevStats(String password) async {
+    final res = await client.functions.invoke(
+      'dev-stats',
+      body: {'password': password},
+    );
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Painel indisponível (código ${res.status}).');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
   }
 
   /// Progresso remoto (para hidratar o cache local em outro dispositivo).

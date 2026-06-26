@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/lesson.dart';
 import '../services/analytics_service.dart';
 import '../services/audio_recorder_service.dart';
-import '../services/backend.dart';
 import '../services/feedback_messages.dart';
 import '../services/progress_store.dart';
 import '../services/pronunciation_assessor.dart';
@@ -64,12 +63,6 @@ class _LessonScreenState extends State<LessonScreen>
   PronunciationResult? _result;
   double? _firstAccuracy; // accuracy da 1ª tentativa, p/ medir a melhora
   String? _error;
-
-  /// Feedback gerado pela Claude (Edge Function) para o resultado atual.
-  /// null = ainda não chegou (ou indisponível) → usa a mensagem fixa.
-  String? _aiFeedback;
-  // Invalida respostas atrasadas: só a última tentativa pode setar o texto.
-  int _feedbackToken = 0;
   Duration _approved = Duration.zero;
   Duration _audioSent = Duration.zero;
 
@@ -122,7 +115,10 @@ class _LessonScreenState extends State<LessonScreen>
     switch (_recPhase) {
       case _RecPhase.idle:
         if (!await _recorder.hasPermission()) {
-          setState(() => _error = 'Permita o acesso ao microfone.');
+          setState(() => _error =
+              'Sem acesso ao microfone. Clique no ícone de cadeado ou '
+              'câmera ao lado do endereço do site, permita o microfone e '
+              'toque no botão de gravar de novo.');
           return;
         }
         if (_player?.state == PlayerState.playing) await _player!.stop();
@@ -151,6 +147,10 @@ class _LessonScreenState extends State<LessonScreen>
 
     final audio = await _recorder.stop();
     if (audio == null) {
+      widget.analytics?.log('recording_discarded_silence', {
+        'lesson': widget.lesson.id,
+        'item': _item.text,
+      });
       setState(() {
         _recPhase = _RecPhase.idle;
         _error = 'Não ouvi nada — fale mais perto do microfone.';
@@ -181,7 +181,6 @@ class _LessonScreenState extends State<LessonScreen>
       });
       setState(() {
         _result = result;
-        _aiFeedback = result.aiFeedback; // vem junto com o assess quando disponível
         _audioSent += audio.duration;
         _recPhase = _RecPhase.idle;
         if (_step == _Step.listen) {
@@ -195,51 +194,32 @@ class _LessonScreenState extends State<LessonScreen>
           _step = _Step.resultFinal;
         }
       });
-      // Fallback: busca Claude separado só se o servidor não trouxe feedback.
-      if (result.aiFeedback == null) {
-        _maybeFetchAiFeedback(result, attempt, approved);
-      }
     } catch (e) {
       debugPrint('[licao] avaliação falhou: $e');
+      widget.analytics?.log('assessment_failed', {
+        'lesson': widget.lesson.id,
+        'item': _item.text,
+        'attempt': attempt,
+        'error': e.toString(),
+      });
       setState(() {
         _audioSent += audio.duration;
-        _error = 'Não consegui avaliar sua gravação agora. '
-            'Confira sua conexão e grave de novo.';
+        // PronunciationAssessmentException já distingue erro do servidor
+        // (código HTTP) de falha de conexão na própria mensagem; exceções
+        // genéricas (sem rede, timeout) caem no texto fixo de conectividade.
+        _error = e is PronunciationAssessmentException
+            ? e.message
+            : 'Não consegui avaliar sua gravação agora. '
+                'Confira sua conexão e grave de novo.';
         _recPhase = _RecPhase.idle;
       });
     }
   }
 
-  /// Mensagem a exibir: a da Claude quando chegou, senão a fixa (fallback
-  /// imediato e offline). Mantém a regra de produto mesmo sem rede/chave.
+  /// Mensagem de feedback: fixa por banda de nota (lib/services/
+  /// feedback_messages.dart), calculada na hora, sem chamada de rede.
   String _feedbackText(PronunciationResult r) =>
-      _aiFeedback ??
       feedbackFor(r, widget.lesson, rigorous: widget.rigorous);
-
-  /// Dispara o feedback da Claude em segundo plano. Só busca quando a
-  /// mensagem realmente será mostrada (1ª tentativa sempre; tentativa final
-  /// só quando reprovou) — aprovação na final exibe o selo, não o texto.
-  void _maybeFetchAiFeedback(
-      PronunciationResult r, int attempt, bool approved) {
-    final backend = Backend.instance;
-    if (backend == null) return; // modo local-only: fica na mensagem fixa
-    if (attempt == 2 && approved) return; // texto não aparece → não gasta
-    final token = ++_feedbackToken;
-    backend.generateFeedback({
-      'word': _item.text,
-      'attempt': attempt,
-      'approved': approved,
-      'accuracy': r.accuracy.round(),
-      'fluency': r.fluency.round(),
-      'completeness': r.completeness.round(),
-      'prosody': r.prosody?.round(),
-      'minPhoneme': r.minPhoneme.round(),
-      'worstSyllable': r.worstSyllable?.grapheme,
-    }).then((msg) {
-      if (!mounted || token != _feedbackToken || msg == null) return;
-      setState(() => _aiFeedback = msg);
-    });
-  }
 
   /// Regrava a tentativa final: volta ao Livro Aberto (palavra visível, dá
   /// pra ouvir de novo). Mantém _firstAccuracy para a melhora seguir medida
@@ -264,7 +244,6 @@ class _LessonScreenState extends State<LessonScreen>
         _step = _Step.listen;
         _hasListened = false;
         _result = null;
-        _aiFeedback = null;
         _firstAccuracy = null;
         _error = null;
       }
@@ -518,8 +497,8 @@ class _LessonScreenState extends State<LessonScreen>
             ),
             TextButton(
               onPressed: _nextItem,
-              child: Text(
-                  _isLastItem ? 'Concluir mesmo assim' : 'Próxima palavra'),
+              child:
+                  Text(_isLastItem ? 'Concluir a lição' : 'Próxima palavra'),
             ),
           ],
         ]);
@@ -583,7 +562,6 @@ class _LessonScreenState extends State<LessonScreen>
               _hasListened = false;
               _result = null;
               _approved = Duration.zero;
-              _aiFeedback = null;
               _firstAccuracy = null;
               _wordAccuracies.clear();
               _error = null;
@@ -600,7 +578,7 @@ class _LessonScreenState extends State<LessonScreen>
     final text =
         'Acabei de treinar inglês no 484 Method 🎙️\n'
         'Lição: "${widget.lesson.title}"$scoreLine\n\n'
-        'Experimenta você (grátis): https://method484.github.io/484-method';
+        'Experimenta você (grátis): https://484method.github.io/484-method';
     final uri = Uri.parse(
         'https://wa.me/?text=${Uri.encodeComponent(text)}');
     if (await canLaunchUrl(uri)) await launchUrl(uri);

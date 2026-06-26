@@ -41,6 +41,7 @@ dependencies:
   supabase_flutter: ^2.14.2
   google_fonts: ^6.2.1
   url_launcher: ^6.3.0
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +83,12 @@ flutter:
     - assets/audio/fase1/bonus_vocabulario/
     - assets/audio/fase1/bonus_ritmo/
     - assets/audio/fase1/bonus_pedidos/
+    - assets/audio/fase1/bloco4_saudacoes/
+    - assets/audio/fase1/bloco4_respostas/
+    - assets/audio/fase1/bloco4_clima/
+    - assets/audio/fase1/bloco4_dia_bonito/
+    - assets/audio/fase1/bloco4_planos/
+    - assets/audio/fase1/bloco4_bonus/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

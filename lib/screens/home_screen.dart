@@ -70,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openPaywall() {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PaywallScreen(
+        analytics: widget.analytics,
         onSubscribe: () => showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -123,10 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (ok != true) return;
-    if (controller.text != 'geovane484method') return;
     if (!mounted) return;
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => StatsScreen(backend: backend),
+      builder: (_) =>
+          StatsScreen(backend: backend, password: controller.text),
     ));
   }
 
@@ -136,6 +137,35 @@ class _HomeScreenState extends State<HomeScreen> {
     await widget.entitlement
         .setFounderAccess(!widget.entitlement.hasFounderAccess);
     if (mounted) setState(() {});
+  }
+
+  /// Explica o efeito antes de ligar: o critério mais rígido vale para
+  /// qualquer tentativa a partir de agora (lições já concluídas continuam
+  /// concluídas, mas refazê-las ou seguir adiante usa o novo critério) —
+  /// sem isso, a mesma pronúncia passar antes e reprovar depois confunde.
+  Future<bool> _confirmEnableRigorous() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ativar modo desafio?'),
+        content: const Text(
+            'A partir de agora, toda gravação — inclusive em lições que '
+            'você já concluiu, se refizer — só é aprovada com pronúncia '
+            'bem próxima da nativa. O que já está concluído continua '
+            'concluído; só o critério das próximas tentativas muda.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ativar'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   Future<void> _openLesson(Lesson lesson) async {
@@ -230,12 +260,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SwitchListTile(
                   value: widget.store.rigorousMode,
                   onChanged: (v) async {
+                    if (v && !await _confirmEnableRigorous()) return;
                     await widget.store.setRigorousMode(v);
                     setState(() {});
                   },
                   title: const Text('Modo desafio'),
                   subtitle: const Text(
-                      'Só aprova com pronúncia bem próxima da nativa.'),
+                      'Só aprova com pronúncia bem próxima da nativa — '
+                      'vale para qualquer tentativa a partir de agora.'),
                   secondary: const Icon(Icons.fitness_center),
                 ),
               ),
@@ -247,14 +279,15 @@ class _HomeScreenState extends State<HomeScreen> {
               // Beta Fundador) e o progressivo (a lição N abre quando a N-1
               // foi concluída; a primeira está sempre aberta).
               for (final (i, lesson) in fase1Lessons.indexed) ...[
-                if (i == 0 || i == 7 || i == 14)
+                if (i == 0 || i == 7 || i == 14 || i == 20)
                   Padding(
                     padding: EdgeInsets.only(top: i == 0 ? 0 : 16, bottom: 4),
                     child: Text(
                       switch (i) {
                         0 => 'Bloco 1 — Reconhecimento e confiança',
                         7 => 'Bloco 2 — Som e sílaba forte',
-                        _ => 'Bloco 3 — Da palavra à frase',
+                        14 => 'Bloco 3 — Da palavra à frase',
+                        _ => 'Bloco 4 — Conversa do dia a dia',
                       },
                       style: theme.textTheme.titleSmall?.copyWith(
                         color: theme.colorScheme.secondary,
