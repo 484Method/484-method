@@ -111,6 +111,7 @@ class _Body extends StatelessWidget {
     final hourly           = (stats['hourly_48h'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final accHistogram     = (stats['accuracy_histogram'] as Map?)?.cast<String, dynamic>() ?? {};
     final hardestWords     = (stats['hardest_words'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final lessonDuration    = (stats['lesson_duration'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final avgGapSec        = (stats['avg_seconds_between_attempts'] as num?)?.toDouble() ?? 0;
     final assessFailures   = (stats['assessment_failures'] as num?)?.toInt() ?? 0;
     final discardedSilence = (stats['recordings_discarded_silence'] as num?)?.toInt() ?? 0;
@@ -208,6 +209,20 @@ class _Body extends StatelessWidget {
               final acc  = (w['avg_accuracy'] as num?)?.toInt() ?? 0;
               final att  = (w['attempts'] as num?)?.toInt() ?? 0;
               return _row(theme, Icons.translate, '$word ($att tentativas)', '$acc/100');
+            }),
+          ],
+
+          // ── Tempo parado em cada lição ───────────────────────────────────
+          if (lessonDuration.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _section('Tempo até concluir cada lição (início → fim)'),
+            const SizedBox(height: 8),
+            ...lessonDuration.map((l) {
+              final lesson = l['lesson_id'] as String? ?? '';
+              final sec    = (l['avg_seconds'] as num?)?.toInt() ?? 0;
+              final n      = (l['n'] as num?)?.toInt() ?? 0;
+              final fmt = sec >= 60 ? '${sec ~/ 60}min ${sec % 60}s' : '${sec}s';
+              return _row(theme, Icons.timer_outlined, '$lesson ($n concluídas)', fmt);
             }),
           ],
 

@@ -164,6 +164,34 @@ BEGIN
       ) t
     ),
 
+    -- ── Tempo parado em cada lição (lesson_started → lesson_completed) ───
+    'lesson_duration', (
+      SELECT COALESCE(json_agg(row_to_json(g) ORDER BY g.lesson_id), '[]'::json)
+      FROM (
+        SELECT lesson_id,
+               ROUND(AVG(dur)) AS avg_seconds,
+               COUNT(*) AS n
+        FROM (
+          SELECT c.props->>'lesson' AS lesson_id,
+                 EXTRACT(EPOCH FROM (c.created_at - s.started_at)) AS dur
+          FROM events c
+          JOIN LATERAL (
+            SELECT s2.created_at AS started_at
+            FROM events s2
+            WHERE s2.user_id = c.user_id
+              AND s2.event = 'lesson_started'
+              AND s2.props->>'lesson' = c.props->>'lesson'
+              AND s2.created_at <= c.created_at
+            ORDER BY s2.created_at DESC
+            LIMIT 1
+          ) s ON true
+          WHERE c.event = 'lesson_completed'
+        ) raw
+        WHERE dur BETWEEN 0 AND 3600
+        GROUP BY lesson_id
+      ) g
+    ),
+
     -- ── Saúde operacional ─────────────────────────────────────────────────
     'assessment_failures', (
       SELECT COUNT(*) FROM events WHERE event = 'assessment_failed'
