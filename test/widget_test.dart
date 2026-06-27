@@ -60,6 +60,23 @@ void main() {
     expect(find.text('Ouvir'), findsOneWidget);
   });
 
+  testWidgets('lição retoma no item salvo em vez de recomeçar do 1º',
+      (tester) async {
+    final store = await _emptyStore();
+    // Simula quem já passou de "apple"/"cinema" e fechou a lição na 3ª
+    // palavra (índice 2 = "hotel") — reabrir não pode jogar de volta pro 0.
+    await store.saveItemIndex(licao01.id, 2);
+
+    await tester.pumpWidget(MaterialApp(
+      home: LessonScreen(
+          lesson: licao01, assessor: _FakeAssessor(), store: store),
+    ));
+    await tester.tap(find.text('Começar'));
+    await tester.pump();
+    expect(find.textContaining('Palavra 3'), findsOneWidget);
+    expect(find.textContaining('Palavra 1'), findsNothing);
+  });
+
   testWidgets('onboarding só libera após consentimento de voz',
       (tester) async {
     final store = await _emptyStore();

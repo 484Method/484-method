@@ -79,6 +79,12 @@ class _LessonScreenState extends State<LessonScreen>
   @override
   void initState() {
     super.initState();
+    // Retoma de onde parou em vez de recomeçar do item 1 — sem isso, quem
+    // fecha a lição na metade e volta depois é jogado de volta pro início
+    // (achado real: usuários que já tinham passado 3-4 palavras reabriram a
+    // lição, caíram na 1ª palavra de novo, reprovaram e desistiram).
+    final saved = widget.store?.itemIndexFor(widget.lesson.id) ?? 0;
+    _index = saved.clamp(0, widget.lesson.items.length - 1);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -234,6 +240,7 @@ class _LessonScreenState extends State<LessonScreen>
       if (_isLastItem) {
         _step = _Step.finished;
         widget.store?.markLessonCompleted(widget.lesson.id);
+        widget.store?.clearItemIndex(widget.lesson.id);
         widget.analytics?.log('lesson_completed', {
           'lesson': widget.lesson.id,
           'approved_seconds': _approved.inSeconds,
@@ -241,6 +248,7 @@ class _LessonScreenState extends State<LessonScreen>
         });
       } else {
         _index++;
+        widget.store?.saveItemIndex(widget.lesson.id, _index);
         _step = _Step.listen;
         _hasListened = false;
         _result = null;
@@ -558,6 +566,7 @@ class _LessonScreenState extends State<LessonScreen>
           TextButton(
             onPressed: () => setState(() {
               _index = 0;
+              widget.store?.clearItemIndex(widget.lesson.id);
               _step = _Step.intro;
               _hasListened = false;
               _result = null;

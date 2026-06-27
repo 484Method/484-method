@@ -20,6 +20,7 @@ class ProgressStore {
   static const _kCompletedLessons = 'completed_lessons';
   static const _kVoiceConsentAt = 'voice_consent_at';
   static const _kRigorousMode = 'rigorous_mode';
+  static const _kItemIndexPrefix = 'lesson_item_index_';
 
   /// Meta do produto: 484 horas de prática aprovada.
   static const goalSeconds = 484 * 3600;
@@ -106,6 +107,18 @@ class ProgressStore {
   bool isLessonCompleted(String lessonId) =>
       (_prefs.getStringList(_kCompletedLessons) ?? const [])
           .contains(lessonId);
+
+  /// Em que item da lição a pessoa estava (pra retomar, não recomeçar do
+  /// zero ao reabrir). Só local — é conveniência de UX, não a métrica norte,
+  /// não precisa espelhar no Supabase.
+  int itemIndexFor(String lessonId) =>
+      _prefs.getInt('$_kItemIndexPrefix$lessonId') ?? 0;
+
+  Future<void> saveItemIndex(String lessonId, int index) =>
+      _prefs.setInt('$_kItemIndexPrefix$lessonId', index);
+
+  Future<void> clearItemIndex(String lessonId) =>
+      _prefs.remove('$_kItemIndexPrefix$lessonId');
 
   Future<void> markLessonCompleted(String lessonId) async {
     final done = _prefs.getStringList(_kCompletedLessons) ?? [];
