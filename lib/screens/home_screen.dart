@@ -24,6 +24,8 @@ class HomeScreen extends StatefulWidget {
     this.analytics,
     this.onDataCleared,
     this.autostartFirstLesson = false,
+    this.themeMode = ThemeMode.system,
+    this.onThemeModeChanged,
   });
 
   final ProgressStore store;
@@ -37,6 +39,11 @@ class HomeScreen extends StatefulWidget {
   /// Logo após o onboarding: abre a 1ª lição automaticamente (conserto do
   /// funil consentimento→1ª lição), em vez de deixar o novato na dashboard.
   final bool autostartFirstLesson;
+
+  /// Tema atual e callback pra trocar (Sistema/Claro/Escuro). Controlados e
+  /// persistidos pelo App; aqui só exibimos o seletor no menu.
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode>? onThemeModeChanged;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -113,6 +120,35 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => const PrivacyPolicyScreen(),
     ));
+  }
+
+  /// Seletor de tema: Sistema (segue o aparelho), Claro ou Escuro.
+  void _openThemeChooser() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (mode, label) in const [
+              (ThemeMode.system, 'Sistema'),
+              (ThemeMode.light, 'Claro'),
+              (ThemeMode.dark, 'Escuro'),
+            ])
+              ListTile(
+                title: Text(label),
+                trailing:
+                    widget.themeMode == mode ? const Icon(Icons.check) : null,
+                onTap: () {
+                  widget.onThemeModeChanged?.call(mode);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _openStats() async {
@@ -214,8 +250,13 @@ class _HomeScreenState extends State<HomeScreen> {
               if (v == 'toggle_founder') _toggleFounderAccess();
               if (v == 'privacy') _openPrivacyPolicy();
               if (v == 'stats') _openStats();
+              if (v == 'theme') _openThemeChooser();
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'theme',
+                child: Text('Tema'),
+              ),
               if (Backend.instance != null)
                 const PopupMenuItem(
                   value: 'stats',

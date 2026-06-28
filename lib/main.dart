@@ -55,22 +55,40 @@ class _Method484AppState extends State<Method484App> {
   static const _navy  = Color(0xFF1B2D4F);
   static const _gold  = Color(0xFFC9A252);
   static const _cream = Color(0xFFF5F2EB);
+  // Tons do tema escuro (mantêm a identidade navy/gold da marca).
+  static const _darkBg   = Color(0xFF0F1626);
+  static const _darkCard = Color(0xFF1B2740);
 
-  static ThemeData _buildTheme() {
-    final cs = ColorScheme.fromSeed(seedColor: _navy).copyWith(
-      primary: _navy,
-      onPrimary: Colors.white,
-      secondary: _gold,
-      onSecondary: Colors.white,
-      tertiary: _gold,
-      onTertiary: Colors.white,
-      surface: _cream,
-      onSurface: _navy,
-      surfaceContainerHighest: const Color(0xFFEBE7DE),
-    );
+  static ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final base = ColorScheme.fromSeed(seedColor: _navy, brightness: brightness);
+    final cs = isDark
+        ? base.copyWith(
+            primary: _gold, // no escuro o dourado vira o destaque (contraste)
+            onPrimary: _navy,
+            secondary: _gold,
+            onSecondary: _navy,
+            tertiary: _gold,
+            onTertiary: _navy,
+            surface: _darkBg,
+            onSurface: _cream,
+            surfaceContainerHighest: _darkCard,
+          )
+        : base.copyWith(
+            primary: _navy,
+            onPrimary: Colors.white,
+            secondary: _gold,
+            onSecondary: Colors.white,
+            tertiary: _gold,
+            onTertiary: Colors.white,
+            surface: _cream,
+            onSurface: _navy,
+            surfaceContainerHighest: const Color(0xFFEBE7DE),
+          );
     return ThemeData(
       useMaterial3: true,
       colorScheme: cs,
+      scaffoldBackgroundColor: cs.surface,
       fontFamily: GoogleFonts.inter().fontFamily,
       textTheme: TextTheme(
         headlineLarge:  GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
@@ -80,7 +98,7 @@ class _Method484AppState extends State<Method484App> {
         titleMedium:    GoogleFonts.playfairDisplay(fontWeight: FontWeight.w500, fontSize: 16),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: _navy,
+        backgroundColor: isDark ? _darkCard : _navy,
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -94,10 +112,12 @@ class _Method484AppState extends State<Method484App> {
         actionsIconTheme: const IconThemeData(color: Colors.white),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: isDark ? _darkCard : Colors.white,
         surfaceTintColor: Colors.transparent,
-        elevation: 2,
-        shadowColor: _navy.withValues(alpha: 0.12),
+        elevation: isDark ? 1 : 2,
+        shadowColor: isDark
+            ? Colors.black.withValues(alpha: 0.4)
+            : _navy.withValues(alpha: 0.12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -129,6 +149,27 @@ class _Method484AppState extends State<Method484App> {
   // consentimento→1ª lição). A HomeScreen consome no initState (roda 1x só).
   bool _justOnboarded = false;
 
+  // Tema: Sistema (default) / Claro / Escuro, persistido no ProgressStore.
+  // `late` + inicializador: avaliado no 1º build (quando `widget` já existe).
+  late ThemeMode _themeMode = _themeModeFromPref(widget.store.themePref);
+
+  void _setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode = mode);
+    widget.store.setThemePref(_prefFromThemeMode(mode));
+  }
+
+  static ThemeMode _themeModeFromPref(String p) => switch (p) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+
+  static String _prefFromThemeMode(ThemeMode m) => switch (m) {
+        ThemeMode.light => 'light',
+        ThemeMode.dark => 'dark',
+        ThemeMode.system => 'system',
+      };
+
   @override
   Widget build(BuildContext context) {
     final Widget home;
@@ -159,13 +200,17 @@ class _Method484AppState extends State<Method484App> {
         assessor: BackendPronunciationAssessor(backend),
         analytics: widget.analytics,
         autostartFirstLesson: _justOnboarded,
+        themeMode: _themeMode,
+        onThemeModeChanged: _setThemeMode,
         // Exclusão de dados derruba o consentimento → volta ao onboarding.
         onDataCleared: () => setState(() {}),
       );
     }
     return MaterialApp(
       title: '484 Method',
-      theme: _buildTheme(),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
+      themeMode: _themeMode,
       home: home,
     );
   }

@@ -238,4 +238,16 @@ void main() {
   test('regra de produto: todas as lições estão grátis por enquanto', () {
     expect(kFreeLessonCount, fase1Lessons.length);
   });
+
+  test('preferência de tema começa em system e persiste (cross-sessão)',
+      () async {
+    final store = await _emptyStore();
+    expect(store.themePref, 'system'); // default: segue o aparelho
+
+    await store.setThemePref('dark');
+    expect(store.themePref, 'dark');
+
+    final store2 = await ProgressStore.load();
+    expect(store2.themePref, 'dark');
+  });
 }

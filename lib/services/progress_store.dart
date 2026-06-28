@@ -20,6 +20,7 @@ class ProgressStore {
   static const _kCompletedLessons = 'completed_lessons';
   static const _kVoiceConsentAt = 'voice_consent_at';
   static const _kRigorousMode = 'rigorous_mode';
+  static const _kThemeMode = 'theme_mode';
   static const _kItemIndexPrefix = 'lesson_item_index_';
 
   /// Meta do produto: 484 horas de prática aprovada.
@@ -103,6 +104,13 @@ class ProgressStore {
     await _prefs.setBool(_kRigorousMode, value);
     backend?.pushProgress(_snapshot());
   }
+
+  /// Preferência de tema (UI, só local — não espelha no backend): 'system'
+  /// (default, segue o aparelho), 'light' ou 'dark'.
+  String get themePref => _prefs.getString(_kThemeMode) ?? 'system';
+
+  Future<void> setThemePref(String value) =>
+      _prefs.setString(_kThemeMode, value);
 
   bool isLessonCompleted(String lessonId) =>
       (_prefs.getStringList(_kCompletedLessons) ?? const [])
