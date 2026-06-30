@@ -524,6 +524,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final progressionUnlocked = prereq < 0 ||
                       widget.store.isLessonCompleted(fase1Lessons[prereq].id);
                   final unlocked = !paywalled && progressionUnlocked;
+                  final mission = _missionFor(lesson.id);
                   final String subtitle;
                   if (paywalled) {
                     subtitle = 'Beta Fundador';
@@ -569,7 +570,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ],
                       ),
-                      subtitle: Text(subtitle),
+                      isThreeLine: mission != null && !completed,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (mission != null && !completed)
+                            Text(mission,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.secondary,
+                                    fontWeight: FontWeight.w600)),
+                          Text(subtitle),
+                        ],
+                      ),
                       trailing: Icon(trailing),
                       onTap: paywalled
                           ? _openPaywall
