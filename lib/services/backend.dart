@@ -136,4 +136,24 @@ class Backend {
       return null;
     }
   }
+
+  /// Histórico de tentativas do próprio usuário (RLS: só enxerga as suas).
+  /// Alimenta a tela "Minhas palavras" — a memória de erros e acertos.
+  /// Lista vazia em qualquer falha (offline) → a tela mostra estado vazio.
+  Future<List<Map<String, dynamic>>> fetchAttemptHistory() async {
+    final uid = userId;
+    if (uid == null) return const [];
+    try {
+      final rows = await client
+          .from('events')
+          .select('props, created_at')
+          .eq('user_id', uid)
+          .eq('event', 'attempt_assessed')
+          .order('created_at');
+      return (rows as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('[backend] fetchAttemptHistory falhou: $e');
+      return const [];
+    }
+  }
 }

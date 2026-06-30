@@ -8,6 +8,7 @@ import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/home_screen.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
+import 'package:method484/screens/word_memory_screen.dart';
 import 'package:method484/services/feedback_messages.dart';
 import 'package:method484/services/analytics_service.dart';
 import 'package:method484/services/entitlement_service.dart';
@@ -249,5 +250,27 @@ void main() {
 
     final store2 = await ProgressStore.load();
     expect(store2.themePref, 'dark');
+  });
+
+  test('memória de palavras separa "a revisar" de "dominadas" e ordena', () {
+    final rows = <Map<String, dynamic>>[
+      {'props': {'item': 'apple', 'accuracy': 92, 'approved': true}},
+      {'props': {'item': 'apple', 'accuracy': 70, 'approved': false}},
+      {'props': {'item': 'hotel', 'accuracy': 55, 'approved': false}},
+      {'props': {'item': 'hotel', 'accuracy': 60, 'approved': false}},
+      {'props': {'item': 'banana', 'accuracy': 40, 'approved': false}},
+      {'props': {'item': 'cinema', 'accuracy': 88, 'approved': true}},
+      {'props': {'noise': 1}}, // sem 'item' → ignorado
+    ];
+    final mem = aggregateWordMemory(rows);
+
+    // Dominadas (aprovadas alguma vez), melhor accuracy primeiro.
+    expect(mem.mastered.map((s) => s.word).toList(), ['apple', 'cinema']);
+    expect(mem.mastered.first.bestAccuracy, 92);
+    expect(mem.mastered.first.attempts, 2); // apple: 2 tentativas
+
+    // A revisar (nunca aprovadas), pior accuracy primeiro.
+    expect(mem.review.map((s) => s.word).toList(), ['banana', 'hotel']);
+    expect(mem.review.first.bestAccuracy, 40);
   });
 }

@@ -11,6 +11,7 @@ import 'lesson_screen.dart';
 import 'paywall_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'stats_screen.dart';
+import 'word_memory_screen.dart';
 
 /// Dashboard: a barra das 484 horas, o streak e a porta de entrada das
 /// lições. É a tela que o aluno vê todo dia — precisa mostrar progresso
@@ -151,6 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openWordMemory() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const WordMemoryScreen(),
+    ));
+  }
+
   Future<void> _openStats() async {
     final backend = Backend.instance;
     if (backend == null) return;
@@ -251,12 +258,18 @@ class _HomeScreenState extends State<HomeScreen> {
               if (v == 'privacy') _openPrivacyPolicy();
               if (v == 'stats') _openStats();
               if (v == 'theme') _openThemeChooser();
+              if (v == 'words') _openWordMemory();
             },
             itemBuilder: (_) => [
               const PopupMenuItem(
                 value: 'theme',
                 child: Text('Tema'),
               ),
+              if (Backend.instance != null)
+                const PopupMenuItem(
+                  value: 'words',
+                  child: Text('Minhas palavras'),
+                ),
               if (Backend.instance != null)
                 const PopupMenuItem(
                   value: 'stats',
