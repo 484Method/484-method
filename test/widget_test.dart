@@ -273,4 +273,15 @@ void main() {
     expect(mem.review.map((s) => s.word).toList(), ['banana', 'hotel']);
     expect(mem.review.first.bestAccuracy, 40);
   });
+
+  test('ativação: firstOnce dispara só uma vez; aha persiste', () async {
+    final store = await _emptyStore();
+    expect(store.firstOnce('first_recording_completed'), isTrue);
+    expect(store.firstOnce('first_recording_completed'), isFalse);
+    expect(store.firstOnce('first_feedback_seen'), isTrue); // outro passo: ok
+
+    expect(store.hasAnsweredAha, isFalse);
+    await store.setAhaAnswered();
+    expect(store.hasAnsweredAha, isTrue);
+  });
 }

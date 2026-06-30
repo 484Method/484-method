@@ -21,6 +21,8 @@ class ProgressStore {
   static const _kVoiceConsentAt = 'voice_consent_at';
   static const _kRigorousMode = 'rigorous_mode';
   static const _kThemeMode = 'theme_mode';
+  static const _kActivationSteps = 'activation_steps';
+  static const _kAhaAnswered = 'aha_answered';
   static const _kItemIndexPrefix = 'lesson_item_index_';
 
   /// Meta do produto: 484 horas de prática aprovada.
@@ -111,6 +113,21 @@ class ProgressStore {
 
   Future<void> setThemePref(String value) =>
       _prefs.setString(_kThemeMode, value);
+
+  /// Ativação (Fase 0): marca um passo `first_*` como já visto (idempotente).
+  /// Retorna true só na 1ª vez — pra disparar o evento sem repetir. Só local;
+  /// clearAll zera junto (LGPD).
+  bool firstOnce(String step) {
+    final done = _prefs.getStringList(_kActivationSteps) ?? const [];
+    if (done.contains(step)) return false;
+    _prefs.setStringList(_kActivationSteps, [...done, step]);
+    return true;
+  }
+
+  /// "Momento Uau": se a pessoa já respondeu a pergunta de percepção de melhora.
+  bool get hasAnsweredAha => _prefs.getBool(_kAhaAnswered) ?? false;
+
+  Future<void> setAhaAnswered() => _prefs.setBool(_kAhaAnswered, true);
 
   bool isLessonCompleted(String lessonId) =>
       (_prefs.getStringList(_kCompletedLessons) ?? const [])

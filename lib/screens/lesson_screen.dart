@@ -73,6 +73,11 @@ class _LessonScreenState extends State<LessonScreen>
   Duration _approved = Duration.zero;
   Duration _audioSent = Duration.zero;
 
+  /// Tempo da regravação final quando aprovada — exibido no antes/depois.
+  Duration? _lastApprovedDuration;
+  // "Momento Uau": esconde a pergunta de percepção quando já respondida.
+  late bool _ahaAnswered = widget.store?.hasAnsweredAha ?? true;
+
   /// Accuracy final de cada palavra (capturada ao avançar). Usada para
   /// calcular a média exibida na tela de conclusão.
   final List<double> _wordAccuracies = [];
@@ -109,11 +114,22 @@ class _LessonScreenState extends State<LessonScreen>
     super.dispose();
   }
 
+  /// Dispara um evento de ativação (Fase 0) só na 1ª vez (gating no store).
+  /// Sem store (testes) não dispara.
+  void _logFirst(String event, [Map<String, Object?> extra = const {}]) {
+    if (widget.store?.firstOnce(event) ?? false) {
+      widget.analytics?.log(event, {'lesson': widget.lesson.id, ...extra});
+    }
+  }
+
   Future<void> _play() async {
     if (_recPhase == _RecPhase.recording || _recPhase == _RecPhase.preparing) return;
     // Libera a gravação imediatamente: o destrave da UI não pode depender
     // do ciclo de vida do player (no web, stop/play podem demorar).
-    if (!_hasListened) setState(() => _hasListened = true);
+    if (!_hasListened) {
+      setState(() => _hasListened = true);
+      _logFirst('first_listen_completed');
+    }
     try {
       _player ??= AudioPlayer();
       if (_player!.state == PlayerState.playing) await _player!.stop();
@@ -203,11 +219,21 @@ class _LessonScreenState extends State<LessonScreen>
         } else if (_step == _Step.livroAberto) {
           if (approved) {
             _approved += audio.duration;
+            _lastApprovedDuration = audio.duration;
             widget.store?.addApproved(audio.duration);
           }
           _step = _Step.resultFinal;
         }
       });
+      // Eventos de ativação (Fase 0) — só na 1ª vez (gating no store).
+      _logFirst('first_recording_completed');
+      if (attempt == 1) {
+        _logFirst('first_feedback_seen');
+      } else {
+        _logFirst('first_retry_completed');
+        _logFirst('first_before_after_seen');
+        if (approved) _logFirst('first_approved_minute_earned');
+      }
       _maybeFetchAiFeedback(result, attempt, approved);
     } catch (e) {
       debugPrint('[licao] avaliação falhou: $e');
@@ -361,6 +387,110 @@ class _LessonScreenState extends State<LessonScreen>
     );
   }
 
+  /// Comparação antes/depois forte (tentativa 1 → 2): o "momento de
+  /// transformação" do método. Mostra notas, diferença, ponto trabalhado,
+  /// minutos ganhos e um trecho do feedback.
+  Widget _beforeAfterCard(
+      ThemeData theme, PronunciationResult r, double gain, bool approved) {
+    final cs = theme.colorScheme;
+    final point = r.worstSyllable?.grapheme;
+    return Card(
+      color: cs.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(children: [
+          Text(
+            'Você não apenas completou um exercício. Você melhorou uma '
+            'tentativa real de fala.',
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _scorePill(theme, 'Tentativa 1', _firstAccuracy?.round() ?? 0),
+              Icon(Icons.arrow_forward, color: cs.onSecondaryContainer),
+              _scorePill(theme, 'Tentativa 2', r.accuracy.round()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${gain >= 0 ? "+" : ""}${gain.toStringAsFixed(0)} pontos',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: gain > 0 ? Colors.green.shade600 : cs.onSecondaryContainer,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (point != null) ...[
+            const SizedBox(height: 8),
+            Text('Ponto trabalhado: o som "$point"',
+                style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+          ],
+          if (approved && _lastApprovedDuration != null) ...[
+            const SizedBox(height: 4),
+            Text('✅ +${_lastApprovedDuration!.inSeconds}s de fala aprovada',
+                style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+          ],
+          const SizedBox(height: 8),
+          Text(_feedbackText(r),
+              style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+        ]),
+      ),
+    );
+  }
+
+  Widget _scorePill(ThemeData theme, String label, int score) => Column(
+        children: [
+          Text(label, style: theme.textTheme.bodySmall),
+          Text('$score',
+              style: theme.textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+        ],
+      );
+
+  /// Pergunta de "Momento Uau" (Fase 0): a percepção subjetiva de melhora é
+  /// o sinal de ativação mais forte. Aparece uma vez, após o 1º antes/depois.
+  Widget _ahaQuestion(ThemeData theme) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Você sentiu melhora entre a primeira e a segunda tentativa?',
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              for (final (val, label) in const [
+                ('sim_claramente', 'Sim, claramente'),
+                ('um_pouco', 'Um pouco'),
+                ('nao_percebi', 'Não percebi'),
+                ('nao_consegui_comparar', 'Não consegui comparar'),
+              ])
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: OutlinedButton(
+                    onPressed: () => _answerAha(val),
+                    child: Text(label),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+
+  void _answerAha(String answer) {
+    widget.analytics?.log('aha_question_answered', {
+      'lesson': widget.lesson.id,
+      'item': _item.text,
+      'answer': answer,
+    });
+    widget.store?.setAhaAnswered();
+    setState(() => _ahaAnswered = true);
+  }
+
   Widget _buildStep(ThemeData theme) {
     switch (_step) {
       case _Step.intro:
@@ -484,38 +614,17 @@ class _LessonScreenState extends State<LessonScreen>
             ? 0.0
             : r.accuracy - _firstAccuracy!;
         return _centered([
-          _scoreBadge(theme, r.accuracy),
-          const SizedBox(height: 12),
+          if (_firstAccuracy != null) ...[
+            _beforeAfterCard(theme, r, gain, approved),
+            const SizedBox(height: 16),
+          ] else ...[
+            _scoreBadge(theme, r.accuracy),
+            const SizedBox(height: 12),
+          ],
           // Mapa de sílabas colorido: a escrita já foi liberada no Livro
           // Aberto, então mostrar os grafemas aqui não fere o som-first.
           _SyllableMap(result: r),
           const SizedBox(height: 12),
-          if (gain >= 5)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              decoration: BoxDecoration(
-                color: theme.brightness == Brightness.dark
-                    ? Colors.green.shade900.withValues(alpha: 0.35)
-                    : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '📈 Você melhorou ${gain.toStringAsFixed(0)} pontos da '
-                'primeira tentativa para esta. É exatamente isso que treina '
-                'o ouvido.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.brightness == Brightness.dark
-                      ? Colors.green.shade200
-                      : Colors.green.shade900,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          if (gain >= 5) const SizedBox(height: 12),
-          if (!approved)
-            Text(_feedbackText(r),
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center),
           Text(
             approved
                 ? '✅ Aprovada! Esse tempo conta para as suas 484 horas.'
@@ -524,6 +633,10 @@ class _LessonScreenState extends State<LessonScreen>
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
+          if (!_ahaAnswered) ...[
+            const SizedBox(height: 16),
+            _ahaQuestion(theme),
+          ],
           const SizedBox(height: 24),
           // Passo 8: regravar é sempre possível, sem prender. Aprovou → seguir
           // é o destaque (regravar fica discreto, pra fixar). Reprovou →
