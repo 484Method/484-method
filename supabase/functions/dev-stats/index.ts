@@ -133,6 +133,28 @@ Deno.serve(async (req) => {
       return json({ code });
     }
 
+    // ── Export CSV: uma linha por usuário (métricas do progress) ─────────────
+    if (action === "export_users") {
+      const { data, error } = await client
+        .from("progress")
+        .select(
+          "user_id, approved_seconds, streak_days, completed_lessons, last_practice_day, updated_at",
+        );
+      if (error) throw error;
+      const users = (data ?? []).map((r) => ({
+        user_id: r.user_id,
+        approved_seconds: r.approved_seconds ?? 0,
+        approved_minutes: Math.round((r.approved_seconds ?? 0) / 60),
+        streak_days: r.streak_days ?? 0,
+        lessons_completed: Array.isArray(r.completed_lessons)
+          ? r.completed_lessons.length
+          : 0,
+        last_practice_day: r.last_practice_day ?? "",
+        updated_at: r.updated_at ?? "",
+      }));
+      return json({ users });
+    }
+
     // ── Liga/desliga do app + stats agregadas (comportamento padrão) ─────────
     if (typeof set_maintenance === "boolean") {
       const { error } = await client.from("app_config").upsert({

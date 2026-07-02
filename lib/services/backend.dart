@@ -269,6 +269,21 @@ class Backend {
     return code;
   }
 
+  /// Export CSV do painel: uma linha por usuário (métricas do progress), via
+  /// Edge Function `dev-stats` (service role + gate de senha).
+  Future<List<Map<String, dynamic>>> fetchUserExport(String password) async {
+    final res = await client.functions.invoke(
+      'dev-stats',
+      body: {'password': password, 'action': 'export_users'},
+    );
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Falha ao exportar (código ${res.status}).');
+    }
+    final list = (res.data is Map ? res.data['users'] : null) as List?;
+    return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
   /// Liga/desliga global do app (app_config/'maintenance'), checado no boot.
   /// Fail-open: qualquer falha (offline, tabela ausente) devolve false — a
   /// checagem de manutenção nunca pode derrubar o app por acidente.

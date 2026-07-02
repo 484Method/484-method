@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/backend.dart';
+import '../services/csv_download.dart';
 import 'cohort_rating_screen.dart';
 
 /// Painel de uso — apenas para o desenvolvedor (acessível via menu oculto).
@@ -87,6 +88,48 @@ class _StatsScreenState extends State<StatsScreen> {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  /// Exporta uma linha por usuário como CSV (baixa no navegador). Dado bruto
+  /// pra análise de coorte/retenção em planilha ou pro data room do investidor.
+  Future<void> _exportUsersCsv() async {
+    try {
+      final users = await widget.backend.fetchUserExport(widget.password);
+      if (users.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nenhum usuário para exportar.')));
+        return;
+      }
+      const cols = [
+        'user_id',
+        'approved_seconds',
+        'approved_minutes',
+        'streak_days',
+        'lessons_completed',
+        'last_practice_day',
+        'updated_at',
+      ];
+      String cell(Object? v) {
+        final s = (v ?? '').toString();
+        return '"${s.replaceAll('"', '""')}"'; // escapa aspas p/ CSV
+      }
+
+      final buf = StringBuffer(cols.join(','))..write('\n');
+      for (final u in users) {
+        buf.write(cols.map((c) => cell(u[c])).join(','));
+        buf.write('\n');
+      }
+      final stamp = DateTime.now().toIso8601String().split('T').first;
+      downloadCsv('484-usuarios-$stamp.csv', buf.toString());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('CSV com ${users.length} usuário(s) baixado.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Falha ao exportar: $e')));
     }
   }
 
@@ -260,6 +303,21 @@ class _StatsScreenState extends State<StatsScreen> {
                                   'código de acesso.'),
                               trailing: const Icon(Icons.add),
                               onTap: _generateAccessCode,
+                            ),
+                          ),
+                        ),
+                        // ── Export CSV (dado bruto por usuário) ──────────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.download),
+                              title: const Text('Exportar usuários (CSV)'),
+                              subtitle: const Text(
+                                  'Uma linha por usuário — pra coorte/retenção '
+                                  'em planilha.'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: _exportUsersCsv,
                             ),
                           ),
                         ),
@@ -470,6 +528,12 @@ class _Body extends StatelessWidget {
           _row(theme, Icons.timer, 'Tempo médio entre tentativas (mesma lição)', '${avgGapSec.toStringAsFixed(1)}s'),
           _row(theme, Icons.attach_money, 'Custo Azure total (est. US\$1/h, tarifa S0)', 'US\$ ${azureCost.toStringAsFixed(2)}'),
           _row(theme, Icons.person_outline, 'Custo Azure por usuário', 'US\$ ${azureCostPerUser.toStringAsFixed(4)}'),
+          // Número da unit economics: custo de IA por minuto APROVADO (a
+          // métrica norte). Derivado no cliente = custo Azure / min aprovados.
+          _row(theme, Icons.trending_down, 'Custo Azure por minuto aprovado',
+              approvedMin > 0
+                  ? 'US\$ ${(azureCost / approvedMin).toStringAsFixed(4)}'
+                  : '—'),
 
           // ── Palavras mais difíceis ──────────────────────────────────────
           if (hardestWords.isNotEmpty) ...[
