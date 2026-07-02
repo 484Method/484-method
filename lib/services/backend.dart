@@ -121,6 +121,42 @@ class Backend {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  /// Liga/desliga global do app (app_config/'maintenance'), checado no boot.
+  /// Fail-open: qualquer falha (offline, tabela ausente) devolve false — a
+  /// checagem de manutenção nunca pode derrubar o app por acidente.
+  Future<bool> fetchMaintenanceMode() async {
+    try {
+      final row = await client
+          .from('app_config')
+          .select('value')
+          .eq('key', 'maintenance')
+          .maybeSingle()
+          .timeout(const Duration(seconds: 4));
+      final value = row?['value'];
+      return value is Map && value['on'] == true;
+    } catch (e) {
+      debugPrint('[backend] fetchMaintenanceMode falhou (seguindo no ar): $e');
+      return false;
+    }
+  }
+
+  /// Liga/desliga o app pelo painel do dev. A escrita passa pela Edge
+  /// Function `dev-stats` (a tabela não tem policy de escrita), atrás do
+  /// mesmo gate de senha do painel. Devolve as stats atualizadas (inclui
+  /// `maintenance_mode` confirmado pelo servidor).
+  Future<Map<String, dynamic>> setMaintenanceMode(
+      String password, bool on) async {
+    final res = await client.functions.invoke(
+      'dev-stats',
+      body: {'password': password, 'set_maintenance': on},
+    );
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Não foi possível alterar (código ${res.status}).');
+    }
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   /// Progresso remoto (para hidratar o cache local em outro dispositivo).
   Future<Map<String, dynamic>?> pullProgress() async {
     final uid = userId;

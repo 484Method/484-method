@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
+import 'screens/maintenance_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/backend.dart';
@@ -22,6 +23,10 @@ Future<void> main() async {
   // Backend é obrigatório: a avaliação de pronúncia roda pela Edge Function.
   // Sem credenciais Supabase, Backend.instance fica null → tela de setup.
   await Backend.init(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+  // Liga/desliga da fase de construção (toggle no painel do dev). Checado só
+  // no boot: quem está no meio de um treino termina; ninguém novo entra.
+  final maintenance =
+      await Backend.instance?.fetchMaintenanceMode() ?? false;
   final store = await ProgressStore.load(backend: Backend.instance);
   final analytics = await AnalyticsService.load(backend: Backend.instance);
   // Uma vez por sessão: browser/SO/idioma agregados, nunca o user-agent cru.
@@ -32,7 +37,10 @@ Future<void> main() async {
   // Web/dev usa o fake local; mobile trocará por RevenueCat na mesma interface.
   final entitlement = await LocalEntitlementService.load();
   runApp(Method484App(
-      store: store, analytics: analytics, entitlement: entitlement));
+      store: store,
+      analytics: analytics,
+      entitlement: entitlement,
+      maintenanceOnBoot: maintenance));
 }
 
 class Method484App extends StatefulWidget {
@@ -41,11 +49,16 @@ class Method484App extends StatefulWidget {
     required this.store,
     required this.entitlement,
     this.analytics,
+    this.maintenanceOnBoot = false,
   });
 
   final ProgressStore store;
   final EntitlementService entitlement;
   final AnalyticsService? analytics;
+
+  /// Estado da flag app_config/'maintenance' lido no boot (main). Quando
+  /// true, tudo fica atrás da MaintenanceScreen até a flag ser religada.
+  final bool maintenanceOnBoot;
 
   @override
   State<Method484App> createState() => _Method484AppState();
@@ -153,6 +166,10 @@ class _Method484AppState extends State<Method484App> {
   // `late` + inicializador: avaliado no 1º build (quando `widget` já existe).
   late ThemeMode _themeMode = _themeModeFromPref(widget.store.themePref);
 
+  // Manutenção: começa com o valor lido no boot; a MaintenanceScreen derruba
+  // via onBackOnline quando a flag é religada (sem exigir reload da página).
+  late bool _maintenance = widget.maintenanceOnBoot;
+
   void _setThemeMode(ThemeMode mode) {
     setState(() => _themeMode = mode);
     widget.store.setThemePref(_prefFromThemeMode(mode));
@@ -176,6 +193,13 @@ class _Method484AppState extends State<Method484App> {
     final backend = Backend.instance;
     if (backend == null) {
       home = const _MissingConfigScreen();
+    } else if (_maintenance) {
+      // Fase de construção: app desligado pelo painel do dev. Antes de
+      // qualquer outra tela — inclusive onboarding — ninguém entra.
+      home = MaintenanceScreen(
+        backend: backend,
+        onBackOnline: () => setState(() => _maintenance = false),
+      );
     } else if (!widget.store.hasVoiceConsent) {
       // LGPD: nenhuma gravação antes do consentimento do onboarding.
       home = _introSeen

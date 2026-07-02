@@ -3,6 +3,12 @@
 // cliente, então a checagem não pode ser pulada chamando a RPC direto com a
 // anon key (get_dev_stats() teve EXECUTE revogado de anon/authenticated;
 // só esta função, com a service role key, consegue chamá-la).
+//
+// Também é o ÚNICO caminho de escrita do liga/desliga do app (app_config/
+// 'maintenance'): body opcional { set_maintenance: bool } atualiza a flag
+// atrás do mesmo gate de senha; a tabela tem RLS sem policy de escrita, então
+// a anon key não consegue alterá-la por fora. A resposta sempre inclui
+// maintenance_mode junto das stats (estado do switch no painel).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -24,7 +30,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { password } = await req.json();
+    const { password, set_maintenance } = await req.json();
     if (password !== expected) {
       return new Response(JSON.stringify({ error: "wrong_password" }), {
         status: 401,
@@ -36,13 +42,33 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    if (typeof set_maintenance === "boolean") {
+      const { error } = await client.from("app_config").upsert({
+        key: "maintenance",
+        value: { on: set_maintenance },
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    }
+
     const { data, error } = await client.rpc("get_dev_stats");
     if (error) throw error;
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+    const { data: cfg } = await client
+      .from("app_config")
+      .select("value")
+      .eq("key", "maintenance")
+      .maybeSingle();
+    const maintenanceOn = cfg?.value?.on === true;
+
+    return new Response(
+      JSON.stringify({ ...data, maintenance_mode: maintenanceOn }),
+      {
+        status: 200,
+        headers: { ...cors, "Content-Type": "application/json" },
+      },
+    );
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,

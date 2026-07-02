@@ -7,6 +7,7 @@ import 'package:method484/main.dart';
 import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/home_screen.dart';
 import 'package:method484/screens/lesson_screen.dart';
+import 'package:method484/screens/maintenance_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
 import 'package:method484/screens/word_memory_screen.dart';
 import 'package:method484/services/feedback_messages.dart';
@@ -340,4 +341,19 @@ void main() {
     await store.setAskedAbandon();
     expect(store.hasAskedAbandon, isTrue);
   });
+
+  testWidgets('app desligado: tela de manutenção bloqueia e explica',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: MaintenanceScreen(backend: null, onBackOnline: _noop),
+    ));
+    // Copy de construção + garantia de que o progresso não some.
+    expect(find.text('Estamos ajustando o treino'), findsOneWidget);
+    expect(find.textContaining('Seu progresso está guardado'), findsOneWidget);
+    expect(find.text('Verificar de novo'), findsOneWidget);
+    // Ícone de obra presente (é também o acesso oculto do dev via long-press).
+    expect(find.byIcon(Icons.construction), findsOneWidget);
+  });
 }
+
+void _noop() {}

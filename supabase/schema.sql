@@ -405,3 +405,19 @@ revoke all on function public.get_phase0_activation() from public;
 revoke all on function public.get_dev_stats() from public;
 grant execute on function public.get_phase0_activation() to service_role;
 grant execute on function public.get_dev_stats() to service_role;
+
+-- ── Liga/desliga do app (2026-07-01, migração app_config_maintenance_flag) ──
+-- Uma linha por chave; hoje só 'maintenance' ({"on": bool}). Leitura liberada
+-- (o app checa no boot com a anon key); RLS SEM policy de escrita = o toggle
+-- só entra pela Edge Function `dev-stats` (service role + gate de senha).
+create table if not exists public.app_config (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.app_config enable row level security;
+create policy "app_config: leitura pública" on public.app_config
+  for select using (true);
+insert into public.app_config (key, value)
+  values ('maintenance', jsonb_build_object('on', false))
+  on conflict (key) do nothing;

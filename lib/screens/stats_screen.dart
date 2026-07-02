@@ -12,6 +12,42 @@ class StatsScreen extends StatefulWidget {
   final Backend backend;
   final String password;
 
+  /// Diálogo de senha + navegação para o painel. Compartilhado entre o menu
+  /// oculto da home e a saída de dev da tela de manutenção — a validação real
+  /// acontece no servidor quando o painel carrega.
+  static Future<void> openWithPasswordGate(
+      BuildContext context, Backend backend) async {
+    final controller = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Acesso restrito'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Senha'),
+          onSubmitted: (_) => Navigator.of(ctx).pop(true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Entrar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) =>
+          StatsScreen(backend: backend, password: controller.text),
+    ));
+  }
+
   @override
   State<StatsScreen> createState() => _StatsScreenState();
 }
@@ -19,6 +55,7 @@ class StatsScreen extends StatefulWidget {
 class _StatsScreenState extends State<StatsScreen> {
   Map<String, dynamic>? _stats;
   bool _loading = true;
+  bool _toggling = false;
   String? _error;
 
   @override
@@ -51,9 +88,54 @@ class _StatsScreenState extends State<StatsScreen> {
     }
   }
 
+  /// Liga/desliga o app para TODOS os usuários (flag no servidor). Desligar
+  /// pede confirmação — quem estiver no meio de um treino continua até
+  /// recarregar, mas ninguém novo entra.
+  Future<void> _setAppOnline(bool online) async {
+    if (_toggling) return;
+    if (!online) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Desligar o app?'),
+          content: const Text(
+              'Todos os usuários passam a ver a tela "em ajustes" ao abrir '
+              'o app. Para religar, volte a este painel (na tela de '
+              'manutenção, segure o ícone de obra).'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Desligar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    setState(() => _toggling = true);
+    try {
+      final stats =
+          await widget.backend.setMaintenanceMode(widget.password, !online);
+      if (!mounted) return;
+      setState(() => _stats = stats);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao alterar: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _toggling = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final maintenanceOn = _stats?['maintenance_mode'] == true;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel do desenvolvedor'),
@@ -72,7 +154,38 @@ class _StatsScreenState extends State<StatsScreen> {
               : Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 700),
-                    child: _Body(stats: _stats!, theme: theme),
+                    child: Column(
+                      children: [
+                        // ── Controle do app (fase de construção) ──────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: Card(
+                            color: maintenanceOn
+                                ? theme.colorScheme.errorContainer
+                                : null,
+                            child: SwitchListTile(
+                              value: !maintenanceOn,
+                              onChanged:
+                                  _toggling ? null : (v) => _setAppOnline(v),
+                              title: Text(
+                                maintenanceOn
+                                    ? 'App DESLIGADO (em ajustes)'
+                                    : 'App no ar',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(maintenanceOn
+                                  ? 'Usuários veem a tela "em ajustes" ao abrir.'
+                                  : 'Desligue para bloquear o acesso durante a construção.'),
+                              secondary: Icon(maintenanceOn
+                                  ? Icons.construction
+                                  : Icons.check_circle_outline),
+                            ),
+                          ),
+                        ),
+                        Expanded(child: _Body(stats: _stats!, theme: theme)),
+                      ],
+                    ),
                   ),
                 ),
     );

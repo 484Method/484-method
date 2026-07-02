@@ -229,36 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openStats() async {
     final backend = Backend.instance;
     if (backend == null) return;
-    final controller = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Acesso restrito'),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Senha'),
-          onSubmitted: (_) => Navigator.of(ctx).pop(true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Entrar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          StatsScreen(backend: backend, password: controller.text),
-    ));
+    await StatsScreen.openWithPasswordGate(context, backend);
   }
 
   /// Alterna o acesso na implementação fake (web/dev) para testar os dois
