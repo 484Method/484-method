@@ -29,6 +29,11 @@ flutter build web --release --base-href /484-method/ --pwa-strategy=none \
 # .nojekyll evita o Jekyll do Pages mexer nos assets do Flutter.
 touch build/web/.nojekyll
 
+# Landing de aquisição (front-of-funnel) em /landing/, mesma origem da demo.
+# Os CTAs da landing apontam pra raiz (o app). Compartilhe a URL /landing/.
+mkdir -p build/web/landing
+cp landing/index.html build/web/landing/index.html
+
 # Publica o build como raiz da branch gh-pages (repo git efêmero, force-push).
 cd build/web
 rm -rf .git
