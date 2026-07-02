@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!--
+  Landing de aquisição do 484 Method — artefato ESTÁTICO, separado do app Flutter.
+  Copy baseada no memo §17 (posicionamento "você sabe mais inglês do que fala").
+  Página única, sem dependências (CSS inline, fontes do sistema) — deploya em
+  qualquer host estático (gh-pages, Netlify, Vercel).
+
+  ⚠️ ANTES DE PUBLICAR: troque os href="#cta" pelo destino real do CTA
+  (URL do app/demo ou um formulário de waitlist). Procure por data-cta.
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>484 Method — Você sabe mais inglês do que consegue falar</title>
+  <meta name="description" content="Prática oral guiada para brasileiros adultos que travam ao falar inglês. Você escuta, repete, grava, recebe feedback e acompanha sua evolução em minutos de fala aprovada." />
+  <meta property="og:title" content="484 Method — Primeiro o ouvido. Depois a boca. Só então a escrita." />
+  <meta property="og:description" content="Transforme o inglês que você já reconhece em fala de verdade, treinando o ouvido e a boca antes da escrita." />
+  <meta property="og:type" content="website" />
+  <style>
+    :root {
+      --navy: #14243f;
+      --cream: #f5f1ea;
+      --gold: #c0983a;
+      --gold-dark: #a9832d;
+      --ink: #1b2230;
+      --muted: #5b6472;
+      --card: #ffffff;
+      --line: #e6ded1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--cream);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.2; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 56px 0; }
+    .eyebrow {
+      text-transform: uppercase; letter-spacing: .12em; font-size: .78rem;
+      font-weight: 700; color: var(--gold-dark); margin-bottom: 12px;
+    }
+    .btn {
+      display: inline-block; background: var(--gold); color: #fff;
+      font-weight: 700; text-decoration: none; padding: 16px 28px;
+      border-radius: 999px; font-size: 1.05rem; transition: background .15s;
+    }
+    .btn:hover { background: var(--gold-dark); }
+    .btn-ghost { background: transparent; color: var(--cream); border: 1px solid rgba(255,255,255,.4); }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); }
+
+    /* Hero */
+    .hero { background: var(--navy); color: var(--cream); text-align: center; padding: 72px 0 64px; }
+    .hero h1 { font-size: 2.5rem; margin-bottom: 20px; }
+    .hero p.sub { font-size: 1.2rem; color: #d7dae1; margin: 0 auto 32px; max-width: 34ch; }
+    .hero .fine { margin-top: 16px; font-size: .9rem; color: #9aa3b2; }
+    .ladder { font-family: Georgia, serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 8px; letter-spacing: .02em; }
+
+    /* Generic section */
+    h2 { font-size: 1.9rem; margin-bottom: 16px; }
+    section p.lead { font-size: 1.12rem; color: var(--muted); margin-bottom: 8px; }
+    .alt { background: #efe9de; }
+
+    /* Steps */
+    .steps { list-style: none; margin-top: 24px; display: grid; gap: 14px; }
+    .step { display: flex; gap: 16px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+    .step .n { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .95rem; }
+    .step strong { display: block; }
+    .step span { color: var(--muted); font-size: .96rem; }
+
+    /* Pills / chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .chip { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: .95rem; }
+
+    /* Measure cards */
+    .cards { display: grid; gap: 14px; margin-top: 24px; grid-template-columns: 1fr; }
+    @media (min-width: 560px) { .cards { grid-template-columns: 1fr 1fr 1fr; } }
+    .mcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; text-align: center; }
+    .mcard .icon { font-size: 1.6rem; }
+    .mcard strong { display: block; margin-top: 8px; }
+    .mcard span { color: var(--muted); font-size: .92rem; }
+
+    /* Offer */
+    .offer { background: var(--navy); color: var(--cream); text-align: center; border-radius: 20px; padding: 40px 28px; margin-top: 8px; }
+    .offer h2 { color: #fff; }
+    .offer .price { font-family: Georgia, serif; font-size: 2.4rem; color: var(--gold); margin: 12px 0 4px; }
+    .offer ul { list-style: none; margin: 20px auto 28px; max-width: 30ch; text-align: left; }
+    .offer li { padding: 6px 0 6px 28px; position: relative; color: #e2e5ea; }
+    .offer li::before { content: "✓"; position: absolute; left: 0; color: var(--gold); font-weight: 700; }
+
+    /* FAQ */
+    details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 600; padding: 14px 0; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; float: right; color: var(--gold-dark); font-size: 1.2rem; }
+    details[open] summary::after { content: "–"; }
+    details p { padding-bottom: 16px; color: var(--muted); }
+
+    .privacy { font-size: .92rem; color: var(--muted); text-align: center; }
+    .privacy a { color: var(--gold-dark); }
+
+    footer { background: var(--navy); color: #9aa3b2; text-align: center; padding: 32px 0; font-size: .88rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="wrap">
+      <div class="ladder">Primeiro o ouvido · depois a boca · só então a escrita</div>
+      <h1>Você sabe mais inglês do que consegue falar.</h1>
+      <p class="sub">O 484 Method transforma as palavras que você já reconhece em fala de verdade — treinando o ouvido e a boca antes de mostrar a escrita.</p>
+      <a class="btn" href="#cta" data-cta>Começar o desafio de 21 dias</a>
+      <p class="fine">Feito para brasileiros adultos que travam na hora de falar.</p>
+    </div>
+  </header>
+
+  <!-- Problem -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">O problema</div>
+      <h2>Você entende, mas trava na hora de falar.</h2>
+      <p class="lead">Você reconhece um monte de palavra em inglês — no trabalho, nas séries, nos apps, nas músicas. Mas quando precisa abrir a boca, congela. Não é falta de inteligência nem de vocabulário: é que ninguém treinou seu ouvido e sua boca antes dos seus olhos.</p>
+    </div>
+  </section>
+
+  <!-- Why traditional fails -->
+  <section class="alt">
+    <div class="wrap">
+      <div class="eyebrow">Por que os métodos comuns falham</div>
+      <h2>Você aprendeu inglês pelos olhos.</h2>
+      <p class="lead">Escola, gramática, tradução, listas de palavras escritas. Você passou anos lendo inglês com sons de português — e é exatamente isso que trava sua fala. Enquanto a escrita vier antes do som, a pronúncia aportuguesada se fixa.</p>
+    </div>
+  </section>
+
+  <!-- Method -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">O método</div>
+      <h2>O ciclo som-first</h2>
+      <p class="lead">Cada palavra ou frase segue sempre a mesma ordem — a escrita só aparece depois que você já tentou de ouvido:</p>
+      <ol class="steps">
+        <li class="step"><div class="n">1</div><div><strong>Ouça</strong><span>o áudio, sem ver nada escrito.</span></div></li>
+        <li class="step"><div class="n">2</div><div><strong>Repita e grave</strong><span>de ouvido, a sua primeira tentativa.</span></div></li>
+        <li class="step"><div class="n">3</div><div><strong>Receba feedback</strong><span>de pronúncia, em português, na hora.</span></div></li>
+        <li class="step"><div class="n">4</div><div><strong>Tente de novo</strong><span>corrigindo o que o feedback apontou.</span></div></li>
+        <li class="step"><div class="n">5</div><div><strong>Agora sim, veja a escrita</strong><span>o texto, a tradução e um exemplo.</span></div></li>
+        <li class="step"><div class="n">6</div><div><strong>Regrave</strong><span>a versão final, já com tudo no lugar.</span></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- What you practice -->
+  <section class="alt">
+    <div class="wrap">
+      <div class="eyebrow">O que você treina</div>
+      <h2>Começando pelo inglês que você já conhece.</h2>
+      <p class="lead">Nada de gramática pesada nem palavras impossíveis. Você começa com o que já faz parte da sua vida e vai subindo:</p>
+      <div class="chips">
+        <span class="chip">Palavras familiares</span>
+        <span class="chip">Inglês do celular</span>
+        <span class="chip">Comida e viagem</span>
+        <span class="chip">Palavras do trabalho</span>
+        <span class="chip">Armadilhas de pronúncia</span>
+        <span class="chip">Primeiras frases úteis</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- How progress is measured -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Como você vê a evolução</div>
+      <h2>Progresso real, não tempo de tela.</h2>
+      <div class="cards">
+        <div class="mcard"><div class="icon">🎙️</div><strong>Gravações</strong><span>a sua voz, tentativa após tentativa.</span></div>
+        <div class="mcard"><div class="icon">⏱️</div><strong>Minutos aprovados</strong><span>só conta a fala que passou no critério.</span></div>
+        <div class="mcard"><div class="icon">📈</div><strong>Antes e depois</strong><span>ouça o quanto você melhorou em 21 dias.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Beta offer -->
+  <section class="alt" id="cta">
+    <div class="wrap">
+      <div class="offer">
+        <div class="eyebrow" style="color:var(--gold)">Beta Fundador</div>
+        <h2>Desafio de 21 dias</h2>
+        <p style="color:#d7dae1; max-width:34ch; margin:8px auto 0;">Em 21 dias, treine o ouvido e a boca com prática oral diária usando palavras que você já conhece — com feedback e um antes/depois da sua fala.</p>
+        <div class="price">Beta Fundador</div>
+        <ul>
+          <li>Acesso à Fase 1 completa</li>
+          <li>Feedback de pronúncia em português</li>
+          <li>Gravação de antes/depois em 21 dias</li>
+          <li>Você molda o que vem depois</li>
+        </ul>
+        <a class="btn" href="#" data-cta>Quero fazer meu diagnóstico oral</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Perguntas frequentes</div>
+      <h2>Antes de começar</h2>
+      <details><summary>Preciso já saber inglês?</summary><p>Não. O método foi feito justamente pra quem "sabe mais do que fala": você reconhece palavras, mas trava. Começamos pelo que você já conhece.</p></details>
+      <details><summary>Isso promete fluência?</summary><p>Não prometemos fluência mágica. Prometemos treino de fala de verdade, com feedback, e uma forma honesta de medir sua evolução em minutos de prática aprovada.</p></details>
+      <details><summary>Funciona no meu celular?</summary><p>Sim. Roda no navegador do celular e usa o microfone pra avaliar sua pronúncia — sem precisar instalar nada pesado.</p></details>
+      <details><summary>Por que gravar a minha voz?</summary><p>Porque o método é baseado na sua fala. O áudio é usado pra gerar seu feedback e medir sua evolução. Você consente antes de qualquer gravação e pode apagar seus dados quando quiser.</p></details>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section class="alt">
+    <div class="wrap privacy">
+      <p>Sua voz é sua. Gravamos apenas com o seu consentimento explícito, usamos o áudio só para gerar feedback e medir sua evolução, nunca para treinar modelos, e você pode excluir todos os seus dados a qualquer momento. <a href="#" data-cta>Leia a política de privacidade</a>.</p>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section style="text-align:center;">
+    <div class="wrap">
+      <h2>Seu inglês já começou. Falta destravar a fala.</h2>
+      <p class="lead" style="margin-bottom:24px;">Comece hoje pelas palavras que você já conhece.</p>
+      <a class="btn" href="#" data-cta>Começar o desafio de 21 dias</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">484 Method — primeiro o ouvido, depois a boca, só então a escrita.</div>
+  </footer>
+
+</body>
+</html>
