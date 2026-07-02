@@ -56,10 +56,14 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `cohort_recordings_storage`). Consentimento AMPLIADO próprio
   (`ProgressStore.hasVoiceStorageConsent` — guardar áudio ≠ processar na hora);
   `deleteRemoteData` apaga Storage+metadados em bloco próprio (não trava o
-  delete de progress/events). Política de privacidade atualizada. FALTA: UI
-  in-app de rating cego (hoje o avaliador baixa os áudios pelo dashboard do
-  Supabase / SQL em `cohort_recordings`; signed URLs exigiriam estender a Edge
-  Function `dev-stats`).
+  delete de progress/events). Política de privacidade atualizada. Rating cego
+  IN-APP: painel do dev (`stats_screen` → `CohortRatingScreen`) ouve as
+  gravações embaralhadas e às CEGAS (não revela baseline/final), dá nota 1–5 de
+  clareza e mostra o antes/depois agregado (média baseline vs final). URLs
+  assinadas e escrita das notas via Edge Function `dev-stats` (novas actions
+  `list_recordings`/`rate`, service role + gate de senha; deploy v6); notas em
+  `public.cohort_ratings` (migração `cohort_ratings`; RLS sem policy de cliente,
+  igual feedback_quota).
 - ✅ Teste de willingness-to-pay (fake door): a `PaywallScreen` é um teste de
   preço A/B — cada usuário vê uma variante estável (`lib/services/pricing.dart`,
   `ProgressStore.assignedPriceVariant`) e o funil inteiro vai pra `events` com

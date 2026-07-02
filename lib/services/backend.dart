@@ -177,6 +177,43 @@ class Backend {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  /// Rating cego: lista as gravações do desafio (baseline/final) com URLs
+  /// ASSINADAS geradas pela Edge Function `dev-stats` (service role assina o
+  /// bucket privado), atrás do mesmo gate de senha do painel. Cada item traz
+  /// url, kind, duration_ms e a nota já dada (score/note), se houver.
+  Future<List<Map<String, dynamic>>> fetchCohortRecordings(
+      String password) async {
+    final res = await client.functions.invoke(
+      'dev-stats',
+      body: {'password': password, 'action': 'list_recordings'},
+    );
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Falha ao carregar gravações (código ${res.status}).');
+    }
+    final data = res.data;
+    final list = (data is Map ? data['recordings'] : null) as List?;
+    return (list ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  /// Rating cego: grava/atualiza a nota (1–5) de uma gravação. Passa pela
+  /// mesma Edge Function/gate de senha; a tabela cohort_ratings não tem policy
+  /// de cliente (só a service role escreve).
+  Future<void> saveCohortRating(
+      String password, String recordingId, int score, String? note) async {
+    final res = await client.functions.invoke('dev-stats', body: {
+      'password': password,
+      'action': 'rate',
+      'recording_id': recordingId,
+      'score': score,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    });
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Falha ao salvar a nota (código ${res.status}).');
+    }
+  }
+
   /// Liga/desliga global do app (app_config/'maintenance'), checado no boot.
   /// Fail-open: qualquer falha (offline, tabela ausente) devolve false — a
   /// checagem de manutenção nunca pode derrubar o app por acidente.

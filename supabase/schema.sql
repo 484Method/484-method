@@ -450,3 +450,21 @@ create policy "own cohort_recordings: delete" on public.cohort_recordings
   for delete using (auth.uid() = user_id);
 create index if not exists cohort_recordings_user_idx
   on public.cohort_recordings (user_id, kind);
+
+-- ── Rating cego das gravações (2026-07-02, migração cohort_ratings) ──────────
+-- O avaliador (dev) pontua a clareza 1–5 SEM saber se é baseline ou final; a
+-- comparação antes/depois sai juntando score com kind. Escrita/leitura só pela
+-- Edge Function dev-stats (service role + gate de senha) — RLS ligada SEM
+-- policy de cliente, igual feedback_quota. unique(recording_id) = 1 nota por
+-- gravação (upsert on conflict).
+create table if not exists public.cohort_ratings (
+  id uuid primary key default gen_random_uuid(),
+  recording_id uuid not null unique
+    references public.cohort_recordings (id) on delete cascade,
+  score integer not null check (score between 1 and 5),
+  note text,
+  rated_at timestamptz not null default now()
+);
+alter table public.cohort_ratings enable row level security;
+create index if not exists cohort_ratings_recording_idx
+  on public.cohort_ratings (recording_id);
