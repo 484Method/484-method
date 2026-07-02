@@ -738,40 +738,72 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Só faz sentido mostrar quando já dá pra recomendar (≥30min aprovados) —
+  /// abaixo disso o card virava um aviso "pode ser difícil demais" e só
+  /// competia com a ação principal do iniciante. Ver `_showPrecision`.
+  static const _precisionBaseSeconds = 30 * 60;
+
   /// #10: "Modo precisão" (ex-"Modo desafio") — copy menos intimidante, sem
-  /// prometer "pronúncia nativa"; avisa quem ainda está construindo base.
+  /// prometer "pronúncia nativa". Aparece só depois da base de 30min.
   Widget _precisionModeCard(ThemeData theme) {
-    final hasEnoughBase =
-        widget.store.totalApproved.inSeconds >= 30 * 60;
     return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SwitchListTile(
-            value: widget.store.rigorousMode,
-            onChanged: (v) async {
-              if (v && !await _confirmEnableRigorous()) return;
-              await widget.store.setRigorousMode(v);
-              setState(() {});
-            },
-            title: const Text('Modo precisão'),
-            subtitle: const Text(
-                'Use quando quiser treinar com critério mais exigente de '
-                'clareza, ritmo e pronúncia. Recomendado depois dos '
-                'primeiros 30 minutos aprovados.'),
-            secondary: const Icon(Icons.fitness_center),
-          ),
-          if (!hasEnoughBase)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Text(
-                'Você ainda está construindo base. O modo precisão pode '
-                'ficar difícil demais no começo.',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
+      child: SwitchListTile(
+        value: widget.store.rigorousMode,
+        onChanged: (v) async {
+          if (v && !await _confirmEnableRigorous()) return;
+          await widget.store.setRigorousMode(v);
+          setState(() {});
+        },
+        title: const Text('Modo precisão'),
+        subtitle: const Text(
+            'Use quando quiser treinar com critério mais exigente de '
+            'clareza, ritmo e pronúncia. Recomendado depois dos '
+            'primeiros 30 minutos aprovados.'),
+        secondary: const Icon(Icons.fitness_center),
+      ),
+    );
+  }
+
+  /// #7 (mais distante da hierarquia): a jornada de 484h + streak. Fica abaixo
+  /// da meta de hoje e do primeiro marco; escondida no dia 0 (a barra "0 de
+  /// 484h" assusta e o streak ainda é 0 mesmo).
+  Widget _journeyCard(ThemeData theme) {
+    final total = widget.store.totalApproved;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Jornada 484h iniciada',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: widget.store.goalFraction,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+              color: theme.colorScheme.secondary,
+              backgroundColor:
+                  theme.colorScheme.secondary.withValues(alpha: 0.15),
             ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              total.inSeconds > 0
+                  ? '${_format(total)} de treino aprovado no total'
+                  : 'Comece o primeiro treino hoje.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (widget.store.streakDays > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                '🔥 ${widget.store.streakDays} '
+                '${widget.store.streakDays == 1 ? "dia" : "dias"} seguidos',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -972,6 +1004,20 @@ class _HomeScreenState extends State<HomeScreen> {
     // enquanto a pessoa não entrou na lista de Fundadores.
     final showFounderOffer = widget.store.hasDone('first_before_after_seen') &&
         !widget.store.hasLeftFounderEmail;
+
+    // Priorização por estágio (evita a "parede de cards" no dia 0). No dia 0 a
+    // única coisa é a próxima ação + a trilha; medidores e ofertas secundárias
+    // entram à medida que a pessoa acumula prática real.
+    final isBrandNew = total == Duration.zero;
+    // Desafio de hoje: não repetir a lição que a "próxima melhor ação" já
+    // aponta (seria o mesmo card duas vezes), nem oferecer no dia 0.
+    final showChallenge =
+        !isBrandNew && challenge != null && challenge.id != next?.id;
+    // Convite do desafio de 21 dias só depois da 1ª prática; já iniciado,
+    // mostra sempre (é o frame ativo).
+    final showCohort = widget.store.cohortStarted || !isBrandNew;
+    final showPrecision =
+        total.inSeconds >= _precisionBaseSeconds; // só quando é recomendável
     return Scaffold(
       appBar: AppBar(
         title: const Text('484 Method'),
@@ -1023,17 +1069,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
               ],
               if (next != null) ...[
-                _nextBestActionCard(theme, next, total == Duration.zero),
+                _nextBestActionCard(theme, next, isBrandNew),
                 const SizedBox(height: 12),
               ],
-              _cohortCard(theme),
-              const SizedBox(height: 12),
-              // #7: meta de hoje (curta e tangível) antes do primeiro marco
-              // e da jornada de 484h — hierarquia do mais imediato pro mais
-              // distante, pra "1min aprovado" não parecer minúsculo demais.
-              _todayGoalCard(theme),
-              const SizedBox(height: 12),
-              if (challenge != null) ...[
+              if (showCohort) ...[
+                _cohortCard(theme),
+                const SizedBox(height: 12),
+              ],
+              // #7: meta de hoje → primeiro marco → jornada 484h, do mais
+              // imediato pro mais distante. Escondidos no dia 0 (a próxima
+              // ação já carrega a promessa da meta de hoje).
+              if (!isBrandNew) ...[
+                _todayGoalCard(theme),
+                const SizedBox(height: 12),
+              ],
+              if (!isBrandNew && !widget.store.reachedFirstMilestone) ...[
+                _firstMilestoneCard(theme),
+                const SizedBox(height: 12),
+              ],
+              if (showChallenge) ...[
                 _dailyChallengeCard(theme, challenge),
                 const SizedBox(height: 12),
               ],
@@ -1041,49 +1095,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 _founderOfferCard(theme),
                 const SizedBox(height: 12),
               ],
-              if (!widget.store.reachedFirstMilestone) ...[
-                _firstMilestoneCard(theme),
+              if (!isBrandNew) ...[
+                _journeyCard(theme),
                 const SizedBox(height: 12),
               ],
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Jornada 484h iniciada',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant)),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: widget.store.goalFraction,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                        color: theme.colorScheme.secondary,
-                        backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        total.inSeconds > 0
-                            ? '${_format(total)} de treino aprovado no total'
-                            : 'Comece o primeiro treino hoje.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      if (widget.store.streakDays > 0) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '🔥 ${widget.store.streakDays} '
-                          '${widget.store.streakDays == 1 ? "dia" : "dias"} seguidos',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+              if (showPrecision) ...[
+                _precisionModeCard(theme),
+                const SizedBox(height: 4),
+              ],
               const SizedBox(height: 12),
-              _precisionModeCard(theme),
-              const SizedBox(height: 16),
               Text('Trilha 1 — Saia do inglês mudo',
                   style: theme.textTheme.titleMedium),
               Text('Inglês que você já conhece',

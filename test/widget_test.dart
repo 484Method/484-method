@@ -130,9 +130,53 @@ void main() {
     // #9: a próxima ação nomeia o treino e a micro-habilidade (foco).
     expect(find.textContaining('foco: ${licao01.microSkill}'),
         findsOneWidget);
-    // #10: "Modo desafio" foi renomeado.
+    // Priorização: "Modo precisão" só aparece depois de 30min aprovados —
+    // com 20s aqui ele fica escondido (staging coberto em teste próprio).
+    expect(find.text('Modo precisão'), findsNothing);
+  });
+
+  testWidgets('priorização: dashboard do dia 0 é enxuta (só ação + trilha)',
+      (tester) async {
+    final store = await _emptyStore(); // zero prática = usuário novo
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    // O caminho único: próxima ação + a trilha de lições.
+    expect(find.textContaining('Próxima melhor ação'), findsOneWidget);
+    expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
+        findsOneWidget);
+    // Medidores e ofertas secundárias NÃO aparecem no dia 0.
+    expect(find.textContaining('Meta de hoje'), findsNothing);
+    expect(find.textContaining('Jornada 484h'), findsNothing);
+    expect(find.textContaining('Desafio de 21 dias'), findsNothing);
+    expect(find.text('Modo precisão'), findsNothing);
+  });
+
+  testWidgets('priorização: Modo precisão aparece após 30min aprovados',
+      (tester) async {
+    final store = await _emptyStore();
+    await store.addApproved(const Duration(minutes: 31)); // passa dos 30min
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
     expect(find.text('Modo precisão'), findsOneWidget);
-    expect(find.textContaining('Modo desafio'), findsNothing);
+    expect(find.textContaining('Modo desafio'), findsNothing); // renomeado
   });
 
   testWidgets('onboarding só libera após consentimento de voz',
