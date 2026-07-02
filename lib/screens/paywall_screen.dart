@@ -1,40 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/analytics_service.dart';
+import '../services/backend.dart';
+import '../services/entitlement_service.dart';
 import '../services/pricing.dart';
 import '../services/progress_store.dart';
 
-/// Oferta "Beta Fundador" instrumentada — na prática, um teste de
-/// willingness-to-pay. Cada usuário vê uma variante de preço ESTÁVEL
-/// ([PriceVariant], atribuída pelo ProgressStore) e todo o funil
-/// (`paywall_viewed` → `paywall_subscribe_clicked` → `paywall_email_captured`)
-/// é logado com o `price_bucket`, pra medir conversão POR PREÇO e desenhar a
-/// curva de demanda.
+/// Oferta "Beta Fundador" instrumentada — um teste de willingness-to-pay com
+/// COBRANÇA REAL (Pix manual, memo §13 Opção B). Cada usuário vê uma variante
+/// de preço ESTÁVEL ([PriceVariant], atribuída pelo ProgressStore) e o funil é
+/// logado com o `price_bucket`: `paywall_viewed` → `paywall_subscribe_clicked`
+/// → `pix_checkout_started` → `access_code_redeemed` (a conversão que importa,
+/// = pagou). Curva de demanda por preço sai daí.
 ///
-/// Hoje é fake door: o CTA leva à captura de e-mail (lista de Fundadores),
-/// não a um pagamento — de propósito, pra provar intenção real antes de
-/// construir cobrança. O Pix entra depois em [_startCheckout]; o preço, o
-/// evento e a tela não mudam quando ele chegar.
+/// Fluxo Pix: mostra a chave Pix do dev (app_config 'pix') + o valor; o
+/// comprador paga no banco, recebe um código de Fundador (o dev gera no painel
+/// e entrega) e resgata aqui → vira Fundador ([EntitlementService]). Quem não
+/// quer pagar agora ainda pode entrar na lista por e-mail (fake door, sinal
+/// mais fraco). Sem backend, cai direto na lista.
 class PaywallScreen extends StatefulWidget {
-  const PaywallScreen({super.key, required this.store, this.analytics});
+  const PaywallScreen({
+    super.key,
+    required this.store,
+    required this.entitlement,
+    this.backend,
+    this.analytics,
+  });
 
   final ProgressStore store;
+  final EntitlementService entitlement;
+  final Backend? backend;
   final AnalyticsService? analytics;
 
   @override
   State<PaywallScreen> createState() => _PaywallScreenState();
 }
 
-enum _Step { offer, email, done }
+enum _Step { offer, pix, code, email, done }
 
 class _PaywallScreenState extends State<PaywallScreen> {
   // Estável durante toda a sessão do paywall (não re-sorteia a cada rebuild).
   late final PriceVariant _variant = widget.store.assignedPriceVariant();
   _Step _step = _Step.offer;
+
   final _emailController = TextEditingController();
   bool _emailValid = false;
 
-  // Segmenta todo evento do funil pelo preço testado.
+  final _codeController = TextEditingController();
+  bool _redeeming = false;
+  String? _codeError;
+
+  Map<String, dynamic>? _pixConfig;
+  bool _loadingPix = false;
+
+  bool _becameFounder = false; // done: virou Fundador vs. só entrou na lista
+
   Map<String, Object?> get _priceProps => {
         'price_bucket': _variant.bucket,
         'amount_cents': _variant.amountCents,
@@ -49,27 +70,69 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   void dispose() {
     _emailController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
   static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
-  /// Ponto de entrada do "pagar": HOJE abre a captura de e-mail (fake door).
-  /// AMANHÃ (Pix), trocar por algo como:
-  ///   launchUrl(pixCheckoutUri(_variant.amountCents))
-  /// e tratar o retorno — o evento `paywall_subscribe_clicked` e o preço já
-  /// estão prontos, então a métrica de conversão não muda de forma.
-  void _startCheckout() {
+  /// CTA principal: leva ao pagamento via Pix. Sem backend não dá pra cobrar
+  /// (a chave/validação vivem no servidor) → cai na lista de e-mail.
+  Future<void> _startCheckout() async {
     widget.analytics?.log('paywall_subscribe_clicked', _priceProps);
-    setState(() => _step = _Step.email);
+    if (widget.backend == null) {
+      setState(() => _step = _Step.email);
+      return;
+    }
+    setState(() {
+      _step = _Step.pix;
+      _loadingPix = true;
+    });
+    final cfg = await widget.backend!.fetchPixConfig();
+    if (!mounted) return;
+    setState(() {
+      _pixConfig = cfg;
+      _loadingPix = false;
+    });
+    widget.analytics?.log('pix_checkout_started', _priceProps);
+  }
+
+  void _copyPixKey() {
+    final key = _pixConfig?['key'] as String?;
+    if (key == null) return;
+    Clipboard.setData(ClipboardData(text: key));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Chave Pix copiada.')));
+  }
+
+  Future<void> _redeem() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) return;
+    setState(() {
+      _redeeming = true;
+      _codeError = null;
+    });
+    final ok = await widget.backend?.redeemAccessCode(code) ?? false;
+    if (!mounted) return;
+    if (ok) {
+      await widget.entitlement.setFounderAccess(true);
+      widget.analytics?.log('access_code_redeemed', _priceProps);
+      if (!mounted) return;
+      setState(() {
+        _becameFounder = true;
+        _step = _Step.done;
+        _redeeming = false;
+      });
+    } else {
+      setState(() {
+        _codeError = 'Código inválido ou já usado. Confira e tente de novo.';
+        _redeeming = false;
+      });
+    }
   }
 
   Future<void> _submitEmail() async {
     final email = _emailController.text.trim();
-    // Sinal forte do teste: intenção com nome atrás (não só um clique). O
-    // e-mail vai no evento (tabela `events`, RLS por user_id) pra o dev
-    // conseguir chamar os interessados — consentido: a pessoa digitou pra
-    // entrar na lista.
     widget.analytics?.log('paywall_email_captured', {
       ..._priceProps,
       'email': email,
@@ -98,6 +161,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
             padding: const EdgeInsets.all(24),
             child: switch (_step) {
               _Step.offer => _offer(theme),
+              _Step.pix => _pix(theme),
+              _Step.code => _code(theme),
               _Step.email => _email(theme),
               _Step.done => _done(theme),
             },
@@ -153,7 +218,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
             Text(_variant.cadenceLabel, style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             Text(
-              'Pagamento único. Sem assinatura.',
+              'Pagamento único via Pix. Sem assinatura.',
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
@@ -168,8 +233,181 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
         ),
         TextButton(
+          onPressed: () => setState(() => _step = _Step.email),
+          child: const Text('Ainda não posso pagar — me avise depois'),
+        ),
+        TextButton(
           onPressed: _dismiss,
           child: const Text('Agora não'),
+        ),
+      ],
+    );
+  }
+
+  Widget _pix(ThemeData theme) {
+    if (_loadingPix) {
+      return const Padding(
+        padding: EdgeInsets.all(48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    // Chave Pix ainda não configurada no servidor → cai no fake door (lista).
+    if (_pixConfig == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(Icons.schedule, size: 56, color: theme.colorScheme.primary),
+          const SizedBox(height: 16),
+          Text('Pagamento abrindo',
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(
+            'O Pix está sendo configurado. Deixe seu e-mail e a gente te chama '
+            'pra fechar como Fundador pelo preço de ${_variant.priceLabel}.',
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: () => setState(() => _step = _Step.email),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Entrar na lista'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final key = _pixConfig!['key'] as String? ?? '';
+    final name = _pixConfig!['name'] as String? ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(Icons.pix, size: 56, color: theme.colorScheme.primary),
+        const SizedBox(height: 16),
+        Text('Pague ${_variant.priceLabel} via Pix',
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Chave Pix', style: theme.textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(key,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600)),
+                  ),
+                  IconButton(
+                    onPressed: _copyPixKey,
+                    icon: const Icon(Icons.copy),
+                    tooltip: 'Copiar chave',
+                  ),
+                ],
+              ),
+              if (name.isNotEmpty)
+                Text('em nome de $name', style: theme.textTheme.bodySmall),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _pixStep(theme, '1',
+            'Abra seu banco e faça um Pix de ${_variant.priceLabel} para essa chave.'),
+        _pixStep(theme, '2',
+            'Toque em "Já paguei" — a gente confere e te envia um código de Fundador.'),
+        _pixStep(theme, '3', 'Digite o código aqui para ativar seu acesso.'),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: () => setState(() => _step = _Step.code),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Já paguei / tenho um código'),
+          ),
+        ),
+        TextButton(
+          onPressed: () => setState(() => _step = _Step.email),
+          child: const Text('Prefiro entrar na lista por e-mail'),
+        ),
+      ],
+    );
+  }
+
+  Widget _pixStep(ThemeData theme, String n, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: theme.colorScheme.onPrimary,
+            child: Text(n, style: const TextStyle(fontSize: 12)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
+    );
+  }
+
+  Widget _code(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(Icons.vpn_key, size: 56, color: theme.colorScheme.primary),
+        const SizedBox(height: 16),
+        Text('Ativar Fundador',
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text('Digite o código de Fundador que você recebeu depois de pagar.',
+            style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _codeController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            labelText: 'Código (ex.: FUND-ABC123)',
+            border: const OutlineInputBorder(),
+            errorText: _codeError,
+          ),
+          onChanged: (_) {
+            if (_codeError != null) setState(() => _codeError = null);
+          },
+          onSubmitted: (_) => _redeem(),
+        ),
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: _redeeming ? null : _redeem,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: _redeeming
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Ativar meu acesso'),
+          ),
+        ),
+        TextButton(
+          onPressed: () => setState(() => _step = _Step.pix),
+          child: const Text('Voltar'),
         ),
       ],
     );
@@ -187,12 +425,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center),
         const SizedBox(height: 8),
-        // Honesto sobre o fake door: ainda não há cobrança. A pessoa entra
-        // numa lista e trava o preço que viu.
         Text(
-          'O pagamento ainda não abriu. Deixe seu e-mail: você entra na lista '
-          'de Fundadores e trava o preço de ${_variant.priceLabel} quando '
-          'abrirmos — a gente te chama primeiro.',
+          'Deixe seu e-mail: você entra na lista de Fundadores e trava o preço '
+          'de ${_variant.priceLabel} — a gente te chama primeiro.',
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -241,18 +476,23 @@ class _PaywallScreenState extends State<PaywallScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.check_circle,
+        Icon(_becameFounder ? Icons.workspace_premium : Icons.check_circle,
             size: 64, color: theme.colorScheme.secondary),
         const SizedBox(height: 16),
-        Text('Você está na lista de Fundadores',
+        Text(
+            _becameFounder
+                ? 'Você é Fundador do 484! 🎉'
+                : 'Você está na lista de Fundadores',
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'Assim que o pagamento abrir, a gente te chama com o preço de '
-          'Fundador garantido. Enquanto isso, continue treinando — sua '
-          'prática não para.',
+          _becameFounder
+              ? 'Obrigado por apoiar o 484 desde o começo. Seu acesso de '
+                  'Fundador está ativo — bora treinar.'
+              : 'Assim que abrir a leva, a gente te chama com o preço de '
+                  'Fundador garantido. Enquanto isso, continue treinando.',
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),

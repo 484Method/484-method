@@ -468,3 +468,48 @@ create table if not exists public.cohort_ratings (
 alter table public.cohort_ratings enable row level security;
 create index if not exists cohort_ratings_recording_idx
   on public.cohort_ratings (recording_id);
+
+-- ── Pix manual + código de acesso (2026-07-02, migrações access_codes + ──────
+-- redeem_access_code_require_auth). Memo §13 Opção B: cobrança real sem PSP.
+-- O comprador paga na chave Pix do dev (app_config 'pix', leitura pública),
+-- recebe um código (gerado no painel via dev-stats action gen_access_code) e
+-- resgata no app → vira Fundador. redeem_access_code é a prova durável
+-- (redeemed_by). Sem policy de cliente: ninguém lista códigos; resgate só pela
+-- RPC SECURITY DEFINER (exige auth.uid()).
+create table if not exists public.access_codes (
+  code text primary key,
+  note text,
+  price_bucket text,
+  created_at timestamptz not null default now(),
+  redeemed_by uuid references auth.users (id) on delete set null,
+  redeemed_at timestamptz
+);
+alter table public.access_codes enable row level security;
+
+create or replace function public.redeem_access_code(p_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ok boolean;
+begin
+  if auth.uid() is null then
+    return false;
+  end if;
+  update public.access_codes
+     set redeemed_by = auth.uid(), redeemed_at = now()
+   where code = p_code
+     and redeemed_by is null
+  returning true into ok;
+  return coalesce(ok, false);
+end;
+$$;
+revoke all on function public.redeem_access_code(text) from public;
+grant execute on function public.redeem_access_code(text) to authenticated, anon;
+
+-- Chave Pix do dev, lida pelo paywall (vazia por padrão; preencher key/name/city).
+insert into public.app_config (key, value)
+  values ('pix', jsonb_build_object('key', '', 'name', '', 'city', ''))
+  on conflict (key) do nothing;

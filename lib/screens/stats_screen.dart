@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/backend.dart';
 import 'cohort_rating_screen.dart';
@@ -86,6 +87,47 @@ class _StatsScreenState extends State<StatsScreen> {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  /// Pix manual: gera um código de Fundador pra entregar a quem pagou. Mostra
+  /// num diálogo com botão de copiar (o dev manda pro pagante fora do app).
+  Future<void> _generateAccessCode() async {
+    try {
+      final code = await widget.backend.generateAccessCode(widget.password);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Código de Fundador'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Entregue este código a quem pagou via Pix:'),
+              const SizedBox(height: 12),
+              SelectableText(code,
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code));
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Copiar e fechar'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Falha ao gerar: $e')));
     }
   }
 
@@ -203,6 +245,21 @@ class _StatsScreenState extends State<StatsScreen> {
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
+                        ),
+                        // ── Pix manual: gerar código de Fundador pro pagante ─
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.vpn_key),
+                              title: const Text('Gerar código de Fundador'),
+                              subtitle: const Text(
+                                  'Para quem pagou via Pix — gere e envie o '
+                                  'código de acesso.'),
+                              trailing: const Icon(Icons.add),
+                              onTap: _generateAccessCode,
                             ),
                           ),
                         ),

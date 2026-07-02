@@ -214,6 +214,61 @@ class Backend {
     }
   }
 
+  /// Config da chave Pix do dev (app_config 'pix', leitura pública). Devolve
+  /// {key, name, city} ou null se não configurada — o paywall usa pra mostrar
+  /// a chave de pagamento. Falha/offline → null (o passo Pix mostra fallback).
+  Future<Map<String, dynamic>?> fetchPixConfig() async {
+    try {
+      final row = await client
+          .from('app_config')
+          .select('value')
+          .eq('key', 'pix')
+          .maybeSingle()
+          .timeout(const Duration(seconds: 4));
+      final value = row?['value'];
+      if (value is Map && (value['key'] as String?)?.isNotEmpty == true) {
+        return Map<String, dynamic>.from(value);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[backend] fetchPixConfig falhou: $e');
+      return null;
+    }
+  }
+
+  /// Resgata um código de acesso (Fundador) via RPC atômica SECURITY DEFINER.
+  /// True = código válido e marcado como usado por este usuário; false =
+  /// inexistente/já usado. Erro de rede também vira false (o cliente avisa).
+  Future<bool> redeemAccessCode(String code) async {
+    try {
+      final res = await client.rpc('redeem_access_code',
+          params: {'p_code': code.trim().toUpperCase()});
+      return res == true;
+    } catch (e) {
+      debugPrint('[backend] redeemAccessCode falhou: $e');
+      return false;
+    }
+  }
+
+  /// Gera um código de acesso novo (painel do dev) pra entregar a quem pagou
+  /// via Pix. Passa pela Edge Function `dev-stats` (service role + senha).
+  Future<String> generateAccessCode(String password,
+      {String? note, String? priceBucket}) async {
+    final res = await client.functions.invoke('dev-stats', body: {
+      'password': password,
+      'action': 'gen_access_code',
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      'price_bucket': ?priceBucket,
+    });
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Falha ao gerar código (código ${res.status}).');
+    }
+    final code = (res.data is Map ? res.data['code'] : null) as String?;
+    if (code == null) throw Exception('Resposta sem código.');
+    return code;
+  }
+
   /// Liga/desliga global do app (app_config/'maintenance'), checado no boot.
   /// Fail-open: qualquer falha (offline, tabela ausente) devolve false — a
   /// checagem de manutenção nunca pode derrubar o app por acidente.

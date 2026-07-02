@@ -154,6 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PaywallScreen(
         store: widget.store,
+        entitlement: widget.entitlement,
+        backend: Backend.instance,
         analytics: widget.analytics,
       ),
     ));

@@ -13,8 +13,12 @@
 // Rating cego das gravações do desafio de 21 dias (bucket privado
 // cohort-recordings): { action: 'list_recordings' } devolve as gravações com
 // URLs ASSINADAS (só a service role assina o bucket privado) + a nota já dada;
-// { action: 'rate', recording_id, score, note } grava a nota. Tudo atrás do
-// mesmo gate de senha.
+// { action: 'rate', recording_id, score, note } grava a nota.
+//
+// Pix manual: { action: 'gen_access_code', note?, price_bucket? } cria um
+// código de acesso (Fundador) pra o dev entregar a quem pagou via Pix; o
+// resgate é pela RPC redeem_access_code (não passa aqui). Tudo atrás do mesmo
+// gate de senha.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -37,8 +41,15 @@ Deno.serve(async (req) => {
   if (!expected) return json({ error: "password_unconfigured" }, 503);
 
   try {
-    const { password, set_maintenance, action, recording_id, score, note } =
-      await req.json();
+    const {
+      password,
+      set_maintenance,
+      action,
+      recording_id,
+      score,
+      note,
+      price_bucket,
+    } = await req.json();
     if (password !== expected) return json({ error: "wrong_password" }, 401);
 
     const client = createClient(
@@ -103,6 +114,23 @@ Deno.serve(async (req) => {
       );
       if (error) throw error;
       return json({ ok: true });
+    }
+
+    // ── Pix manual: gerar um código de acesso (Fundador) pra dar ao pagante ──
+    if (action === "gen_access_code") {
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem I/O/0/1
+      const rand = Array.from(
+        { length: 6 },
+        () => alphabet[Math.floor(Math.random() * alphabet.length)],
+      ).join("");
+      const code = `FUND-${rand}`;
+      const { error } = await client.from("access_codes").insert({
+        code,
+        note: typeof note === "string" && note.trim() ? note.trim() : null,
+        price_bucket: typeof price_bucket === "string" ? price_bucket : null,
+      });
+      if (error) throw error;
+      return json({ code });
     }
 
     // ── Liga/desliga do app + stats agregadas (comportamento padrão) ─────────

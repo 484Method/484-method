@@ -64,17 +64,23 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `list_recordings`/`rate`, service role + gate de senha; deploy v6); notas em
   `public.cohort_ratings` (migração `cohort_ratings`; RLS sem policy de cliente,
   igual feedback_quota).
-- ✅ Teste de willingness-to-pay (fake door): a `PaywallScreen` é um teste de
-  preço A/B — cada usuário vê uma variante estável (`lib/services/pricing.dart`,
-  `ProgressStore.assignedPriceVariant`) e o funil inteiro vai pra `events` com
-  `price_bucket`/`amount_cents` (`paywall_viewed` → `paywall_subscribe_clicked`
-  → `paywall_email_captured` c/ e-mail). Hoje NÃO cobra: o CTA captura e-mail
-  (lista de Fundadores) pra provar intenção antes de construir cobrança. O Pix
-  entra em `PaywallScreen._startCheckout` (seam marcado; `url_launcher` já é
-  dep, não precisa de plugin novo). Gatilho: card não-bloqueante na home no
-  "momento uau" (`first_before_after_seen`), some quando a pessoa deixa o
-  e-mail — não gateia as lições grátis. Métrica que importa: conversão POR
-  preço (e-mail/viewed), segmentada por `price_bucket`, entre usuários ativos.
+- ✅ Teste de willingness-to-pay com COBRANÇA REAL (Pix manual, memo §13 Opção
+  B): a `PaywallScreen` é um teste de preço A/B — variante estável por usuário
+  (`lib/services/pricing.dart`, `ProgressStore.assignedPriceVariant`), funil em
+  `events` com `price_bucket` (`paywall_viewed` → `paywall_subscribe_clicked` →
+  `pix_checkout_started` → `access_code_redeemed` = pagou). Fluxo: mostra a
+  chave Pix do dev (`app_config 'pix'`, leitura pública, `Backend.fetchPixConfig`)
+  + valor; comprador paga, recebe um código de Fundador (o dev gera no painel:
+  `stats_screen` → `Backend.generateAccessCode` → `dev-stats` action
+  `gen_access_code`) e resgata (`Backend.redeemAccessCode` → RPC
+  `redeem_access_code` SECURITY DEFINER, exige auth.uid()) → vira Fundador
+  (`EntitlementService.setFounderAccess`). Códigos em `public.access_codes`
+  (migração `access_codes`; RLS sem policy de cliente). Quem não quer pagar
+  agora ainda entra na lista por e-mail (fake door, sinal fraco). Gatilho: card
+  não-bloqueante na home no "momento uau"; não gateia as lições grátis (hoje
+  `kFreeLessonCount`=25=todas, então ser Fundador é status/apoio, não desbloqueio).
+  Métrica que importa: `access_code_redeemed`/`paywall_viewed` por `price_bucket`.
+  Dev precisa preencher `app_config 'pix'` (key/name) pra o Pix aparecer.
 
 ## Fora de escopo (NÃO implementar)
 - Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA
