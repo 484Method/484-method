@@ -8,20 +8,22 @@ depois conteúdo público.**
 - **Gancho central:** *Você sabe mais inglês do que consegue falar.*
 - **Promessa honesta:** destravar a fala treinando o ouvido e a boca antes da
   escrita — não "fluência em X dias".
-- **Métrica do lançamento:** views da landing → abriu o app → deixou e-mail /
-  virou Fundador (tudo no painel do dev: funil do paywall por `price_bucket`).
+- **Métrica do lançamento:** views da landing → abriu o app → completou a 1ª
+  gravação → voltou (D1) → deixou e-mail / virou Fundador (tudo no painel do
+  dev: funil de ativação + funil do paywall por `price_bucket`).
 
 ---
 
 ## 1. Rede quente (dia 0 — maior conversão, faça primeiro)
 
 Mande no 1:1 / grupos / close friends pra quem encaixa no perfil (adulto, trava
-no inglês). Pessoal, não "propaganda":
+no inglês). Pessoal, não "propaganda". Já preempte a objeção de gravar a voz:
 
 > Tô construindo uma coisa que talvez te interesse. É um treino de fala de
 > inglês pra quem *entende mas trava na hora de falar* — você escuta, repete,
-> grava e recebe correção, antes de ver qualquer coisa escrita. Tô abrindo pras
-> primeiras pessoas testarem. Topa fazer 5 min e me dizer o que achou?
+> grava e recebe correção, antes de ver qualquer coisa escrita. Você grava só
+> pra você (dá pra apagar tudo, ninguém mais ouve). Tô abrindo pras primeiras
+> pessoas testarem. Topa fazer 5 min e me dizer o que achou?
 > 👉 https://484method.github.io/484-method/landing/
 
 Meta realista: 10–20 conversas → alguns testes reais → os primeiros depoimentos
@@ -29,26 +31,44 @@ e Fundadores. Esses viram sua prova social pro conteúdo público.
 
 ---
 
-## 2. Ganchos de Reels/TikTok (primeiros 3 segundos)
+## 2. Respostas rápidas (objeções comuns)
 
-O gancho é 90% do vídeo. Fale à câmera, sem edição pesada:
+Tenha essas na ponta da língua — é o que faz a pessoa testar ou não:
+
+- **"Vou ter que gravar minha voz?"** → "Grava, sim — é como o app te dá
+  feedback de pronúncia. Mas fica só pra você, não vai pra lugar nenhum público,
+  e você apaga quando quiser."
+- **"Quanto custa?"** → "Agora tá grátis pras primeiras pessoas. Se você curtir
+  e quiser apoiar como Fundador, tem uma opção — mas não precisa pra testar."
+- **"Meu inglês é péssimo."** → "É exatamente pra você. Começa com palavras que
+  você já conhece (tipo hotel, pizza, internet) — a ideia é justo destravar quem
+  trava."
+- **"Não tenho tempo."** → "É 5 min. Uma lição por dia já vale."
+
+---
+
+## 3. Ganchos de Reels/TikTok (primeiros 3 segundos)
+
+O gancho é 90% do vídeo. Fale à câmera, sem edição pesada. Ancorados nas
+palavras-armadilha reais do app (a fonética é a que o app ensina):
 
 1. "Você não é ruim de inglês. Você só aprendeu ao contrário."
 2. "Você entende inglês em série, música, no trabalho — mas trava na hora de
    falar. Tem explicação."
-3. "Por que você lê 'comfortable' e trava? Porque te ensinaram a escrita antes
-   do som."
-4. "Teste rápido: fala 'chocolate' em inglês. Reparou que você leu com som de
-   português?"
-5. "3 palavras que todo brasileiro acha que fala certo em inglês — e erra."
+3. "Todo mundo jura que fala 'hotel' certo em inglês. Você fala 'ô-TÉL'. É
+   'rrou-TÉL' — o H sopra e a força vai na segunda sílaba."
+4. "3 palavras que você acha que fala certo e fala com sotaque sem perceber:
+   hotel (rrou-TÉL), banana (ba-NÉ-na), internet (ÍN-ter-nét)."
+5. "Fala 'banana' em inglês. Reparou que saiu 'ba-NÂ-na'? Em inglês é
+   'ba-NÉ-na'. Não é burrice — é que ninguém treinou seu ouvido."
 
 **Estrutura de 20–30s:** gancho → o problema (aprendeu pelos olhos, não pelo
-ouvido) → o "aha" (uma palavra-armadilha, ex.: hotel/comfortable/vegetable) →
-CTA ("testa de graça, link na bio").
+ouvido) → o "aha" (a palavra-armadilha, dita errado vs. certo) → CTA ("testa de
+graça, link na bio").
 
 ---
 
-## 3. Legenda padrão (Reels/TikTok/post)
+## 4. Legenda padrão (Reels/TikTok/post)
 
 > Você sabe mais inglês do que consegue falar. O problema não é vocabulário — é
 > que você aprendeu pelos olhos antes do ouvido. No 484 você escuta, repete,
@@ -59,9 +79,12 @@ CTA ("testa de graça, link na bio").
 >
 > #inglês #inglesparabrasileiros #pronuncia #aprenderingles #inglesonline
 
+(No TikTok, use menos hashtags — 2 ou 3 mais específicas convertem melhor que
+uma lista.)
+
 ---
 
-## 4. Sequência de Stories (dia de lançamento — 5 frames)
+## 5. Sequência de Stories (dia de lançamento — 5 frames)
 
 1. **Enquete:** "Você entende inglês mas TRAVA na hora de falar?" (Sim / Total)
 2. **Diagnóstico:** "O problema não é você. É a ordem: te ensinaram a escrita
@@ -74,7 +97,21 @@ CTA ("testa de graça, link na bio").
 
 ---
 
-## 5. Bio (Instagram/TikTok)
+## 6. Post de fundador (por que você tá construindo)
+
+Público quente confia mais na pessoa do que no produto. Um post/vídeo assim, com
+a sua cara, costuma converter mais que qualquer anúncio:
+
+> Passei anos "sabendo inglês" e travando na hora de falar. Descobri que o
+> problema era a ordem: aprendi tudo pela escrita antes de treinar o ouvido — e
+> aí lia inglês com som de português. Cansei e comecei a construir o jeito que
+> eu queria ter aprendido: primeiro o ouvido, depois a boca, só então a escrita.
+> É o 484. Tá de pé, e tô abrindo pras primeiras pessoas. Se você também
+> entende mas trava, testa e me diz o que achou 👇
+
+---
+
+## 7. Bio (Instagram/TikTok)
 
 > Destrave sua fala em inglês 🗣️ Primeiro o ouvido, depois a boca.
 > Pra quem entende mas trava. Testa 👇
@@ -82,25 +119,35 @@ CTA ("testa de graça, link na bio").
 
 ---
 
-## 6. Checklist da semana 1
+## 8. Checklist da semana 1
 
-- [ ] Preencher a chave Pix no painel/`app_config 'pix'` (senão o checkout fica
-      no fallback "pagamento abrindo").
 - [ ] Rede quente: 10–20 mensagens 1:1 (passo 1).
-- [ ] Gravar 3 Reels com os ganchos do passo 2 (postar 1/dia).
+- [ ] Gravar 3 Reels com os ganchos do passo 3 (postar 1/dia).
+- [ ] Post/vídeo de fundador (passo 6).
 - [ ] Sequência de Stories no dia de maior alcance.
 - [ ] Colher 2–3 depoimentos dos primeiros testes → usar como prova.
-- [ ] Olhar o painel: quantos abriram o app, quantos deixaram e-mail / pagaram,
-      conversão por `price_bucket`.
+- [ ] Olhar o painel: quantos abriram o app, completaram a 1ª gravação,
+      voltaram no D1, deixaram e-mail.
+- [ ] (Opcional, só quando aparecer alguém pra pagar) ligar a cobrança
+      preenchendo a chave Pix em `app_config 'pix'`. Até lá o checkout coleta
+      e-mail no fallback — não precisa pra lançar.
 
 ---
 
-## 7. O que observar (e o que NÃO fazer)
+## 9. O que observar (e o que NÃO fazer)
 
-- **Sinal bom:** gente da rede quente que testa e VOLTA no dia seguinte (D1). É
-  o que destrava tudo — retenção com estranhos vem depois.
-- **Cuidado ao ler métricas:** nesse estágio o tráfego é pico manual (post/story),
-  não aquisição contínua. Queda no dia seguinte a um post não é "produto ruim" —
-  é falta de novo impulso. Sempre cheque se houve divulgação no dia.
+**Alvos pra primeira leva (rede quente, não são metas de escala):**
+
+- **>70%** de quem abre o app completa a **1ª gravação** (senão o problema é
+  ativação/onboarding, não aquisição).
+- **Alguns voltam no D1** — é o sinal mais forte nesse estágio. Retenção com
+  estranhos vem depois.
+- **2–3 depoimentos** espontâneos → sua prova social pro conteúdo público.
+
+**Cuidados:**
+
+- Nesse estágio o tráfego é pico manual (post/story), não aquisição contínua.
+  Queda no dia seguinte a um post **não** é "produto ruim" — é falta de novo
+  impulso. Sempre cheque se houve divulgação no dia antes de tirar conclusão.
 - **Não** escale conteúdo pago nem prometa fluência. O objetivo desta fase é
-  provar que o loop retém e que alguém paga — não crescer número.
+  provar que o loop retém e que alguém pagaria — não crescer número.
