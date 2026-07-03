@@ -513,3 +513,24 @@ grant execute on function public.redeem_access_code(text) to authenticated, anon
 insert into public.app_config (key, value)
   values ('pix', jsonb_build_object('key', '', 'name', '', 'city', ''))
   on conflict (key) do nothing;
+
+-- ── Cadastro obrigatório na entrada (2026-07-03, migração signups) ───────────
+-- Nome + e-mail antes de usar o app (reverte a entrada anônima). PII isolada
+-- aqui, separada de progress/events/gravações (boa prática LGPD). RLS por dono
+-- (como progress); o dev lê todos via service role (export CSV com contato).
+create table if not exists public.signups (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  name text,
+  email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.signups enable row level security;
+create policy "own signups: select" on public.signups
+  for select using (auth.uid() = user_id);
+create policy "own signups: insert" on public.signups
+  for insert with check (auth.uid() = user_id);
+create policy "own signups: update" on public.signups
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own signups: delete" on public.signups
+  for delete using (auth.uid() = user_id);

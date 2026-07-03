@@ -133,25 +133,39 @@ Deno.serve(async (req) => {
       return json({ code });
     }
 
-    // ── Export CSV: uma linha por usuário (métricas do progress) ─────────────
+    // ── Export CSV: uma linha por usuário — cadastro (nome/e-mail) + prática ──
     if (action === "export_users") {
-      const { data, error } = await client
+      const { data: signups } = await client
+        .from("signups")
+        .select("user_id, name, email, created_at");
+      const { data: prog, error } = await client
         .from("progress")
         .select(
           "user_id, approved_seconds, streak_days, completed_lessons, last_practice_day, updated_at",
         );
       if (error) throw error;
-      const users = (data ?? []).map((r) => ({
-        user_id: r.user_id,
-        approved_seconds: r.approved_seconds ?? 0,
-        approved_minutes: Math.round((r.approved_seconds ?? 0) / 60),
-        streak_days: r.streak_days ?? 0,
-        lessons_completed: Array.isArray(r.completed_lessons)
-          ? r.completed_lessons.length
-          : 0,
-        last_practice_day: r.last_practice_day ?? "",
-        updated_at: r.updated_at ?? "",
-      }));
+      const sMap = new Map((signups ?? []).map((s) => [s.user_id, s]));
+      const pMap = new Map((prog ?? []).map((p) => [p.user_id, p]));
+      // União: pega quem se cadastrou (mesmo sem praticar) e quem tem progresso.
+      const ids = new Set([...sMap.keys(), ...pMap.keys()]);
+      const users = [...ids].map((id) => {
+        const s = sMap.get(id);
+        const p = pMap.get(id);
+        return {
+          user_id: id,
+          name: s?.name ?? "",
+          email: s?.email ?? "",
+          signed_up_at: s?.created_at ?? "",
+          approved_seconds: p?.approved_seconds ?? 0,
+          approved_minutes: Math.round((p?.approved_seconds ?? 0) / 60),
+          streak_days: p?.streak_days ?? 0,
+          lessons_completed: Array.isArray(p?.completed_lessons)
+            ? p.completed_lessons.length
+            : 0,
+          last_practice_day: p?.last_practice_day ?? "",
+          updated_at: p?.updated_at ?? "",
+        };
+      });
       return json({ users });
     }
 

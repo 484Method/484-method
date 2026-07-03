@@ -23,6 +23,8 @@ class ProgressStore {
   static const _kCompletedLessons = 'completed_lessons';
   static const _kVoiceConsentAt = 'voice_consent_at';
   static const _kVoiceStorageConsentAt = 'voice_storage_consent_at';
+  static const _kRegName = 'registrant_name';
+  static const _kRegEmail = 'registrant_email';
   static const _kRigorousMode = 'rigorous_mode';
   static const _kThemeMode = 'theme_mode';
   static const _kActivationSteps = 'activation_steps';
@@ -128,6 +130,20 @@ class ProgressStore {
       await _prefs.setString(_kLastPracticeDay, today);
     }
     backend?.pushProgress(_snapshot()); // espelha sempre (tempo mudou)
+  }
+
+  /// Cadastro obrigatório na entrada: nome + e-mail. Reverte a entrada
+  /// anônima — ninguém usa o app sem se identificar (decisão do produto). O
+  /// e-mail é a chave; guardado local e espelhado na tabela `signups` (PII
+  /// isolada de progress/events).
+  String? get registrantName => _prefs.getString(_kRegName);
+  String? get registrantEmail => _prefs.getString(_kRegEmail);
+  bool get hasRegistered => (registrantEmail ?? '').isNotEmpty;
+
+  Future<void> setRegistration(String name, String email) async {
+    await _prefs.setString(_kRegName, name.trim());
+    await _prefs.setString(_kRegEmail, email.trim());
+    backend?.saveSignup(name: name.trim(), email: email.trim());
   }
 
   /// LGPD: gravação de voz é dado pessoal sensível — o app só pode gravar

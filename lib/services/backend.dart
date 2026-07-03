@@ -95,6 +95,24 @@ class Backend {
     }
   }
 
+  /// Espelha o cadastro (nome + e-mail) da entrada na tabela `signups` (PII
+  /// isolada, RLS por dono). Fire-and-forget: o local é a fonte de verdade da
+  /// UI; sem rede o cadastro vale localmente e sincroniza depois.
+  Future<void> saveSignup({required String name, required String email}) async {
+    final uid = userId;
+    if (uid == null) return;
+    try {
+      await client.from('signups').upsert({
+        'user_id': uid,
+        'name': name,
+        'email': email,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[backend] saveSignup falhou: $e');
+    }
+  }
+
   Future<void> pushEvent(String event, Map<String, Object?> props) async {
     final uid = userId;
     if (uid == null) return;
@@ -154,6 +172,7 @@ class Backend {
       debugPrint('[backend] deleteRemoteData (gravações) falhou: $e');
     }
     try {
+      await client.from('signups').delete().eq('user_id', uid);
       await client.from('events').delete().eq('user_id', uid);
       await client.from('progress').delete().eq('user_id', uid);
     } catch (e) {
