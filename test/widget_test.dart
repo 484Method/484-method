@@ -326,6 +326,21 @@ void main() {
     expect(kFreeLessonCount, fase1Lessons.length);
   });
 
+  test('cadastro na entrada: começa não-registrado e persiste', () async {
+    final store = await _emptyStore();
+    expect(store.hasRegistered, isFalse);
+    expect(store.registrantEmail, isNull);
+
+    await store.setRegistration('Maria', 'maria@exemplo.com');
+    expect(store.hasRegistered, isTrue);
+    expect(store.registrantName, 'Maria');
+    expect(store.registrantEmail, 'maria@exemplo.com');
+
+    final store2 = await ProgressStore.load();
+    expect(store2.hasRegistered, isTrue); // cross-sessão
+    expect(store2.registrantName, 'Maria');
+  });
+
   test('teste de preço (WTP): variante é válida, estável e persiste', () async {
     final store = await _emptyStore();
     final v = store.assignedPriceVariant();

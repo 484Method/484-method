@@ -104,6 +104,9 @@ class _StatsScreenState extends State<StatsScreen> {
       }
       const cols = [
         'user_id',
+        'name',
+        'email',
+        'signed_up_at',
         'approved_seconds',
         'approved_minutes',
         'streak_days',
