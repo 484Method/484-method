@@ -130,7 +130,20 @@ a sua cara, costuma converter mais que qualquer anúncio:
       voltaram no D1, deixaram e-mail.
 - [ ] (Opcional, só quando aparecer alguém pra pagar) ligar a cobrança
       preenchendo a chave Pix em `app_config 'pix'`. Até lá o checkout coleta
-      e-mail no fallback — não precisa pra lançar.
+      e-mail no fallback — não precisa pra lançar. **Antes de cobrar, ver a
+      nota de formalização abaixo.**
+
+> ⚖️ **Antes de ligar a cobrança — formalização (não é conselho jurídico,
+> confirme com um contador).** Receber receita de produto no Pix/CPF pessoal
+> cria pendência fiscal (IRPF, sem nota, mistura finanças). O caminho limpo é
+> ter CNPJ e usar a **chave Pix da PJ** (não a pessoal) em `app_config 'pix'`.
+> O mais leve costuma ser o **MEI** (~R$70/mês, CNPJ + Pix empresarial + nota;
+> teto ~R$81 mil/ano, cabe nos preços de R$27–67) — **se** o enquadramento
+> permitir (como *ensino/instrução de idiomas* provavelmente cabe; como
+> *software/TI* não cabe → aí é ME no Simples). Confirme o CNAE com um contador
+> (dá pra abrir MEI sozinho no Portal do Empreendedor). Não bloqueia o
+> lançamento: rede quente e teste do produto seguem sem Pix; formalize antes de
+> cobrar recorrente.
 
 ---
 
