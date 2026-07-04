@@ -77,7 +77,7 @@ class IntroScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Gratuito para começar. Sem cadastro.',
+                    'Gratuito para começar. Leva menos de 1 minuto.',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: theme.colorScheme.outline),
                     textAlign: TextAlign.center,

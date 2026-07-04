@@ -3,8 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ponte com o Supabase. Projetada para degradar com elegância: sem URL/chave
 /// configuradas, [instance] é null e o app roda 100% local (ProgressStore +
-/// AnalyticsService em localStorage). Com chaves, faz sign-in anônimo (cada
-/// usuário ganha um id estável sem cadastro) e espelha progresso e eventos.
+/// AnalyticsService em localStorage). Com chaves, faz sign-in anônimo (id
+/// estável por dispositivo; o nome/e-mail do cadastro vão pra `signups`) e
+/// espelha progresso e eventos.
 ///
 /// Toda chamada de rede é fire-and-forget e protegida: o local é a fonte de
 /// verdade da UI; o Supabase é o espelho durável (cross-device + analytics).
