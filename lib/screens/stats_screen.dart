@@ -586,6 +586,8 @@ class _Body extends StatelessWidget {
             final landing  = (acqFunnel['landing_views'] as num?)?.toInt() ?? 0;
             final cta      = (acqFunnel['cta_clicks'] as num?)?.toInt() ?? 0;
             final consent  = (acqFunnel['consent_accepted'] as num?)?.toInt() ?? 0;
+            // signup_completed é chave de topo (merge no wrapper), não do acqFunnel.
+            final signup   = (stats['signup_completed'] as num?)?.toInt() ?? 0;
             final firstDone= (acqFunnel['first_lesson_done'] as num?)?.toInt() ?? 0;
             String conv(int num, int den) =>
                 den > 0 ? '  (${(100.0 * num / den).toStringAsFixed(0)}%)' : '';
@@ -596,6 +598,8 @@ class _Body extends StatelessWidget {
                   'Clicou no CTA', '$cta${conv(cta, landing)}'),
               _row(theme, Icons.check_circle_outline,
                   'Aceitou consentimento de voz', '$consent${conv(consent, cta)}'),
+              _row(theme, Icons.person_add_alt_1,
+                  'Fez cadastro (nome+e-mail)', '$signup${conv(signup, consent)}'),
               _row(theme, Icons.school_outlined,
                   'Concluiu a 1ª lição', '$firstDone${conv(firstDone, consent)}'),
             ];
