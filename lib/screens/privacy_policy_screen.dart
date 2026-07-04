@@ -40,9 +40,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 section(
                   'O que coletamos',
-                  'Para avaliar sua pronúncia, o app grava sua voz durante os '
-                      'exercícios. Guardamos também seu progresso (minutos de '
-                      'prática aprovada, lições concluídas, streak), eventos '
+                  'Ao entrar, você informa seu nome e e-mail — usamos para '
+                      'acompanhar sua evolução e falar com você sobre o beta. '
+                      'Para avaliar sua pronúncia, o app grava sua voz durante '
+                      'os exercícios. Guardamos também seu progresso (minutos '
+                      'de prática aprovada, lições concluídas, streak), eventos '
                       'de uso do app e dados técnicos agregados (navegador, '
                       'sistema operacional, idioma do dispositivo) — nunca '
                       'localização precisa por GPS.',
@@ -68,8 +70,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 section(
                   'Onde os dados ficam',
                   'Seu progresso fica no aparelho e, quando há conexão, é '
-                      'espelhado na nossa base (Supabase) ligada a um '
-                      'identificador anônimo — sem nome, e-mail ou telefone.',
+                      'espelhado na nossa base (Supabase). Seu nome e e-mail '
+                      'ficam guardados à parte, numa tabela de cadastro. Não '
+                      'coletamos telefone nem endereço.',
                 ),
                 section(
                   'Consentimento',
@@ -80,9 +83,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 section(
                   'Exclusão dos seus dados',
                   'A qualquer momento, em "Apagar meus dados" no menu, você '
-                      'remove progresso, streak, lições, consentimento e as '
-                      'gravações do desafio — tanto do aparelho quanto da nossa '
-                      'base. A ação é definitiva.',
+                      'remove seu cadastro (nome/e-mail), progresso, streak, '
+                      'lições, consentimento e as gravações do desafio — tanto '
+                      'do aparelho quanto da nossa base. A ação é definitiva.',
                 ),
                 section(
                   'Contato',
