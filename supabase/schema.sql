@@ -401,8 +401,14 @@ returns json language sql stable security definer set search_path = public
 as $function$
   select (public.get_dev_stats_base()::jsonb || public.get_phase0_activation()::jsonb)::json;
 $function$;
-revoke all on function public.get_phase0_activation() from public;
-revoke all on function public.get_dev_stats() from public;
+-- SEGURANÇA: só service_role executa (a Edge Function `dev-stats`, atrás da
+-- senha). ⚠️ ARMADILHA: todo CREATE OR REPLACE destas funções REGRANTA EXECUTE
+-- pro PUBLIC (default do Postgres/Supabase) — anon/authenticated voltam a poder
+-- chamar o RPC direto pela anon key e pular o gate de senha. SEMPRE rode estes
+-- revokes DEPOIS de recriar a função. Revogado explícito de public+anon+authenticated
+-- (migração revoke_dev_stats_from_anon, 2026-07-03, após regressão detectada).
+revoke execute on function public.get_phase0_activation() from public, anon, authenticated;
+revoke execute on function public.get_dev_stats() from public, anon, authenticated;
 grant execute on function public.get_phase0_activation() to service_role;
 grant execute on function public.get_dev_stats() to service_role;
 
