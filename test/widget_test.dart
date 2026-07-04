@@ -9,6 +9,7 @@ import 'package:method484/screens/home_screen.dart';
 import 'package:method484/screens/lesson_screen.dart';
 import 'package:method484/screens/maintenance_screen.dart';
 import 'package:method484/screens/onboarding_screen.dart';
+import 'package:method484/screens/paywall_screen.dart';
 import 'package:method484/screens/word_memory_screen.dart';
 import 'package:method484/services/feedback_messages.dart';
 import 'package:method484/services/analytics_service.dart';
@@ -324,6 +325,58 @@ void main() {
 
   test('regra de produto: todas as lições estão grátis por enquanto', () {
     expect(kFreeLessonCount, fase1Lessons.length);
+  });
+
+  // Caminho do dinheiro: código válido → resgate → vira Fundador. Usa os seams
+  // de injeção (fetchPixConfigOverride/redeemOverride) pra não depender do
+  // Backend real. Cobre a fiação resgate→EntitlementService, antes sem teste.
+  Future<void> drivePaywallToCode(WidgetTester tester,
+      {required ProgressStore store,
+      required LocalEntitlementService ent,
+      required Future<bool> Function(String) redeem}) async {
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: PaywallScreen(
+        store: store,
+        entitlement: ent,
+        fetchPixConfigOverride: () async => {'key': 'dev@pix', 'name': 'Dev'},
+        redeemOverride: redeem,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quero ser Fundador')); // offer → pix
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Já paguei / tenho um código')); // pix → code
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('caminho do dinheiro: código válido vira Fundador',
+      (tester) async {
+    final store = await _emptyStore();
+    final ent = await LocalEntitlementService.load();
+    expect(ent.hasFounderAccess, isFalse);
+    await drivePaywallToCode(tester,
+        store: store, ent: ent, redeem: (c) async => c == 'FUND-OK');
+    await tester.enterText(find.byType(TextField), 'FUND-OK');
+    await tester.tap(find.text('Ativar meu acesso'));
+    await tester.pumpAndSettle();
+    expect(ent.hasFounderAccess, isTrue); // entitlement virou
+    expect(find.textContaining('Fundador do 484'), findsOneWidget);
+  });
+
+  testWidgets('caminho do dinheiro: código inválido NÃO vira Fundador',
+      (tester) async {
+    final store = await _emptyStore();
+    final ent = await LocalEntitlementService.load();
+    await drivePaywallToCode(tester,
+        store: store, ent: ent, redeem: (c) async => false);
+    await tester.enterText(find.byType(TextField), 'ERRADO');
+    await tester.tap(find.text('Ativar meu acesso'));
+    await tester.pumpAndSettle();
+    expect(ent.hasFounderAccess, isFalse); // não concedeu acesso
+    expect(find.textContaining('inválido'), findsOneWidget);
   });
 
   test('cadastro na entrada: começa não-registrado e persiste', () async {
