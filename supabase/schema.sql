@@ -396,10 +396,18 @@ as $function$
             group by props->>'reason') t)
   );
 $function$;
+-- Wrapper: mescla o corpo grande (get_dev_stats_base, intocado) + phase0 + a
+-- contagem de cadastro (chave de topo signup_completed, migração
+-- dev_stats_add_signup) — sem editar a função grande.
 create or replace function public.get_dev_stats()
 returns json language sql stable security definer set search_path = public
 as $function$
-  select (public.get_dev_stats_base()::jsonb || public.get_phase0_activation()::jsonb)::json;
+  select (
+    public.get_dev_stats_base()::jsonb
+    || public.get_phase0_activation()::jsonb
+    || jsonb_build_object('signup_completed',
+         (select count(*) from events where event = 'signup_completed'))
+  )::json;
 $function$;
 -- SEGURANÇA: só service_role executa (a Edge Function `dev-stats`, atrás da
 -- senha). ⚠️ ARMADILHA: todo CREATE OR REPLACE destas funções REGRANTA EXECUTE
