@@ -19,6 +19,12 @@ import '../services/progress_store.dart';
 /// e entrega) e resgata aqui → vira Fundador ([EntitlementService]). Quem não
 /// quer pagar agora ainda pode entrar na lista por e-mail (fake door, sinal
 /// mais fraco). Sem backend, cai direto na lista.
+/// Busca a config Pix (chave/nome) — normalmente [Backend.fetchPixConfig].
+typedef PixConfigFetcher = Future<Map<String, dynamic>?> Function();
+
+/// Resgata um código de Fundador — normalmente [Backend.redeemAccessCode].
+typedef CodeRedeemer = Future<bool> Function(String code);
+
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({
     super.key,
@@ -26,12 +32,20 @@ class PaywallScreen extends StatefulWidget {
     required this.entitlement,
     this.backend,
     this.analytics,
+    this.fetchPixConfigOverride,
+    this.redeemOverride,
   });
 
   final ProgressStore store;
   final EntitlementService entitlement;
   final Backend? backend;
   final AnalyticsService? analytics;
+
+  /// Seams de teste: injetam as operações de rede (Pix/resgate) sem depender do
+  /// [Backend] concreto (construtor privado + SupabaseClient real). Em produção
+  /// ficam null e o fluxo usa o [backend].
+  final PixConfigFetcher? fetchPixConfigOverride;
+  final CodeRedeemer? redeemOverride;
 
   @override
   State<PaywallScreen> createState() => _PaywallScreenState();
@@ -76,11 +90,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
-  /// CTA principal: leva ao pagamento via Pix. Sem backend não dá pra cobrar
-  /// (a chave/validação vivem no servidor) → cai na lista de e-mail.
+  // Operações de rede: override de teste, senão o backend (ou null se offline).
+  PixConfigFetcher? get _pixFetcher =>
+      widget.fetchPixConfigOverride ?? widget.backend?.fetchPixConfig;
+  CodeRedeemer? get _redeemer =>
+      widget.redeemOverride ?? widget.backend?.redeemAccessCode;
+
+  /// CTA principal: leva ao pagamento via Pix. Sem como cobrar (a chave e a
+  /// validação vivem no servidor) → cai na lista de e-mail.
   Future<void> _startCheckout() async {
     widget.analytics?.log('paywall_subscribe_clicked', _priceProps);
-    if (widget.backend == null) {
+    final fetch = _pixFetcher;
+    if (fetch == null) {
       setState(() => _step = _Step.email);
       return;
     }
@@ -88,7 +109,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       _step = _Step.pix;
       _loadingPix = true;
     });
-    final cfg = await widget.backend!.fetchPixConfig();
+    final cfg = await fetch();
     if (!mounted) return;
     setState(() {
       _pixConfig = cfg;
@@ -112,7 +133,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       _redeeming = true;
       _codeError = null;
     });
-    final ok = await widget.backend?.redeemAccessCode(code) ?? false;
+    final ok = await (_redeemer?.call(code) ?? Future.value(false));
     if (!mounted) return;
     if (ok) {
       await widget.entitlement.setFounderAccess(true);
