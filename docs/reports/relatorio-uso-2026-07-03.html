@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--
+  Relatório de uso do 484 Method — snapshot 2026-07-03.
+  Fonte: Supabase de produção (tabelas events/progress/signups), período 15/jun–03/jul/2026.
+  Autocontido (CSS inline). Abrir no navegador ou imprimir em PDF (Ctrl/Cmd+P).
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>484 Method — Relatório de uso (jun–jul 2026)</title>
+<style>
+  :root{
+    --navy:#14243f; --cream:#f5f1ea; --gold:#c0983a; --gold-dark:#a9832d;
+    --ink:#1b2230; --muted:#5b6472; --card:#ffffff; --line:#e6ded1;
+    --good:#3f7d55; --warn:#b4552d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#e9e3d8;line-height:1.55}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.2}
+  .page{max-width:900px;margin:24px auto;background:var(--cream);padding:0 0 40px;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+  .hero{background:var(--navy);color:var(--cream);padding:36px 40px}
+  .hero .kicker{text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;color:var(--gold);font-weight:700}
+  .hero h1{font-size:2rem;margin:8px 0 6px}
+  .hero p{color:#c9cdd6;font-size:.95rem}
+  section{padding:28px 40px;border-bottom:1px solid var(--line)}
+  section:last-child{border-bottom:none}
+  h2{font-size:1.35rem;margin-bottom:6px}
+  .eyebrow{text-transform:uppercase;letter-spacing:.1em;font-size:.72rem;font-weight:700;color:var(--gold-dark);margin-bottom:12px}
+  p.lead{color:var(--muted);margin-bottom:14px}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+  .kpi .n{font-family:Georgia,serif;font-size:1.8rem;font-weight:700;color:var(--navy)}
+  .kpi .l{font-size:.82rem;color:var(--muted);margin-top:2px}
+
+  ul.take{list-style:none;margin-top:6px}
+  ul.take li{padding:8px 0 8px 26px;position:relative;border-bottom:1px dashed var(--line)}
+  ul.take li:last-child{border-bottom:none}
+  ul.take li::before{content:"▸";position:absolute;left:2px;color:var(--gold-dark)}
+  ul.take b{color:var(--ink)}
+
+  /* barras horizontais */
+  .bar-row{display:grid;grid-template-columns:210px 1fr 54px;align-items:center;gap:10px;margin:7px 0;font-size:.9rem}
+  .bar-track{background:#e7e0d3;border-radius:6px;height:22px;overflow:hidden}
+  .bar-fill{height:100%;background:var(--navy);border-radius:6px}
+  .bar-fill.gold{background:var(--gold)}
+  .bar-fill.warn{background:var(--warn)}
+  .bar-fill.good{background:var(--good)}
+  .bar-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .lbl-muted{color:var(--muted)}
+
+  /* timeline colunas */
+  .timeline{display:flex;align-items:flex-end;gap:6px;height:130px;margin-top:8px;padding-top:8px}
+  .tl-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .tl-bar{width:100%;background:var(--gold);border-radius:4px 4px 0 0;min-height:2px}
+  .tl-bar.peak{background:var(--navy)}
+  .tl-n{font-size:.7rem;color:var(--muted);margin-bottom:3px}
+  .tl-d{font-size:.62rem;color:var(--muted);margin-top:4px;transform:rotate(-0deg)}
+
+  .note{font-size:.8rem;color:var(--muted)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px}
+  .tag.good{background:#e2efe6;color:var(--good)}
+  .tag.warn{background:#f6e6dd;color:var(--warn)}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;max-width:none}section{break-inside:avoid}}
+  @media (max-width:640px){.cards{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}.bar-row{grid-template-columns:130px 1fr 44px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">484 Method · Relatório de uso</div>
+    <h1>Primeiros usuários — validação inicial</h1>
+    <p>Período: 15/jun a 03/jul/2026 (~18 dias) · Aquisição 100% orgânica, sem verba de mídia · Fase pré-monetização.</p>
+  </div>
+
+  <!-- Resumo executivo -->
+  <section>
+    <div class="eyebrow">Resumo executivo</div>
+    <ul class="take">
+      <li><b>93 usuários</b> em ~18 dias, 100% orgânico — a maioria de um único pico no Instagram.</li>
+      <li><b>O produto entrega pra quem passa da 1ª gravação:</b> dos que gravaram, ~69% concluíram ao menos uma lição, e 1 pessoa concluiu <b>as 25</b>.</li>
+      <li><span class="tag warn">Gargalo</span> <b>66% abrem e nunca gravam</b> — a ativação (chegar à 1ª fala) é o ponto a atacar, não a aquisição de topo.</li>
+      <li><b>Aquisição é pico manual, não contínua</b> — falta um canal orgânico recorrente (em andamento).</li>
+    </ul>
+  </section>
+
+  <!-- KPIs -->
+  <section>
+    <div class="eyebrow">Números-chave</div>
+    <div class="cards">
+      <div class="kpi"><div class="n">93</div><div class="l">usuários</div></div>
+      <div class="kpi"><div class="n">2.081</div><div class="l">eventos registrados</div></div>
+      <div class="kpi"><div class="n">28</div><div class="l">com prática aprovada</div></div>
+      <div class="kpi"><div class="n">22</div><div class="l">concluíram ≥1 lição</div></div>
+    </div>
+  </section>
+
+  <!-- Funil -->
+  <section>
+    <div class="eyebrow">Funil de ativação</div>
+    <p class="lead">De cada etapa para a seguinte. A queda decisiva é logo no começo — abrir e não gravar.</p>
+    <div class="bar-row"><span>Abriram o app</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-val">93</span></div>
+    <div class="bar-row"><span>Fizeram a 1ª gravação</span><div class="bar-track"><div class="bar-fill warn" style="width:34%"></div></div><span class="bar-val">32</span></div>
+    <div class="bar-row"><span>Tiveram prática aprovada</span><div class="bar-track"><div class="bar-fill gold" style="width:30%"></div></div><span class="bar-val">28</span></div>
+    <div class="bar-row"><span>Concluíram ≥1 lição</span><div class="bar-track"><div class="bar-fill good" style="width:24%"></div></div><span class="bar-val">22</span></div>
+    <div class="bar-row"><span>Concluíram ≥3 lições</span><div class="bar-track"><div class="bar-fill good" style="width:12%"></div></div><span class="bar-val">11</span></div>
+    <p class="note" style="margin-top:10px"><b>Leitura:</b> a maior perda (93→32) é <b>antes do “momento aha”</b>. Uma vez que a pessoa grava, a conversão para concluir lição é alta (~69%). O foco de produto é reduzir o atrito até a 1ª fala.</p>
+  </section>
+
+  <!-- Aquisição -->
+  <section>
+    <div class="eyebrow">Aquisição — novos usuários por dia</div>
+    <p class="lead">~75% dos usuários entraram num pico de 3 dias (25–27/jun), com auge de 34 no dia 26 (post no Instagram). Depois, fio de água.</p>
+    <div class="timeline">
+      <div class="tl-col"><div class="tl-n">3</div><div class="tl-bar" style="height:9%"></div><div class="tl-d">18/6</div></div>
+      <div class="tl-col"><div class="tl-n">2</div><div class="tl-bar" style="height:6%"></div><div class="tl-d">20/6</div></div>
+      <div class="tl-col"><div class="tl-n">1</div><div class="tl-bar" style="height:3%"></div><div class="tl-d">21/6</div></div>
+      <div class="tl-col"><div class="tl-n">3</div><div class="tl-bar" style="height:9%"></div><div class="tl-d">22/6</div></div>
+      <div class="tl-col"><div class="tl-n">2</div><div class="tl-bar" style="height:6%"></div><div class="tl-d">23/6</div></div>
+      <div class="tl-col"><div class="tl-n">2</div><div class="tl-bar" style="height:6%"></div><div class="tl-d">24/6</div></div>
+      <div class="tl-col"><div class="tl-n">24</div><div class="tl-bar" style="height:70%"></div><div class="tl-d">25/6</div></div>
+      <div class="tl-col"><div class="tl-n">34</div><div class="tl-bar peak" style="height:100%"></div><div class="tl-d">26/6</div></div>
+      <div class="tl-col"><div class="tl-n">12</div><div class="tl-bar" style="height:35%"></div><div class="tl-d">27/6</div></div>
+      <div class="tl-col"><div class="tl-n">1</div><div class="tl-bar" style="height:3%"></div><div class="tl-d">28/6</div></div>
+      <div class="tl-col"><div class="tl-n">3</div><div class="tl-bar" style="height:9%"></div><div class="tl-d">30/6</div></div>
+      <div class="tl-col"><div class="tl-n">4</div><div class="tl-bar" style="height:12%"></div><div class="tl-d">1/7</div></div>
+    </div>
+    <p class="note" style="margin-top:14px"><b>Origem</b> (dos rastreados): direto 21 · Instagram 7. Confirma dependência de divulgação manual pontual, sem canal contínuo.</p>
+  </section>
+
+  <!-- Plataforma -->
+  <section>
+    <div class="split">
+      <div>
+        <div class="eyebrow">Sistema do usuário</div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>iOS</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-val">41</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>Android</span><div class="bar-track"><div class="bar-fill" style="width:32%"></div></div><span class="bar-val">13</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>macOS</span><div class="bar-track"><div class="bar-fill" style="width:32%"></div></div><span class="bar-val">13</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>Windows</span><div class="bar-track"><div class="bar-fill" style="width:20%"></div></div><span class="bar-val">8</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>Linux</span><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><span class="bar-val">2</span></div>
+        <p class="note" style="margin-top:8px">~58% em celular; <b>iOS lidera com 44%</b>. Reforça a estratégia web-first (atende iPhone sem depender de app na App Store).</p>
+      </div>
+      <div>
+        <div class="eyebrow">Idioma do aparelho</div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>pt-BR</span><div class="bar-track"><div class="bar-fill gold" style="width:100%"></div></div><span class="bar-val">45</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>en-US</span><div class="bar-track"><div class="bar-fill gold" style="width:40%"></div></div><span class="bar-val">18</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>en-GB</span><div class="bar-track"><div class="bar-fill gold" style="width:18%"></div></div><span class="bar-val">8</span></div>
+        <div class="bar-row" style="grid-template-columns:90px 1fr 40px"><span>en-AU</span><div class="bar-track"><div class="bar-fill gold" style="width:13%"></div></div><span class="bar-val">6</span></div>
+        <p class="note" style="margin-top:8px">Base majoritariamente brasileira, como esperado; parte com aparelho em inglês.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Diagnóstico e próximos passos -->
+  <section>
+    <div class="eyebrow">Diagnóstico e próximos passos</div>
+    <ul class="take">
+      <li><b>Prioridade 1 — Ativação.</b> Reduzir o atrito até a 1ª gravação (hoje 66% não chegam lá). É a alavanca de maior impacto no funil.</li>
+      <li><b>Prioridade 2 — Canal orgânico recorrente.</b> Sair do pico manual: conteúdo com o gancho “você sabe mais inglês do que fala”.</li>
+      <li><b>Medir retenção com estranhos (D1/D7).</b> A base atual veio de rede próxima; o próximo teste é reter quem não é amigo.</li>
+      <li><b>Instrumentos já prontos pra próxima fase:</b> cadastro na entrada (lista de contatos), desafio de 21 dias com antes/depois (medir <i>outcome</i>) e teste de preço via Pix (disposição a pagar).</li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="note"><b>Nota metodológica.</b> Dados do banco de produção (Supabase), eventos de produto de 15/jun a 03/jul/2026. “Usuário” = identificador anônimo com ao menos um evento. Origem/sistema disponíveis para o subconjunto com esses metadados. Fase pré-monetização: nenhuma cobrança ativa no período. Snapshot gerado em 03/jul/2026.</p>
+  </section>
+
+</div>
+</body>
+</html>

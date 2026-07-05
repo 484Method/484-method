@@ -68,6 +68,14 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       'autorizar, o desafio segue só com sua autoavaliação.',
                 ),
                 section(
+                  'Por quanto tempo guardamos',
+                  'As gravações do Desafio (início e fim) ficam guardadas por '
+                      'até 12 meses após a coleta e depois são apagadas. Nas '
+                      'lições, o áudio não é guardado. Seu cadastro e progresso '
+                      'ficam enquanto sua conta existir. Você pode apagar tudo '
+                      'antes desses prazos, quando quiser.',
+                ),
+                section(
                   'Onde os dados ficam',
                   'Seu progresso fica no aparelho e, quando há conexão, é '
                       'espelhado na nossa base (Supabase). Seu nome e e-mail '

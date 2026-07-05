@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/progress_store.dart';
 import 'privacy_policy_screen.dart';
+import 'terms_of_use_screen.dart';
 
 /// Consentimento de gravação de voz (LGPD), antes do primeiro treino.
 ///
@@ -86,6 +87,13 @@ class OnboardingScreen extends StatelessWidget {
                           builder: (_) => const PrivacyPolicyScreen()),
                     ),
                     child: const Text('Ler a política de privacidade'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const TermsOfUseScreen()),
+                    ),
+                    child: const Text('Ler os Termos de Uso'),
                   ),
                 ],
               ),
