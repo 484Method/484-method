@@ -14,6 +14,7 @@ import 'cohort_review_screen.dart';
 import 'lesson_screen.dart';
 import 'paywall_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'terms_of_use_screen.dart';
 import 'stats_screen.dart';
 import 'word_memory_screen.dart';
 
@@ -209,6 +210,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
+  void _openTermsOfUse() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const TermsOfUseScreen(),
+    ));
+  }
+
   /// Seletor de tema: Sistema (segue o aparelho), Claro ou Escuro.
   void _openThemeChooser() {
     showDialog<void>(
@@ -271,16 +278,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final backend = Backend.instance;
     if (backend == null) return;
     await StatsScreen.openWithPasswordGate(context, backend);
-  }
-
-  /// Alterna o acesso na implementação fake (web/dev) para testar os dois
-  /// estados do gating sem loja. Some quando a impl real (RevenueCat) entrar.
-  Future<void> _toggleFounderAccess() async {
-    await widget.entitlement
-        .setFounderAccess(!widget.entitlement.hasFounderAccess);
-    // Acesso mudou: o desafio salvo pode ter virado paywall (ou liberado).
-    _ensureDailyChallenge();
-    if (mounted) setState(() {});
   }
 
   /// Explica o efeito antes de ligar: o critério mais rígido vale para
@@ -1027,8 +1024,8 @@ class _HomeScreenState extends State<HomeScreen> {
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'clear') _confirmClearData();
-              if (v == 'toggle_founder') _toggleFounderAccess();
               if (v == 'privacy') _openPrivacyPolicy();
+              if (v == 'terms') _openTermsOfUse();
               if (v == 'stats') _openStats();
               if (v == 'theme') _openThemeChooser();
               if (v == 'words') _openWordMemory();
@@ -1051,6 +1048,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const PopupMenuItem(
                 value: 'privacy',
                 child: Text('Política de privacidade'),
+              ),
+              const PopupMenuItem(
+                value: 'terms',
+                child: Text('Termos de Uso'),
               ),
               const PopupMenuItem(
                 value: 'clear',

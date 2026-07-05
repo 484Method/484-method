@@ -548,3 +548,29 @@ create policy "own signups: update" on public.signups
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own signups: delete" on public.signups
   for delete using (auth.uid() = user_id);
+
+-- ── Retenção das gravações do desafio (2026-07-03, migrações ─────────────────
+-- purge_expired_cohort_recordings + schedule_recording_retention). Enforce da
+-- política "até 12 meses": função de expurgo (Storage + metadados) agendada
+-- via pg_cron. Só service_role executa; a exclusão pelo usuário segue no app.
+create or replace function public.purge_expired_cohort_recordings(p_months int default 12)
+returns integer language plpgsql security definer
+set search_path = public, storage
+as $$
+declare v_count int;
+begin
+  delete from storage.objects
+   where bucket_id = 'cohort-recordings'
+     and created_at < now() - make_interval(months => p_months);
+  with del as (
+    delete from public.cohort_recordings
+     where created_at < now() - make_interval(months => p_months) returning 1
+  ) select count(*) into v_count from del;
+  return v_count;
+end;
+$$;
+revoke all on function public.purge_expired_cohort_recordings(int) from public, anon, authenticated;
+grant execute on function public.purge_expired_cohort_recordings(int) to service_role;
+-- pg_cron: create extension if not exists pg_cron;
+-- select cron.schedule('purge-cohort-recordings','0 3 1 * *',
+--   $$select public.purge_expired_cohort_recordings(12)$$);
