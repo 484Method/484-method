@@ -163,10 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-  /// CTA da oferta Beta Fundador na dashboard. Aparece no "momento uau" (a
-  /// pessoa já viu seu antes/depois → sabe que funciona) e some quando ela
-  /// entra na lista de Fundadores. Não bloqueia nada: mede intenção sem
-  /// tirar as lições grátis de quem só quer praticar.
   /// Selo persistente de Fundador na AppBar — torna o status (que hoje é o
   /// que o Fundador compra, já que a Trilha 1 é grátis pra todos) visível.
   Widget _founderBadge(ThemeData theme) {
@@ -205,6 +201,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
   }
 
+  /// CTA da oferta Beta Fundador na dashboard. Aparece no "momento uau" (a
+  /// pessoa já viu seu antes/depois → sabe que funciona) e some quando ela
+  /// entra na lista de Fundadores. Não bloqueia nada: mede intenção sem
+  /// tirar as lições grátis de quem só quer praticar.
   Widget _founderOfferCard(ThemeData theme) {
     return Card(
       color: theme.colorScheme.tertiaryContainer,
