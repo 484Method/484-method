@@ -86,9 +86,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   (migração `access_codes`; RLS sem policy de cliente). Quem não quer pagar
   agora ainda entra na lista por e-mail (fake door, sinal fraco). Gatilho: card
   não-bloqueante na home no "momento uau"; não gateia as lições grátis (hoje
-  `kFreeLessonCount`=25=todas, então ser Fundador é status/apoio, não desbloqueio).
-  Métrica que importa: `access_code_redeemed`/`paywall_viewed` por `price_bucket`.
-  Dev precisa preencher `app_config 'pix'` (key/name) pra o Pix aparecer.
+  `kFreeLessonCount`=25=todas). **Decisão de produto (2026-07-06): a Trilha 1 é
+  grátis pra TODOS de propósito — não gatear o loop é o que permite validar
+  retenção com estranhos (Fase 0/1). O Fundador NÃO é desbloqueio de conteúdo; é
+  (1) apoio, (2) selo visível de Fundador na AppBar (`_founderBadge` em
+  home_screen, aparece quando `hasFounderAccess`; a oferta some pra quem já é
+  Fundador), (3) trava vitalícia de preço/acesso às PRÓXIMAS trilhas (Fase 2+),
+  (4) linha direta/moldar o produto.** A copy do paywall reflete exatamente isso
+  — sem perks ocos (removida a linha "feedback de pronúncia", que é grátis pra
+  todos). Métrica que importa: `access_code_redeemed`/`paywall_viewed` por
+  `price_bucket`. Dev precisa preencher `app_config 'pix'` (key/name) pra o Pix
+  aparecer.
 
 ## Fora de escopo (NÃO implementar)
 - Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA

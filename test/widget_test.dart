@@ -180,6 +180,44 @@ void main() {
     expect(find.textContaining('Modo desafio'), findsNothing); // renomeado
   });
 
+  testWidgets('Fundador vê o selo na AppBar e a oferta some', (tester) async {
+    final store = await _emptyStore();
+    await store.addApproved(const Duration(minutes: 2));
+    store.firstOnce('first_before_after_seen'); // chegou ao "momento uau"
+    final ent = await LocalEntitlementService.load();
+    await ent.setFounderAccess(true);
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(store: store, entitlement: ent, assessor: _FakeAssessor()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Fundador'), findsOneWidget); // selo
+    // Quem já é Fundador não vê mais a oferta de compra.
+    expect(find.text('Seja um Fundador do 484'), findsNothing);
+  });
+
+  testWidgets('não-Fundador no momento uau vê a oferta, sem selo',
+      (tester) async {
+    final store = await _emptyStore();
+    await store.addApproved(const Duration(minutes: 2));
+    store.firstOnce('first_before_after_seen');
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Seja um Fundador do 484'), findsOneWidget);
+    expect(find.text('Fundador'), findsNothing); // sem selo
+  });
+
   testWidgets('onboarding só libera após consentimento de voz',
       (tester) async {
     final store = await _emptyStore();

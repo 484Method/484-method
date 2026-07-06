@@ -206,19 +206,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
             textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'Você já provou que consegue falar. Os primeiros que apoiarem o '
-          'projeto garantem acesso vitalício e ajudam a decidir o que vem '
-          'depois da Trilha 1.',
+          'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador agora '
+          'trava o acesso e o preço de tudo que vem depois — e ajuda a decidir '
+          'o que construir.',
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        _benefit(theme, Icons.lock_open,
-            'Acesso vitalício de Fundador — sem mensalidade'),
-        _benefit(theme, Icons.record_voice_over,
-            'Feedback de pronúncia em português, em cada tentativa'),
         _benefit(theme, Icons.rocket_launch,
             'Acesso antecipado às próximas trilhas, à medida que saem'),
+        _benefit(theme, Icons.lock,
+            'Preço de Fundador travado pra sempre — sem mensalidade'),
+        _benefit(theme, Icons.workspace_premium,
+            'Selo de Fundador no app — você esteve aqui desde o começo'),
         _benefit(theme, Icons.favorite,
             'Você molda o produto: fala direto com quem constrói'),
         const SizedBox(height: 24),
