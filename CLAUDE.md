@@ -91,7 +91,10 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   retenção com estranhos (Fase 0/1). O Fundador NÃO é desbloqueio de conteúdo; é
   (1) apoio, (2) selo visível de Fundador na AppBar (`_founderBadge` em
   home_screen, aparece quando `hasFounderAccess`; a oferta some pra quem já é
-  Fundador), (3) trava vitalícia de preço/acesso às PRÓXIMAS trilhas (Fase 2+),
+  Fundador), (3) trava vitalícia de preço/acesso às PRÓXIMAS trilhas (Fase 2+)
+  — PERSISTIDA no resgate via `ProgressStore.lockFounderPrice` (`founderSince` +
+  `founderLockedPriceCents`/`Label`), exibida na confirmação do paywall e no
+  tooltip do selo; é o que honra a promessa quando houver conteúdo pago,
   (4) linha direta/moldar o produto.** A copy do paywall reflete exatamente isso
   — sem perks ocos (removida a linha "feedback de pronúncia", que é grátis pra
   todos). Métrica que importa: `access_code_redeemed`/`paywall_viewed` por

@@ -38,6 +38,9 @@ class ProgressStore {
   static const _kDailyChallengeCompleted = 'daily_challenge_completed';
   static const _kPriceBucket = 'price_bucket';
   static const _kFounderEmailLeft = 'founder_email_left';
+  static const _kFounderSince = 'founder_since'; // ISO8601 do resgate
+  static const _kFounderLockedCents = 'founder_locked_price_cents';
+  static const _kFounderLockedLabel = 'founder_locked_price_label';
   static const _kCohortStart = 'cohort_start_date';
   static const _kBaselineConfidence = 'cohort_baseline_confidence';
   static const _kFinalConfidence = 'cohort_final_confidence';
@@ -254,6 +257,30 @@ class ProgressStore {
 
   Future<void> setLeftFounderEmail() =>
       _prefs.setBool(_kFounderEmailLeft, true);
+
+  /// Trava de Fundador: registra QUANDO a pessoa virou Fundador e o preço que
+  /// ela pagou. É o que torna real a promessa "preço de Fundador travado pra
+  /// sempre" — quando houver conteúdo pago (Fase 2+), esse preço é o que vale
+  /// pra essa pessoa. Chamado no resgate bem-sucedido do código.
+  Future<void> lockFounderPrice(PriceVariant variant) async {
+    await _prefs.setString(_kFounderSince, DateTime.now().toIso8601String());
+    await _prefs.setInt(_kFounderLockedCents, variant.amountCents);
+    await _prefs.setString(_kFounderLockedLabel, variant.priceLabel);
+  }
+
+  /// Data em que virou Fundador (null se ainda não é / resgate anterior à
+  /// trava). Só local; a fonte de verdade fiscal é o pagamento no banco.
+  DateTime? get founderSince {
+    final s = _prefs.getString(_kFounderSince);
+    return s == null ? null : DateTime.tryParse(s);
+  }
+
+  /// Preço travado do Fundador, já formatado (ex.: 'R\$ 47'); null se não é
+  /// Fundador ou resgatou antes da trava existir.
+  String? get founderLockedPriceLabel => _prefs.getString(_kFounderLockedLabel);
+
+  /// Preço travado em centavos (0 se ausente) — pra comparar com preços futuros.
+  int get founderLockedPriceCents => _prefs.getInt(_kFounderLockedCents) ?? 0;
 
   // --- Desafio de 21 dias (instrumento de validação do beta) ---
   // Estado só local, como dailyChallenge/priceBucket: o que vira métrica

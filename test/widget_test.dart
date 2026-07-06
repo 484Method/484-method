@@ -402,6 +402,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(ent.hasFounderAccess, isTrue); // entitlement virou
     expect(find.textContaining('Fundador do 484'), findsOneWidget);
+    // Trava de preço: resgate registra QUANDO e QUANTO — é o que honra a
+    // promessa de "preço travado" quando houver conteúdo pago (Fase 2+).
+    expect(store.founderSince, isNotNull);
+    expect(store.founderLockedPriceCents,
+        store.assignedPriceVariant().amountCents);
+    expect(find.textContaining('Preço de Fundador travado'), findsOneWidget);
   });
 
   testWidgets('caminho do dinheiro: código inválido NÃO vira Fundador',

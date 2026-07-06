@@ -170,7 +170,17 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Selo persistente de Fundador na AppBar — torna o status (que hoje é o
   /// que o Fundador compra, já que a Trilha 1 é grátis pra todos) visível.
   Widget _founderBadge(ThemeData theme) {
-    return Center(
+    final since = widget.store.founderSince;
+    final price = widget.store.founderLockedPriceLabel;
+    final tip = StringBuffer('Você é Fundador do 484');
+    if (since != null) {
+      tip.write(' desde ${since.day.toString().padLeft(2, '0')}/'
+          '${since.month.toString().padLeft(2, '0')}/${since.year}');
+    }
+    if (price != null) tip.write('\nPreço travado: $price pras próximas trilhas');
+    return Tooltip(
+      message: tip.toString(),
+      child: Center(
       child: Container(
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -192,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _founderOfferCard(ThemeData theme) {
