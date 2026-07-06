@@ -229,15 +229,21 @@ class _StatsScreenState extends State<StatsScreen> {
         ],
       ),
     );
+    final key = keyCtrl.text;
+    final name = nameCtrl.text;
+    final city = cityCtrl.text;
+    keyCtrl.dispose();
+    nameCtrl.dispose();
+    cityCtrl.dispose();
     if (save != true || !mounted) return;
     try {
-      await widget.backend.setPixConfig(widget.password,
-          key: keyCtrl.text, name: nameCtrl.text, city: cityCtrl.text);
+      await widget.backend
+          .setPixConfig(widget.password, key: key, name: name, city: city);
       final stats = await widget.backend.fetchDevStats(widget.password);
       if (!mounted) return;
       setState(() => _stats = stats);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(keyCtrl.text.trim().isEmpty
+          content: Text(key.trim().isEmpty
               ? 'Cobrança desligada.'
               : 'Cobrança ligada — chave Pix salva.')));
     } catch (e) {
