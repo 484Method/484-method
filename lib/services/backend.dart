@@ -289,6 +289,25 @@ class Backend {
     return code;
   }
 
+  /// Liga a cobrança: grava a chave Pix da PJ (app_config 'pix') pelo painel.
+  /// A escrita passa pela Edge Function `dev-stats` (service role + senha) — a
+  /// tabela não tem policy de escrita. `key` vazia desliga o passo Pix (o
+  /// checkout cai no fallback de e-mail). O paywall lê via [fetchPixConfig].
+  Future<void> setPixConfig(String password,
+      {required String key, String name = '', String city = ''}) async {
+    final res = await client.functions.invoke('dev-stats', body: {
+      'password': password,
+      'action': 'set_pix',
+      'pix_key': key.trim(),
+      'pix_name': name.trim(),
+      'pix_city': city.trim(),
+    });
+    if (res.status == 401) throw const DevStatsAuthException();
+    if (res.status != 200) {
+      throw Exception('Falha ao salvar o Pix (código ${res.status}).');
+    }
+  }
+
   /// Export CSV do painel: uma linha por usuário (métricas do progress), via
   /// Edge Function `dev-stats` (service role + gate de senha).
   Future<List<Map<String, dynamic>>> fetchUserExport(String password) async {
