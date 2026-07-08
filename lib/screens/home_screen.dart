@@ -58,6 +58,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // Survey de abandono respondido nesta sessão (esconde o card na hora).
   bool _abandonAnswered = false;
+  bool _pmfAnswered = false;
 
   // #8: por padrão só mostra concluídos + treino atual + poucos bloqueados —
   // muitos cadeados em sequência davam sensação de caminho longo e cansativo.
@@ -104,6 +105,14 @@ class _HomeScreenState extends State<HomeScreen> {
     ('facil_demais', 'Achei fácil demais'),
     ('sem_valor', 'Não vi valor'),
     ('sem_tempo', 'Estou sem tempo'),
+  ];
+
+  // Teste de PMF (Sean Ellis). A ordem importa: "muito" primeiro (a resposta
+  // que interessa — >40% dela = sinal de product-market fit).
+  static const _pmfOptions = [
+    ('very', 'Muito decepcionado'),
+    ('somewhat', 'Pouco decepcionado'),
+    ('not', 'Indiferente'),
   ];
 
   @override
@@ -1010,6 +1019,39 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _abandonAnswered = true);
   }
 
+  /// Teste de PMF (Sean Ellis): uma pergunta a quem já sentiu o valor e voltou.
+  /// Mede a INTENSIDADE que a retenção sozinha não captura.
+  Widget _pmfCard(ThemeData theme) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Como você se sentiria se não pudesse mais usar o 484?',
+                  style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final (val, label) in _pmfOptions)
+                    ActionChip(
+                      label: Text(label),
+                      onPressed: () => _answerPmf(val),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  void _answerPmf(String answer) {
+    widget.analytics?.log('pmf_survey_answered', {'answer': answer});
+    widget.store.setAskedPmf();
+    setState(() => _pmfAnswered = true);
+  }
+
   Future<void> _openLesson(Lesson lesson) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => LessonScreen(
@@ -1037,6 +1079,14 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.store.hasDone('first_recording_completed') &&
         !widget.store.hasDone('first_before_after_seen') &&
         !widget.store.hasAskedAbandon;
+    // Teste de PMF (Sean Ellis): pergunta a quem JÁ sentiu o valor (viu o
+    // antes/depois) e VOLTOU (streak ≥ 2 dias = usou o suficiente pra ter
+    // opinião). Complemento do abandono; mutuamente exclusivos pelo
+    // first_before_after_seen. Uma vez só.
+    final showPmf = !_pmfAnswered &&
+        !widget.store.hasAskedPmf &&
+        widget.store.hasDone('first_before_after_seen') &&
+        widget.store.streakDays >= 2;
     // Oferta Beta Fundador: só depois do "momento uau" (viu o antes/depois) e
     // enquanto a pessoa não entrou na lista de Fundadores.
     // Quem já é Fundador não vê mais a oferta (vê o selo na AppBar).
@@ -1110,6 +1160,10 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               if (askAbandon) ...[
                 _abandonCard(theme),
+                const SizedBox(height: 12),
+              ],
+              if (showPmf) ...[
+                _pmfCard(theme),
                 const SizedBox(height: 12),
               ],
               if (next != null) ...[

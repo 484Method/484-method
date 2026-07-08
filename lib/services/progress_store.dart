@@ -30,6 +30,7 @@ class ProgressStore {
   static const _kActivationSteps = 'activation_steps';
   static const _kAhaAnswered = 'aha_answered';
   static const _kAbandonAsked = 'abandon_asked';
+  static const _kPmfAsked = 'pmf_asked';
   static const _kItemIndexPrefix = 'lesson_item_index_';
   static const _kApprovedTodaySeconds = 'approved_seconds_today';
   static const _kApprovedTodayDate = 'approved_seconds_today_date';
@@ -210,6 +211,14 @@ class ProgressStore {
   bool get hasAskedAbandon => _prefs.getBool(_kAbandonAsked) ?? false;
 
   Future<void> setAskedAbandon() => _prefs.setBool(_kAbandonAsked, true);
+
+  /// Teste de PMF (Sean Ellis): já perguntamos "como se sentiria se não
+  /// pudesse mais usar o 484?" a quem experimentou o valor e voltou? Pergunta
+  /// uma vez só — o complemento simétrico do survey de abandono (aquele é pra
+  /// quem NÃO chegou ao "aha"; este é pra quem chegou e retornou).
+  bool get hasAskedPmf => _prefs.getBool(_kPmfAsked) ?? false;
+
+  Future<void> setAskedPmf() => _prefs.setBool(_kPmfAsked, true);
 
   bool isLessonCompleted(String lessonId) =>
       (_prefs.getStringList(_kCompletedLessons) ?? const [])

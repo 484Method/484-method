@@ -393,7 +393,13 @@ as $function$
     'abandon_breakdown', (select coalesce(json_object_agg(rsn, n), '{}'::json)
       from (select props->>'reason' as rsn, count(*) as n from events
             where event = 'abandon_reason' and props->>'reason' is not null
-            group by props->>'reason') t)
+            group by props->>'reason') t),
+    -- Teste de PMF (Sean Ellis): contagem por resposta (very/somewhat/not).
+    -- O % de "very" (>40% = sinal de PMF) é derivado no cliente (painel).
+    'pmf_breakdown', (select coalesce(json_object_agg(ans, n), '{}'::json)
+      from (select props->>'answer' as ans, count(*) as n from events
+            where event = 'pmf_survey_answered' and props->>'answer' is not null
+            group by props->>'answer') t)
   );
 $function$;
 -- Wrapper: mescla o corpo grande (get_dev_stats_base, intocado) + phase0 + a

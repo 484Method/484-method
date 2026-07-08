@@ -484,6 +484,10 @@ class _Body extends StatelessWidget {
     final phase0           = (stats['phase0_activation'] as Map?)?.cast<String, dynamic>() ?? {};
     final ahaBreakdown     = (stats['aha_breakdown'] as Map?)?.cast<String, dynamic>() ?? {};
     final abandonBreakdown = (stats['abandon_breakdown'] as Map?)?.cast<String, dynamic>() ?? {};
+    final pmfBreakdown     = (stats['pmf_breakdown'] as Map?)?.cast<String, dynamic>() ?? {};
+    int pmfN(String k) => (pmfBreakdown[k] as num?)?.toInt() ?? 0;
+    final pmfTotal = pmfN('very') + pmfN('somewhat') + pmfN('not');
+    final pmfPct = pmfTotal > 0 ? (100.0 * pmfN('very') / pmfTotal).round() : 0;
 
     // "15.4% (n=39)" ou "— (n=0)" quando o cohort é pequeno/vazio.
     String fmtRet(String key) {
@@ -548,6 +552,16 @@ class _Body extends StatelessWidget {
             _section('Motivos de abandono'),
             for (final e in abandonBreakdown.entries)
               _row(theme, Icons.exit_to_app, e.key, '${(e.value as num?)?.toInt() ?? 0}'),
+          ],
+          if (pmfTotal > 0) ...[
+            const SizedBox(height: 8),
+            _section('Product-market fit (Sean Ellis, n=$pmfTotal)'),
+            _row(theme, Icons.favorite,
+                'Muito decepcionado — $pmfPct% (meta >40%)', '${pmfN('very')}'),
+            _row(theme, Icons.sentiment_neutral, 'Pouco decepcionado',
+                '${pmfN('somewhat')}'),
+            _row(theme, Icons.sentiment_dissatisfied, 'Indiferente',
+                '${pmfN('not')}'),
           ],
 
           // ── Crescimento: novos usuários por dia ───────────────────────

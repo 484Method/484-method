@@ -218,6 +218,56 @@ void main() {
     expect(find.text('Fundador'), findsNothing); // sem selo
   });
 
+  testWidgets('teste de PMF: aparece pra quem sentiu valor e voltou (streak≥2)',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'streak_days': 2, // voltou (2 dias) = usou o suficiente pra ter opinião
+      'activation_steps': ['first_before_after_seen'], // sentiu o valor
+      'approved_seconds_total': 180,
+    });
+    final store = await ProgressStore.load();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('não pudesse mais usar o 484'), findsOneWidget);
+    expect(store.hasAskedPmf, isFalse);
+    await tester.tap(find.text('Muito decepcionado'));
+    await tester.pumpAndSettle();
+    // Respondeu → some e não volta a perguntar.
+    expect(store.hasAskedPmf, isTrue);
+    expect(find.textContaining('não pudesse mais usar o 484'), findsNothing);
+  });
+
+  testWidgets('teste de PMF: não aparece antes de voltar (streak < 2)',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'streak_days': 1,
+      'activation_steps': ['first_before_after_seen'],
+      'approved_seconds_total': 180,
+    });
+    final store = await ProgressStore.load();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('não pudesse mais usar o 484'), findsNothing);
+  });
+
   testWidgets('onboarding só libera após consentimento de voz',
       (tester) async {
     final store = await _emptyStore();
