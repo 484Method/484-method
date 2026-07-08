@@ -163,6 +163,44 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Selo persistente de Fundador na AppBar — torna o status (que hoje é o
+  /// que o Fundador compra, já que a Trilha 1 é grátis pra todos) visível.
+  Widget _founderBadge(ThemeData theme) {
+    final since = widget.store.founderSince;
+    final price = widget.store.founderLockedPriceLabel;
+    final tip = StringBuffer('Você é Fundador do 484');
+    if (since != null) {
+      tip.write(' desde ${since.day.toString().padLeft(2, '0')}/'
+          '${since.month.toString().padLeft(2, '0')}/${since.year}');
+    }
+    if (price != null) tip.write('\nPreço travado: $price pras próximas trilhas');
+    return Tooltip(
+      message: tip.toString(),
+      child: Center(
+      child: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium,
+                size: 16, color: theme.colorScheme.onTertiaryContainer),
+            const SizedBox(width: 4),
+            Text('Fundador',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onTertiaryContainer,
+                  fontWeight: FontWeight.w600,
+                )),
+          ],
+        ),
+      ),
+    ));
+  }
+
   /// CTA da oferta Beta Fundador na dashboard. Aparece no "momento uau" (a
   /// pessoa já viu seu antes/depois → sabe que funciona) e some quando ela
   /// entra na lista de Fundadores. Não bloqueia nada: mede intenção sem
@@ -1001,7 +1039,9 @@ class _HomeScreenState extends State<HomeScreen> {
         !widget.store.hasAskedAbandon;
     // Oferta Beta Fundador: só depois do "momento uau" (viu o antes/depois) e
     // enquanto a pessoa não entrou na lista de Fundadores.
-    final showFounderOffer = widget.store.hasDone('first_before_after_seen') &&
+    // Quem já é Fundador não vê mais a oferta (vê o selo na AppBar).
+    final showFounderOffer = !widget.entitlement.hasFounderAccess &&
+        widget.store.hasDone('first_before_after_seen') &&
         !widget.store.hasLeftFounderEmail;
 
     // Priorização por estágio (evita a "parede de cards" no dia 0). No dia 0 a
@@ -1021,6 +1061,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('484 Method'),
         actions: [
+          if (widget.entitlement.hasFounderAccess) _founderBadge(theme),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'clear') _confirmClearData();

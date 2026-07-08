@@ -137,6 +137,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
     if (!mounted) return;
     if (ok) {
       await widget.entitlement.setFounderAccess(true);
+      // Trava o preço que a pessoa pagou — é o que honra a promessa "preço de
+      // Fundador travado pra sempre" quando houver conteúdo pago (Fase 2+).
+      await widget.store.lockFounderPrice(_variant);
       widget.analytics?.log('access_code_redeemed', _priceProps);
       if (!mounted) return;
       setState(() {
@@ -206,19 +209,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
             textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'Você já provou que consegue falar. Os primeiros que apoiarem o '
-          'projeto garantem acesso vitalício e ajudam a decidir o que vem '
-          'depois da Trilha 1.',
+          'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador agora '
+          'trava o acesso e o preço de tudo que vem depois — e ajuda a decidir '
+          'o que construir.',
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        _benefit(theme, Icons.lock_open,
-            'Acesso vitalício de Fundador — sem mensalidade'),
-        _benefit(theme, Icons.record_voice_over,
-            'Feedback de pronúncia em português, em cada tentativa'),
         _benefit(theme, Icons.rocket_launch,
             'Acesso antecipado às próximas trilhas, à medida que saem'),
+        _benefit(theme, Icons.lock,
+            'Preço de Fundador travado pra sempre — sem mensalidade'),
+        _benefit(theme, Icons.workspace_premium,
+            'Selo de Fundador no app — você esteve aqui desde o começo'),
         _benefit(theme, Icons.favorite,
             'Você molda o produto: fala direto com quem constrói'),
         const SizedBox(height: 24),
@@ -517,6 +520,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
+        if (_becameFounder) ...[
+          const SizedBox(height: 16),
+          _lockedPriceChip(theme),
+        ],
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -526,6 +533,32 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Torna visível a promessa cumprida: o preço travado que vale pras próximas
+  /// trilhas. Lê do store (persistido no resgate), com fallback pra variante
+  /// vista caso o resgate tenha ocorrido nesta mesma sessão.
+  Widget _lockedPriceChip(ThemeData theme) {
+    final label = widget.store.founderLockedPriceLabel ?? _variant.priceLabel;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.lock, size: 18, color: theme.colorScheme.onSecondaryContainer),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'Preço de Fundador travado: $label pras próximas trilhas',
+            style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+                fontWeight: FontWeight.w600),
+          ),
+        ),
+      ]),
     );
   }
 
