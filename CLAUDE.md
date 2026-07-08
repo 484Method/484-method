@@ -42,6 +42,14 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Threshold de aprovação CONFIGURÁVEL por lição (permissivo na Fase 1)
 - ✅ Onboarding com promessa + regra som-first + consentimento de gravação de voz
 - ✅ Analytics de eventos (conclusão, tentativas, regravação, retenção)
+- ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
+  pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
+  sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma
+  vez só (`ProgressStore.hasAskedPmf`). Complemento simétrico do survey de
+  abandono (aquele = quem NÃO chegou ao "aha"). Evento `pmf_survey_answered`
+  (props.answer = very/somewhat/not) na tabela `events`; o painel agrega em
+  `pmf_breakdown` (função `get_phase0_activation`) e mostra o **% "muito
+  decepcionado" (meta >40% = sinal de PMF)**.
 - Paywall (oferta "Beta Fundador" — acesso à Fase 1): gating das lições atrás
   de `EntitlementService` JÁ implementado, fake local na web. 2026-06: todas
   as 25 lições estão grátis (`kFreeLessonCount`) até ter usuários reais e
