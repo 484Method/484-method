@@ -17,8 +17,10 @@
 //
 // Pix manual: { action: 'gen_access_code', note?, price_bucket? } cria um
 // código de acesso (Fundador) pra o dev entregar a quem pagou via Pix; o
-// resgate é pela RPC redeem_access_code (não passa aqui). Tudo atrás do mesmo
-// gate de senha.
+// resgate é pela RPC redeem_access_code (não passa aqui).
+// Ligar a cobrança: { action: 'set_pix', pix_key, pix_name?, pix_city? }
+// grava a chave Pix da PJ em app_config/'pix' (chave vazia desliga); a resposta
+// padrão inclui `pix` pra o painel prefill. Tudo atrás do mesmo gate de senha.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -49,6 +51,9 @@ Deno.serve(async (req) => {
       score,
       note,
       price_bucket,
+      pix_key,
+      pix_name,
+      pix_city,
     } = await req.json();
     if (password !== expected) return json({ error: "wrong_password" }, 401);
 
@@ -133,6 +138,27 @@ Deno.serve(async (req) => {
       return json({ code });
     }
 
+    // ── Ligar a cobrança: gravar a chave Pix da PJ (app_config 'pix') ────────
+    // O paywall lê essa config publicamente (só leitura); a ESCRITA passa só
+    // por aqui, atrás do gate de senha (a tabela tem RLS sem policy de escrita).
+    // Chave vazia = desliga o passo Pix (o checkout cai no fallback de e-mail).
+    if (action === "set_pix") {
+      if (typeof pix_key !== "string") {
+        return json({ error: "invalid_pix" }, 400);
+      }
+      const { error } = await client.from("app_config").upsert({
+        key: "pix",
+        value: {
+          key: pix_key.trim(),
+          name: typeof pix_name === "string" ? pix_name.trim() : "",
+          city: typeof pix_city === "string" ? pix_city.trim() : "",
+        },
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
     // ── Export CSV: uma linha por usuário — cadastro (nome/e-mail) + prática ──
     if (action === "export_users") {
       const { data: signups } = await client
@@ -182,14 +208,15 @@ Deno.serve(async (req) => {
     const { data, error } = await client.rpc("get_dev_stats");
     if (error) throw error;
 
-    const { data: cfg } = await client
+    const { data: cfgs } = await client
       .from("app_config")
-      .select("value")
-      .eq("key", "maintenance")
-      .maybeSingle();
-    const maintenanceOn = cfg?.value?.on === true;
+      .select("key, value")
+      .in("key", ["maintenance", "pix"]);
+    const byKey = new Map((cfgs ?? []).map((c) => [c.key, c.value]));
+    const maintenanceOn = byKey.get("maintenance")?.on === true;
+    const pix = byKey.get("pix") ?? { key: "", name: "", city: "" };
 
-    return json({ ...data, maintenance_mode: maintenanceOn });
+    return json({ ...data, maintenance_mode: maintenanceOn, pix });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }

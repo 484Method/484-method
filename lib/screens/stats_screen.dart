@@ -177,6 +177,82 @@ class _StatsScreenState extends State<StatsScreen> {
     }
   }
 
+  /// Liga a cobrança: preenche a chave Pix da PJ (app_config 'pix'). É o que
+  /// faz o passo Pix do paywall aparecer. Chave vazia desliga (volta ao
+  /// fallback de e-mail). Prefill com o que já está salvo; recarrega o painel
+  /// pra refletir o novo estado.
+  Future<void> _configurePix() async {
+    final pix = _stats?['pix'];
+    final keyCtrl = TextEditingController(
+        text: pix is Map ? (pix['key'] as String? ?? '') : '');
+    final nameCtrl = TextEditingController(
+        text: pix is Map ? (pix['name'] as String? ?? '') : '');
+    final cityCtrl = TextEditingController(
+        text: pix is Map ? (pix['city'] as String? ?? '') : '');
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cobrança (Pix)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'Use a chave Pix da PJ (não a pessoal). Deixe a chave vazia '
+                'para desligar a cobrança.',
+                style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: keyCtrl,
+              decoration: const InputDecoration(
+                  labelText: 'Chave Pix (CNPJ/e-mail/telefone/aleatória)'),
+            ),
+            TextField(
+              controller: nameCtrl,
+              decoration:
+                  const InputDecoration(labelText: 'Nome do recebedor (PJ)'),
+            ),
+            TextField(
+              controller: cityCtrl,
+              decoration: const InputDecoration(labelText: 'Cidade'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    final key = keyCtrl.text;
+    final name = nameCtrl.text;
+    final city = cityCtrl.text;
+    keyCtrl.dispose();
+    nameCtrl.dispose();
+    cityCtrl.dispose();
+    if (save != true || !mounted) return;
+    try {
+      await widget.backend
+          .setPixConfig(widget.password, key: key, name: name, city: city);
+      final stats = await widget.backend.fetchDevStats(widget.password);
+      if (!mounted) return;
+      setState(() => _stats = stats);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(key.trim().isEmpty
+              ? 'Cobrança desligada.'
+              : 'Cobrança ligada — chave Pix salva.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Falha ao salvar: $e')));
+    }
+  }
+
   /// Liga/desliga o app para TODOS os usuários (flag no servidor). Desligar
   /// pede confirmação — quem estiver no meio de um treino continua até
   /// recarregar, mas ninguém novo entra.
@@ -225,6 +301,9 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final maintenanceOn = _stats?['maintenance_mode'] == true;
+    final pix = _stats?['pix'];
+    final pixKey = (pix is Map ? pix['key'] as String? : null) ?? '';
+    final pixOn = pixKey.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel do desenvolvedor'),
@@ -306,6 +385,22 @@ class _StatsScreenState extends State<StatsScreen> {
                                   'código de acesso.'),
                               trailing: const Icon(Icons.add),
                               onTap: _generateAccessCode,
+                            ),
+                          ),
+                        ),
+                        // ── Cobrança: ligar/editar a chave Pix da PJ ─────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                          child: Card(
+                            child: ListTile(
+                              leading: Icon(pixOn ? Icons.pix : Icons.pix_outlined),
+                              title: const Text('Cobrança (Pix)'),
+                              subtitle: Text(pixOn
+                                  ? 'Ligada — chave: $pixKey'
+                                  : 'Desligada — o checkout coleta e-mail. '
+                                      'Toque pra preencher a chave da PJ.'),
+                              trailing: const Icon(Icons.edit),
+                              onTap: _configurePix,
                             ),
                           ),
                         ),
