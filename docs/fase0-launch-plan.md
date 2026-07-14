@@ -35,8 +35,12 @@ engajado **esgota as 25 em poucos dias**. Logo:
 | **Esgotou conteúdo?** | usuários que chegam à lição 25 | é gatilho pra AMPLIAR conteúdo, não sinal de falha |
 | **WTP (secundário)** | `paywall_viewed` → `access_code_redeemed` por `price_bucket` | intenção de pagar; fraco nessa fase, mas registra |
 
-⚠️ **Vigiar o atrito:** o portão nome+email vem ANTES do "aha". Se `first_recording`
-vier baixo, o suspeito nº1 é o cadastro — mover o gate pra depois da 1ª gravação.
+✅ **Atrito do cadastro corrigido (2026-07-14):** confirmado com dado real —
+40 consentimentos de voz → só 10 cadastros (75% de perda no portão antigo,
+que ficava ANTES do "aha"). O gate de nome+e-mail foi movido pra depois da
+1ª gravação (`HomeScreen.build()`, condicionado a
+`hasDone('first_recording_completed')` — ver CLAUDE.md). Reavaliar a
+ativação depois de rodar tráfego novo com essa mudança no ar.
 
 ## Cronograma
 **Dia 0 (pré-voo):**

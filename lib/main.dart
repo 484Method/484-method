@@ -5,7 +5,6 @@ import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'screens/maintenance_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/signup_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/backend.dart';
 import 'services/backend_assessor.dart';
@@ -218,15 +217,6 @@ class _Method484AppState extends State<Method484App> {
               widget.analytics?.log('onboarding_cta_clicked');
               setState(() => _introSeen = true);
             });
-    } else if (!widget.store.hasRegistered) {
-      // Porta de entrada: nome + e-mail obrigatórios antes de usar o app
-      // (reverte a entrada anônima). Depois do consentimento, antes da 1ª
-      // lição — o autostart (_justOnboarded) segue valendo até a HomeScreen.
-      home = SignupScreen(
-        store: widget.store,
-        analytics: widget.analytics,
-        onDone: () => setState(() {}),
-      );
     } else {
       home = HomeScreen(
         store: widget.store,

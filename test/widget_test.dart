@@ -97,6 +97,47 @@ void main() {
     // Conserto do funil consentimento→1ª lição: o novato entra na lição,
     // não fica parado na dashboard vazia.
     expect(find.textContaining('Regra do jogo'), findsOneWidget);
+    // Cadastro NÃO aparece antes da 1ª gravação — a pessoa nem chegou lá
+    // ainda, então isso não pode travar o autostart pra dentro da lição.
+    expect(find.text('Antes de continuar'), findsNothing);
+  });
+
+  testWidgets(
+      'cadastro (nome+e-mail) só aparece DEPOIS da 1ª gravação, não antes',
+      (tester) async {
+    final store = await _emptyStore();
+    // Ainda não gravou: dashboard normal, sem gate de cadastro.
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Antes de continuar'), findsNothing);
+
+    // Simula quem já fez a 1ª gravação (o firstOnce grava o marcador) mas
+    // ainda não se cadastrou — ao reabrir a Home, o gate aparece.
+    store.firstOnce('first_recording_completed');
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Antes de continuar'), findsOneWidget);
+
+    // Completa o cadastro → volta a ver a dashboard normal.
+    await tester.enterText(find.byType(TextField).at(0), 'Ana');
+    await tester.enterText(find.byType(TextField).at(1), 'ana@exemplo.com');
+    await tester.pump();
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Antes de continuar'), findsNothing);
+    expect(store.hasRegistered, isTrue);
   });
 
   testWidgets(

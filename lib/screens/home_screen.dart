@@ -14,6 +14,7 @@ import 'cohort_review_screen.dart';
 import 'lesson_screen.dart';
 import 'paywall_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'signup_screen.dart';
 import 'terms_of_use_screen.dart';
 import 'stats_screen.dart';
 import 'word_memory_screen.dart';
@@ -1070,6 +1071,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Cadastro (nome+e-mail) só aparece DEPOIS da 1ª gravação, não antes da
+    // 1ª lição. Dado real (2026-07-13): 40 pessoas aceitaram o consentimento
+    // de voz, só 10 completaram o cadastro — 75% de perda bem no portão
+    // antigo, antes de qualquer "aha". Mover pra cá deixa a pessoa sentir o
+    // valor primeiro; o cadastro reaparece quando ela volta pra Home (fim da
+    // lição ou saída no meio) — nunca interrompe a lição em andamento.
+    if (!widget.store.hasRegistered &&
+        widget.store.hasDone('first_recording_completed')) {
+      return SignupScreen(
+        store: widget.store,
+        analytics: widget.analytics,
+        onDone: () => setState(() {}),
+      );
+    }
     final theme = Theme.of(context);
     final total = widget.store.totalApproved;
     final next = _nextLesson();

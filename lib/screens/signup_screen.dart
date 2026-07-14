@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../services/analytics_service.dart';
 import '../services/progress_store.dart';
 
-/// Cadastro obrigatório na entrada: nome + e-mail antes de usar o app. É uma
-/// porta travada (decisão do produto de identificar quem entra) — sem "pular".
-/// Só captura, sem verificação. Guarda no ProgressStore (local + tabela
-/// `signups`). LGPD: pede só nome/e-mail e explica o porquê.
+/// Cadastro obrigatório, mas só DEPOIS da 1ª gravação (ver HomeScreen.build):
+/// nome + e-mail, porta travada (decisão do produto de identificar quem usa
+/// de verdade) — sem "pular". Só captura, sem verificação. Guarda no
+/// ProgressStore (local + tabela `signups`). LGPD: pede só nome/e-mail e
+/// explica o porquê.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({
     super.key,
@@ -69,14 +70,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 Icon(Icons.waving_hand,
                     size: 56, color: theme.colorScheme.primary),
                 const SizedBox(height: 16),
-                Text('Antes de começar',
+                Text('Antes de continuar',
                     style: theme.textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 Text(
-                  'Diz seu nome e um e-mail pra gente acompanhar sua evolução e '
-                  'te avisar das novidades do beta.',
+                  'Você já viu como funciona. Diz seu nome e um e-mail pra '
+                  'gente guardar sua evolução e te avisar das novidades do '
+                  'beta.',
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),

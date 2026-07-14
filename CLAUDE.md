@@ -18,14 +18,20 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - ✅ Auth: **Supabase Auth** (decidido e em produção) — sign-in anônimo, cada
   usuário ganha um id estável. Progresso e eventos no Postgres com RLS por
   user_id; degrada para local-only sem credenciais.
-- ✅ **Cadastro obrigatório na entrada (2026-07-03):** nome + e-mail antes de
-  usar o app (`SignupScreen`, gate depois do consentimento e antes da 1ª lição;
-  `ProgressStore.hasRegistered`). REVERTE a entrada 100% anônima "sem cadastro"
-  — decisão do produto de identificar quem entra (recrutamento de coorte). Só
-  captura, sem verificação. PII isolada na tabela `signups` (RLS por dono,
-  migração `signups`), separada de progress/events/gravações; entra no export
-  CSV do painel (nome/e-mail + atividade) e é apagada no clearAll (LGPD).
-  ⚠️ Custo: adiciona atrito antes do "aha" — vigiar o impacto na ativação.
+- ✅ **Cadastro obrigatório, mas DEPOIS do "aha" (mudou em 2026-07-14):** nome
+  + e-mail continuam obrigatórios pra usar o app de verdade (recrutamento de
+  coorte), mas o gate (`SignupScreen`, `ProgressStore.hasRegistered`) saiu do
+  topo do funil (entre consentimento e 1ª lição) e entrou dentro da
+  `HomeScreen.build()`, condicionado a `hasDone('first_recording_completed')`.
+  Motivo: dado real do funil (2026-07-13) mostrou 40 consentimentos de voz →
+  só 10 cadastros = 75% de perda bem no portão antigo, antes de qualquer
+  valor sentido. Agora: consentimento → 1ª lição direto (autostart, sem
+  interromper) → ao voltar pra Home (fim da lição ou saída no meio) já tendo
+  gravado ao menos 1x, o gate aparece. Nunca interrompe uma lição em
+  andamento (só reavalia quando a Home reconstrói). Só captura, sem
+  verificação. PII isolada na tabela `signups` (RLS por dono, migração
+  `signups`), separada de progress/events/gravações; entra no export CSV do
+  painel (nome/e-mail + atividade) e é apagada no clearAll (LGPD).
 - Fase 1 "Inglês que Você Já Conhece": 21 microlições obrigatórias de 5–10
   min, em 4 blocos pedagógicos internos — reconhecimento/confiança, som/
   sílaba forte, palavra/frase, conversa do dia a dia — mais 4 lições BÔNUS
