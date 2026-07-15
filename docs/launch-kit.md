@@ -22,8 +22,9 @@ no inglês). Pessoal, não "propaganda". Já preempte a objeção de gravar a vo
 > Tô construindo uma coisa que talvez te interesse. É um treino de fala de
 > inglês pra quem *entende mas trava na hora de falar* — você escuta, repete,
 > grava e recebe correção, antes de ver qualquer coisa escrita. Você grava só
-> pra você (dá pra apagar tudo, ninguém mais ouve). Tô abrindo pras primeiras
-> pessoas testarem. Topa fazer 5 min e me dizer o que achou?
+> pra você (dá pra apagar tudo, ninguém mais ouve). Não precisa criar conta
+> pra testar — já cai direto numa lição. Tô abrindo pras primeiras pessoas
+> testarem. Topa fazer 5 min e me dizer o que achou?
 > 👉 https://484method.github.io/484-method/landing/
 
 Meta realista: 10–20 conversas → alguns testes reais → os primeiros depoimentos
