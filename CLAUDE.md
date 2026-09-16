@@ -117,7 +117,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 
 ## Fora de escopo (NÃO implementar)
 - Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA
-- Conversa livre com IA generativa
+- Conversa livre com IA generativa — **decidido em 2026-09-16: on hold. Se
+  voltar, é como PACOTE DE SERVIÇOS cobrado à parte, NUNCA dentro de uma
+  trilha.** Motivo 1 (contratual): o Fundador é pagamento ÚNICO (R$ 27,90–67,90,
+  `pricing.dart`) e a copy promete "acesso antecipado às próximas trilhas" +
+  "travado pra sempre — sem mensalidade" (`paywall_screen.dart`). Voz em tempo
+  real tem custo marginal POR MINUTO (ordem de grandeza US$ 0,06–0,30/min), então
+  embutir isso numa trilha da Fase 2+ obrigaria a servir custo recorrente
+  vitalício por um pagamento único — R$ 27,90 compram ~50 min de conversa, e a
+  meta do produto é 484 h. Como add-on à parte, a promessa segue honrada.
+  Motivo 2 (medição): fala livre não é pontuável pelo Azure, logo não vira
+  "minuto aprovado" — quebraria a métrica norte e o antes/depois da coorte.
 - Gamificação social, ranking, comunidade, dashboards B2B
 - Modo offline completo
 - TTS dinâmico em runtime (áudios são PRÉ-GERADOS e servidos por CDN)
