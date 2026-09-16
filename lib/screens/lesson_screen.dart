@@ -221,8 +221,11 @@ class _LessonScreenState extends State<LessonScreen>
       // 1ª tentativa é diagnóstico de ouvido, não prova de domínio. Lido aqui
       // porque _step muda dentro do setState logo abaixo.
       final isFinalAttempt = _step == _Step.livroAberto;
+      // Fixa a palavra agora: depois do await abaixo o aluno já pode ter
+      // tocado em "Próxima palavra", e _item apontaria para a seguinte.
+      final srsWord = _item.text;
       final srsStageBefore =
-          isFinalAttempt ? widget.store?.srsStageOf(_item.text) : null;
+          isFinalAttempt ? widget.store?.srsStageOf(srsWord) : null;
       setState(() {
         _result = result;
         _aiFeedback = null;
@@ -252,17 +255,25 @@ class _LessonScreenState extends State<LessonScreen>
       }
       _maybeFetchAiFeedback(result, attempt, approved);
       if (isFinalAttempt) {
-        final stage = await widget.store
-            ?.recordSrsOutcome(_item.text, approved: approved);
-        // Só conta como REVISÃO se a palavra já estava na escada; a primeira
-        // aprovação apenas a agenda, não prova que a memória durou.
-        if (stage != null && srsStageBefore != null) {
-          widget.analytics?.log('srs_review_done', {
-            'item': _item.text,
-            'from_stage': srsStageBefore,
-            'to_stage': stage,
-            'approved': approved,
-          });
+        // try próprio: a avaliação já deu certo e o minuto já contou. Se
+        // gravar a agenda local falhar (cota de storage no web, por exemplo),
+        // isso não pode cair no catch de baixo e virar "não consegui avaliar
+        // sua gravação" — com o áudio ainda contado duas vezes em _audioSent.
+        try {
+          final stage =
+              await widget.store?.recordSrsOutcome(srsWord, approved: approved);
+          // Só conta como REVISÃO se a palavra já estava na escada; a primeira
+          // aprovação apenas a agenda, não prova que a memória durou.
+          if (stage != null && srsStageBefore != null) {
+            widget.analytics?.log('srs_review_done', {
+              'item': srsWord,
+              'from_stage': srsStageBefore,
+              'to_stage': stage,
+              'approved': approved,
+            });
+          }
+        } catch (e) {
+          debugPrint('[licao] agenda de revisão espaçada falhou: $e');
         }
       }
     } catch (e) {

@@ -700,12 +700,58 @@ void main() {
   });
 
   test('revisão espaçada: degrau não passa do último da escada', () async {
+    final last = ProgressStore.srsIntervalsDays.length - 1;
+    SharedPreferences.setMockInitialValues({
+      'srs_schedule': jsonEncode({
+        'apple': {'stage': last, 'due': _ymd(DateTime.now())},
+      }),
+    });
+    final store = await ProgressStore.load();
+    // No topo da escada o acerto não estoura o índice: repete o último
+    // intervalo (consolidada ≠ eterna).
+    expect(await store.recordSrsOutcome('apple', approved: true), last);
+    expect(store.srsDueWords(), isEmpty);
+  });
+
+  test('revisão espaçada: regravar no mesmo dia não sobe a escada de novo',
+      () async {
     final store = await _emptyStore();
-    int? stage;
-    for (var i = 0; i < 10; i++) {
-      stage = await store.recordSrsOutcome('apple', approved: true);
-    }
-    expect(stage, ProgressStore.srsIntervalsDays.length - 1);
+    // "Gravar de novo" na etapa 7 repete a gravação final quantas vezes a
+    // pessoa quiser. Repetir hoje não é ESPAÇAR: só revisão vencida move o
+    // degrau, senão 3 regravações levariam a palavra de 1 dia para 30.
+    expect(await store.recordSrsOutcome('apple', approved: true), 0);
+    expect(await store.recordSrsOutcome('apple', approved: true), isNull);
+    expect(await store.recordSrsOutcome('apple', approved: false), isNull);
+    expect(store.srsStageOf('apple'), 0);
+  });
+
+  test('revisão espaçada: a mais atrasada abre primeiro', () async {
+    SharedPreferences.setMockInitialValues({
+      'srs_schedule': jsonEncode({
+        'apple': {'stage': 0, 'due': _ymd(DateTime.now())},
+        'zebra': {
+          'stage': 0,
+          'due': _ymd(DateTime.now().subtract(const Duration(days: 9))),
+        },
+      }),
+    });
+    final store = await ProgressStore.load();
+    // O card abre a primeira da lista — precisa ser a esquecida há mais tempo,
+    // não a alfabeticamente primeira.
+    expect(store.srsDueWords(), ['zebra', 'apple']);
+  });
+
+  test('revisão espaçada: degrau adulterado não estoura o índice', () async {
+    SharedPreferences.setMockInitialValues({
+      'srs_schedule': jsonEncode({
+        'apple': {'stage': -3, 'due': _ymd(DateTime.now())},
+        'cinema': {'stage': 99, 'due': _ymd(DateTime.now())},
+      }),
+    });
+    final store = await ProgressStore.load();
+    expect(await store.recordSrsOutcome('apple', approved: true), 1);
+    expect(await store.recordSrsOutcome('cinema', approved: true),
+        ProgressStore.srsIntervalsDays.length - 1);
   });
 
   test('revisão espaçada: agenda corrompida não derruba a home', () async {

@@ -383,17 +383,25 @@ class ProgressStore {
     return stage is int ? stage : null;
   }
 
-  /// Palavras cuja revisão venceu (hoje ou atrasada), em ordem estável.
+  /// Palavras cuja revisão venceu (hoje ou atrasada), da MAIS atrasada para a
+  /// mais recente — o card da home abre a primeira, e o que está esquecido há
+  /// mais tempo é o que mais precisa voltar. Empate desempata em ordem
+  /// alfabética, pra a lista ser estável entre rebuilds.
   /// Comparar as datas como texto funciona porque [_ymd] é zero-padded.
   List<String> srsDueWords() {
     final today = _ymd(DateTime.now());
-    final due = <String>[];
+    final dueEntries = <({String word, String date})>[];
     _srsSchedule().forEach((word, entry) {
       final d = entry['due'];
-      if (d is String && d.compareTo(today) <= 0) due.add(word);
+      if (d is String && d.compareTo(today) <= 0) {
+        dueEntries.add((word: word, date: d));
+      }
     });
-    due.sort();
-    return due;
+    dueEntries.sort((a, b) {
+      final byDate = a.date.compareTo(b.date);
+      return byDate != 0 ? byDate : a.word.compareTo(b.word);
+    });
+    return [for (final e in dueEntries) e.word];
   }
 
   /// Registra o resultado da gravação FINAL de uma palavra (etapa 7 do loop).
@@ -401,13 +409,29 @@ class ProgressStore {
   /// primeiro degrau e volta amanhã. Palavra que nunca foi aprovada não entra
   /// na escada por reprovação: isso é aprender, e a lista "a revisar" do mapa
   /// de fala já cobre. Retorna o novo degrau, ou null quando não fez nada.
+  ///
+  /// O degrau só se mexe quando a revisão está VENCIDA (ou quando a palavra
+  /// ainda não entrou na escada). Sem essa trava, o botão "Gravar de novo" da
+  /// etapa 7 levaria a palavra de 1 para 30 dias em dois minutos — repetir
+  /// hoje não é espaçar — e contaria cada regravação como uma revisão na
+  /// métrica `srs_review_done`.
   Future<int?> recordSrsOutcome(String word, {required bool approved}) async {
     final schedule = _srsSchedule();
-    final current = schedule[word]?['stage'];
-    final currentStage = current is int ? current : null;
-    if (!approved && currentStage == null) return null;
-    final raised = (currentStage ?? -1) + 1;
+    final entry = schedule[word];
     final last = srsIntervalsDays.length - 1;
+    final raw = entry?['stage'];
+    // Clampado já na leitura: agenda adulterada (localStorage é editável) não
+    // pode estourar o índice da escada no meio da lição — este arquivo degrada
+    // com prefs corrompido, não quebra.
+    final currentStage = raw is int ? raw.clamp(0, last).toInt() : null;
+    if (currentStage == null) {
+      if (!approved) return null;
+    } else {
+      final due = entry?['due'];
+      final notDue = due is String && due.compareTo(_ymd(DateTime.now())) > 0;
+      if (notDue) return null;
+    }
+    final raised = (currentStage ?? -1) + 1;
     final nextStage = approved ? (raised > last ? last : raised) : 0;
     schedule[word] = {
       'stage': nextStage,

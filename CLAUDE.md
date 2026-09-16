@@ -52,14 +52,18 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   responde "o que eu nunca acertei" (aprender); o agendador responde "o que eu
   acertei e já está na hora de conferir" (esquecer). Só palavra APROVADA entra
   na escada — a gravação FINAL da lição (etapa 7) é o que move o degrau, via
-  `ProgressStore.recordSrsOutcome`. Acerto sobe um degrau
+  `ProgressStore.recordSrsOutcome`, e SÓ quando a revisão está vencida:
+  regravar no mesmo dia não é espaçar (sem essa trava o botão "Gravar de
+  novo" da etapa 7 levaria a palavra de 1 pra 30 dias em dois minutos e
+  contaria cada regravação como revisão). Acerto sobe um degrau
   (`srsIntervalsDays` = 1, 3, 10, 30 dias; depois do último repete a cada 30 —
   consolidada ≠ eterna), erro volta pro primeiro. Agenda só LOCAL (chave
   `srs_schedule`, JSON palavra→{stage,due}), como o desafio do dia e o de 21
   dias: não entra no snapshot do progresso, então não exige migração de coluna;
   prefs corrompido degrada pra agenda vazia em vez de derrubar a home. UI: card
   "Revisar hoje" na home (`_srsReviewCard`, só quando há palavra vencida) que
-  abre a lição no item da palavra — cada revisão passa pelo loop normal, então
+  abre a lição no item da palavra mais atrasada (`srsDueWords` ordena por data
+  de vencimento) — cada revisão passa pelo loop normal, então
   rende minuto APROVADO, não só tempo de tela. Métrica sai como evento
   `srs_review_done` (props: item, from_stage, to_stage, approved) — só quando a
   palavra JÁ estava na escada, porque a 1ª aprovação apenas agenda e não prova

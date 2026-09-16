@@ -19,6 +19,21 @@ import 'terms_of_use_screen.dart';
 import 'stats_screen.dart';
 import 'word_memory_screen.dart';
 
+/// Índice palavra → (lição, item) do currículo, montado uma vez. A revisão
+/// espaçada consulta isto a cada build da home e de novo ao abrir a palavra;
+/// varrer as 25 lições item a item toda vez era trabalho repetido à toa.
+/// Palavra que aparece em mais de uma lição vale pela PRIMEIRA — é a que a
+/// pessoa viu antes, e é sempre uma lição já liberada.
+final Map<String, ({Lesson lesson, int index})> _wordIndex = () {
+  final out = <String, ({Lesson lesson, int index})>{};
+  for (final lesson in fase1Lessons) {
+    for (var i = 0; i < lesson.items.length; i++) {
+      out.putIfAbsent(lesson.items[i].text, () => (lesson: lesson, index: i));
+    }
+  }
+  return out;
+}();
+
 /// Dashboard: a barra das 484 horas, o streak e a porta de entrada das
 /// lições. É a tela que o aluno vê todo dia — precisa mostrar progresso
 /// real em segundos, não conclusão de telas.
@@ -302,24 +317,20 @@ class _HomeScreenState extends State<HomeScreen> {
   /// "Revisar agora": abre o treino da 1ª lição que contém a palavra, já no
   /// item dela (via startItemIndex) — em vez de retomar o índice salvo.
   void _reviewWord(String word) {
-    for (final lesson in fase1Lessons) {
-      final idx = lesson.items.indexWhere((it) => it.text == word);
-      if (idx >= 0) {
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => LessonScreen(
-            lesson: lesson,
-            assessor: widget.assessor,
-            store: widget.store,
-            analytics: widget.analytics,
-            rigorous: widget.store.rigorousMode,
-            startItemIndex: idx,
-          ),
-        )).then((_) {
-          if (mounted) setState(() {});
-        });
-        return;
-      }
-    }
+    final found = _wordIndex[word];
+    if (found == null) return; // palavra saiu do currículo: nada a treinar
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => LessonScreen(
+        lesson: found.lesson,
+        assessor: widget.assessor,
+        store: widget.store,
+        analytics: widget.analytics,
+        rigorous: widget.store.rigorousMode,
+        startItemIndex: found.index,
+      ),
+    )).then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _openStats() async {
@@ -434,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// palavra que saiu das lições não tem mais onde ser treinada.
   List<String> _dueReviewWords() => [
         for (final w in widget.store.srsDueWords())
-          if (fase1Lessons.any((l) => l.items.any((it) => it.text == w))) w,
+          if (_wordIndex.containsKey(w)) w,
       ];
 
   /// Revisão espaçada: o mapa de fala mostra o que a pessoa NUNCA acertou;
