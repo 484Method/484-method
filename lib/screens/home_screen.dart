@@ -429,6 +429,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Palavras que a revisão espaçada agendou pra hoje e que ainda existem no
+  /// currículo — a agenda é local e sobrevive a mudança de conteúdo, mas
+  /// palavra que saiu das lições não tem mais onde ser treinada.
+  List<String> _dueReviewWords() => [
+        for (final w in widget.store.srsDueWords())
+          if (fase1Lessons.any((l) => l.items.any((it) => it.text == w))) w,
+      ];
+
+  /// Revisão espaçada: o mapa de fala mostra o que a pessoa NUNCA acertou;
+  /// este card traz de volta o que ela JÁ acertou e está na hora de conferir,
+  /// antes que a memória caia. Cada revisão passa pelo loop normal, então
+  /// rende minuto APROVADO — a métrica norte — e não só tempo de tela.
+  Widget _srsReviewCard(ThemeData theme, List<String> due) {
+    final n = due.length;
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.history, color: theme.colorScheme.secondary),
+        title: const Text('Revisar hoje'),
+        subtitle: Text(n == 1
+            ? '1 palavra que você já dominou — veja se ainda sai'
+            : '$n palavras que você já dominou — veja se ainda saem'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _reviewWord(due.first),
+      ),
+    );
+  }
+
   /// Desafio de 21 dias (instrumento de validação do beta): mede outcome, não
   /// só comportamento — confiança inicial vs. final + o antes/depois. O card
   /// muda conforme o estágio: entrar → em andamento → fechar → concluído.
@@ -1122,6 +1149,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final showCohort = widget.store.cohortStarted || !isBrandNew;
     final showPrecision =
         total.inSeconds >= _precisionBaseSeconds; // só quando é recomendável
+    // Revisão espaçada: só aparece quando há palavra vencida. No dia 0 nunca
+    // há (nada foi aprovado ainda), então não precisa de gate por isBrandNew.
+    final dueReview = _dueReviewWords();
     return Scaffold(
       appBar: AppBar(
         title: const Text('484 Method'),
@@ -1198,6 +1228,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
               if (!isBrandNew && !widget.store.reachedFirstMilestone) ...[
                 _firstMilestoneCard(theme),
+                const SizedBox(height: 12),
+              ],
+              if (dueReview.isNotEmpty) ...[
+                _srsReviewCard(theme, dueReview),
                 const SizedBox(height: 12),
               ],
               if (showChallenge) ...[

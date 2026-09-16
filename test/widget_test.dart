@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -41,6 +42,10 @@ Future<ProgressStore> _emptyStore() async {
   SharedPreferences.setMockInitialValues({});
   return ProgressStore.load();
 }
+
+/// Mesmo formato de data que o ProgressStore usa nas chaves de agenda.
+String _ymd(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 void main() {
   testWidgets('sem Supabase configurado, mostra instruções de setup',
@@ -649,6 +654,67 @@ void main() {
         SpeechCategory.rhythm);
     expect(mem.review.firstWhere((s) => s.word == 'banana').category,
         SpeechCategory.pronunciation); // sem prosódia → pronúncia
+  });
+
+  test('revisão espaçada: 1ª aprovação agenda a palavra, mas não vence hoje',
+      () async {
+    final store = await _emptyStore();
+    expect(store.srsStageOf('banana'), isNull); // nunca aprovada: fora da escada
+
+    expect(await store.recordSrsOutcome('banana', approved: true), 0);
+    expect(store.srsStageOf('banana'), 0);
+    expect(store.srsDueWords(), isEmpty); // volta amanhã, não no mesmo dia
+  });
+
+  test('revisão espaçada: palavra nunca aprovada não entra por reprovação',
+      () async {
+    final store = await _emptyStore();
+    // Errar algo que nunca se soube é aprender, não esquecer — quem cobre
+    // isso é a lista "a revisar" do mapa de fala.
+    expect(await store.recordSrsOutcome('hotel', approved: false), isNull);
+    expect(store.srsStageOf('hotel'), isNull);
+    expect(store.srsDueWords(), isEmpty);
+  });
+
+  test('revisão espaçada: acerto sobe degrau, erro volta pro primeiro',
+      () async {
+    final yesterday = _ymd(DateTime.now().subtract(const Duration(days: 1)));
+    SharedPreferences.setMockInitialValues({
+      'srs_schedule': jsonEncode({
+        'apple': {'stage': 1, 'due': yesterday},
+        'cinema': {'stage': 2, 'due': yesterday},
+      }),
+    });
+    final store = await ProgressStore.load();
+
+    // Vencidas ontem → aparecem hoje, em ordem estável.
+    expect(store.srsDueWords(), ['apple', 'cinema']);
+
+    expect(await store.recordSrsOutcome('apple', approved: true), 2);
+    expect(await store.recordSrsOutcome('cinema', approved: false), 0);
+
+    // Reagendadas pro futuro (10 dias e 1 dia): nenhuma vence hoje.
+    expect(store.srsDueWords(), isEmpty);
+    expect(store.srsStageOf('apple'), 2);
+    expect(store.srsStageOf('cinema'), 0);
+  });
+
+  test('revisão espaçada: degrau não passa do último da escada', () async {
+    final store = await _emptyStore();
+    int? stage;
+    for (var i = 0; i < 10; i++) {
+      stage = await store.recordSrsOutcome('apple', approved: true);
+    }
+    expect(stage, ProgressStore.srsIntervalsDays.length - 1);
+  });
+
+  test('revisão espaçada: agenda corrompida não derruba a home', () async {
+    SharedPreferences.setMockInitialValues({'srs_schedule': 'nao-e-json{'});
+    final store = await ProgressStore.load();
+    expect(store.srsDueWords(), isEmpty);
+    expect(store.srsStageOf('apple'), isNull);
+    // E ainda aceita agendar por cima do lixo.
+    expect(await store.recordSrsOutcome('apple', approved: true), 0);
   });
 
   test('ativação: firstOnce dispara só uma vez; aha persiste', () async {

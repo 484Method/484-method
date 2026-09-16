@@ -217,6 +217,12 @@ class _LessonScreenState extends State<LessonScreen>
         'approved': approved,
         'audio_seconds': audio.duration.inMilliseconds / 1000,
       });
+      // Só a gravação FINAL (etapa 7) mexe na escada de revisão espaçada: a
+      // 1ª tentativa é diagnóstico de ouvido, não prova de domínio. Lido aqui
+      // porque _step muda dentro do setState logo abaixo.
+      final isFinalAttempt = _step == _Step.livroAberto;
+      final srsStageBefore =
+          isFinalAttempt ? widget.store?.srsStageOf(_item.text) : null;
       setState(() {
         _result = result;
         _aiFeedback = null;
@@ -245,6 +251,20 @@ class _LessonScreenState extends State<LessonScreen>
         if (approved) _logFirst('first_approved_minute_earned');
       }
       _maybeFetchAiFeedback(result, attempt, approved);
+      if (isFinalAttempt) {
+        final stage = await widget.store
+            ?.recordSrsOutcome(_item.text, approved: approved);
+        // Só conta como REVISÃO se a palavra já estava na escada; a primeira
+        // aprovação apenas a agenda, não prova que a memória durou.
+        if (stage != null && srsStageBefore != null) {
+          widget.analytics?.log('srs_review_done', {
+            'item': _item.text,
+            'from_stage': srsStageBefore,
+            'to_stage': stage,
+            'approved': approved,
+          });
+        }
+      }
     } catch (e) {
       debugPrint('[licao] avaliação falhou: $e');
       widget.analytics?.log('assessment_failed', {

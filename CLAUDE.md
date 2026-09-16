@@ -48,6 +48,22 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Threshold de aprovação CONFIGURÁVEL por lição (permissivo na Fase 1)
 - ✅ Onboarding com promessa + regra som-first + consentimento de gravação de voz
 - ✅ Analytics de eventos (conclusão, tentativas, regravação, retenção)
+- ✅ Repetição espaçada (SRS) em cima do mapa de fala: o `WordMemoryScreen`
+  responde "o que eu nunca acertei" (aprender); o agendador responde "o que eu
+  acertei e já está na hora de conferir" (esquecer). Só palavra APROVADA entra
+  na escada — a gravação FINAL da lição (etapa 7) é o que move o degrau, via
+  `ProgressStore.recordSrsOutcome`. Acerto sobe um degrau
+  (`srsIntervalsDays` = 1, 3, 10, 30 dias; depois do último repete a cada 30 —
+  consolidada ≠ eterna), erro volta pro primeiro. Agenda só LOCAL (chave
+  `srs_schedule`, JSON palavra→{stage,due}), como o desafio do dia e o de 21
+  dias: não entra no snapshot do progresso, então não exige migração de coluna;
+  prefs corrompido degrada pra agenda vazia em vez de derrubar a home. UI: card
+  "Revisar hoje" na home (`_srsReviewCard`, só quando há palavra vencida) que
+  abre a lição no item da palavra — cada revisão passa pelo loop normal, então
+  rende minuto APROVADO, não só tempo de tela. Métrica sai como evento
+  `srs_review_done` (props: item, from_stage, to_stage, approved) — só quando a
+  palavra JÁ estava na escada, porque a 1ª aprovação apenas agenda e não prova
+  que a memória durou.
 - ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
   pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
   sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma
