@@ -22,6 +22,15 @@ class Backend {
 
   static Backend? instance;
 
+  /// Teto de espera das chamadas do BOOT. O `main()` só chama `runApp` depois
+  /// que elas voltam, então backend pendurado = tela branca — foi exatamente
+  /// o que aconteceu em 2026-09-16, com o projeto Supabase pausado: o refresh
+  /// da sessão salva ficava em retry (`AuthRetryableFetchException`) e o app
+  /// não pintava nada. try/catch pega ERRO, não pega DEMORA; só o timeout
+  /// pega. Generoso o suficiente (6s) pra não derrubar 4G ruim, curto o
+  /// suficiente pra ninguém encarar branco esperando.
+  static const bootTimeout = Duration(seconds: 6);
+
   /// Inicializa se as credenciais existirem. Falha silenciosa (offline,
   /// projeto fora do ar) mantém o app em modo local.
   static Future<void> init({
@@ -32,13 +41,18 @@ class Backend {
     try {
       // publishableKey aceita tanto a anon key (JWT legado) quanto a
       // publishable key nova — ambas são apenas a chave pública da API.
-      await Supabase.initialize(url: url, publishableKey: anonKey);
+      // O timeout cobre também o refresh da sessão persistida, que acontece
+      // DENTRO do initialize (é ele que estourava com o projeto pausado).
+      await Supabase.initialize(url: url, publishableKey: anonKey)
+          .timeout(bootTimeout);
       final client = Supabase.instance.client;
       if (client.auth.currentSession == null) {
-        await client.auth.signInAnonymously();
+        await client.auth.signInAnonymously().timeout(bootTimeout);
       }
       instance = Backend._(client);
     } catch (e) {
+      // instance continua null → o app sobe em modo local-only, que é a
+      // degradação prometida no topo deste arquivo.
       debugPrint('[backend] indisponível, seguindo local-only: $e');
     }
   }
@@ -364,11 +378,14 @@ class Backend {
     final uid = userId;
     if (uid == null) return null;
     try {
+      // Roda no boot (ProgressStore.load), antes do runApp — mesmo motivo do
+      // timeout em [init]: sem teto, o app não pinta enquanto isso não volta.
       return await client
           .from('progress')
           .select()
           .eq('user_id', uid)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(bootTimeout);
     } catch (e) {
       debugPrint('[backend] pullProgress falhou: $e');
       return null;

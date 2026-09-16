@@ -167,6 +167,24 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   MissingPluginException em runtime (já causou tela branca duas vezes).
 - Build/teste iOS: via CI na nuvem (Codemagic ou GitHub Actions) + TestFlight
   no iPhone do dev. Nunca sugerir instalar Xcode nesta máquina.
+- ⚠️ **Deploy web é MANUAL** (`tool/deploy_pages.sh`, force-push numa branch
+  `gh-pages` órfã). Não há CI publicando, então o que está no ar pode ficar
+  meses atrás da `main` — já ficou (deploy de 2026-07-08 vs. main de setembro,
+  sem o gate de cadastro novo nem o card de PMF). Ao mudar algo que os
+  testadores precisam ver, republicar faz parte da tarefa.
+- ⚠️ **Projeto Supabase free PAUSA sozinho** após ~7 dias sem uso, e aí o app
+  precisa continuar abrindo. Incidente de 2026-09-16: projeto pausado → o
+  refresh da sessão salva entrava em retry dentro de `Supabase.initialize` →
+  como o `runApp` é a ÚLTIMA linha do `main()`, a tela ficava BRANCA. Por isso
+  toda chamada de rede do boot tem `Backend.bootTimeout` (6s) — `try/catch`
+  pega erro, só timeout pega demora — e o `web/index.html` tem um splash
+  próprio (`#boot`, removido no evento `flutter-first-frame`), para nunca
+  existir branco absoluto. Regra: **nada novo no `main()` antes do `runApp`
+  sem timeout.**
+- O build web serve o CanvasKit LOCAL (`--no-web-resources-cdn` no
+  `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
+  publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê
+  tela branca (o engine nem inicializa).
 
 ## Stack
 - Flutter (iOS + Android)
