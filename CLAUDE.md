@@ -167,11 +167,18 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   MissingPluginException em runtime (já causou tela branca duas vezes).
 - Build/teste iOS: via CI na nuvem (Codemagic ou GitHub Actions) + TestFlight
   no iPhone do dev. Nunca sugerir instalar Xcode nesta máquina.
-- ⚠️ **Deploy web é MANUAL** (`tool/deploy_pages.sh`, force-push numa branch
-  `gh-pages` órfã). Não há CI publicando, então o que está no ar pode ficar
-  meses atrás da `main` — já ficou (deploy de 2026-07-08 vs. main de setembro,
-  sem o gate de cadastro novo nem o card de PMF). Ao mudar algo que os
-  testadores precisam ver, republicar faz parte da tarefa.
+- **Deploy web é AUTOMÁTICO** a cada merge na `main`
+  (`.github/workflows/deploy-web.yml` → force-push na branch `gh-pages` órfã,
+  a mesma que o Pages serve). Roda `analyze` + `test` antes de publicar: main
+  quebrada não chega no testador. Exige os secrets `SUPABASE_URL` e
+  `SUPABASE_ANON_KEY` no repo — sem eles o workflow falha de propósito, em vez
+  de publicar o app na tela de "Supabase não configurado".
+  O `tool/deploy_pages.sh` continua válido pra publicar fora de um merge (da
+  máquina do dev). ⚠️ **As flags de build dos dois precisam ficar iguais.**
+  Motivo de existir: o deploy era só manual e o que estava no ar ficou dois
+  meses atrás da `main` — os testadores usaram o build de 2026-07-08 até
+  setembro, sem o gate de cadastro corrigido em 14/07, que era justamente a
+  correção de funil que se queria medir.
 - ⚠️ **Projeto Supabase free PAUSA sozinho** após ~7 dias sem uso, e aí o app
   precisa continuar abrindo. Incidente de 2026-09-16: projeto pausado → o
   refresh da sessão salva entrava em retry dentro de `Supabase.initialize` →

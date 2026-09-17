@@ -1,0 +1,96 @@
+name: Deploy web (GitHub Pages)
+
+# Publica a demo web a cada merge na main, na branch `gh-pages` — a mesma que
+# o Pages já serve hoje. Existe porque o deploy era MANUAL
+# (`tool/deploy_pages.sh`, rodado à mão no MacBook do dev) e isso deixou o que
+# estava no ar dois meses atrás da main: os testadores usaram o build de
+# 2026-07-08 até setembro, sem o gate de cadastro corrigido em 14/07 — ou seja,
+# o conserto do funil que valia medir nunca chegou a um usuário.
+#
+# ⚠️ As flags do build precisam ficar IGUAIS às do tool/deploy_pages.sh (que
+# segue valendo pra publicar fora de um merge). Mudou uma, mude a outra.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Dois deploys ao mesmo tempo dariam force-push concorrente no gh-pages.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false # nunca abortar um deploy em curso
+
+jobs:
+  deploy:
+    name: Build e publicar
+    runs-on: ubuntu-latest # build web não precisa de macOS — mais rápido e barato
+    permissions:
+      contents: write # o push no gh-pages
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Falha ANTES de construir se faltar credencial: sem elas o app compila,
+      # mas sobe na tela de "Supabase não configurado". Publicar isso calado
+      # seria pior que não publicar.
+      - name: Conferir secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          if [ -z "$SUPABASE_URL" ]; then missing="$missing SUPABASE_URL"; fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then missing="$missing SUPABASE_ANON_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets ausentes:$missing — cadastre em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependências
+        run: flutter pub get
+
+      # Portão de qualidade: main quebrada não pode ir pro ar. O workflow do
+      # iOS roda em paralelo e não bloqueia este, então a checagem se repete
+      # aqui de propósito.
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Testes
+        run: flutter test
+
+      - name: Build web
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          flutter build web --release --base-href /484-method/ \
+            --pwa-strategy=none \
+            --no-web-resources-cdn \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          # .nojekyll: sem isso o Jekyll do Pages ignora os arquivos _*.
+          touch build/web/.nojekyll
+          # Landing de aquisição em /landing/, mesma origem da demo.
+          mkdir -p build/web/landing
+          cp landing/index.html build/web/landing/index.html
+
+      # Branch órfã a cada deploy, igual ao deploy_pages.sh: o que está no ar é
+      # exatamente este build, sem sobra de publicação anterior.
+      - name: Publicar no gh-pages
+        working-directory: build/web
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git init -q
+          git checkout -q -b gh-pages
+          git add -A
+          git -c user.email="github-actions[bot]@users.noreply.github.com" \
+              -c user.name="github-actions[bot]" \
+              commit -q -m "Deploy 484 Method — ${GITHUB_SHA::7}"
+          git push -fq "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          echo "Publicado em https://484method.github.io/484-method/ (o CDN leva ~1 min)."
