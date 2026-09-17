@@ -48,6 +48,26 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Threshold de aprovação CONFIGURÁVEL por lição (permissivo na Fase 1)
 - ✅ Onboarding com promessa + regra som-first + consentimento de gravação de voz
 - ✅ Analytics de eventos (conclusão, tentativas, regravação, retenção)
+- ✅ Repetição espaçada (SRS) em cima do mapa de fala: o `WordMemoryScreen`
+  responde "o que eu nunca acertei" (aprender); o agendador responde "o que eu
+  acertei e já está na hora de conferir" (esquecer). Só palavra APROVADA entra
+  na escada — a gravação FINAL da lição (etapa 7) é o que move o degrau, via
+  `ProgressStore.recordSrsOutcome`, e SÓ quando a revisão está vencida:
+  regravar no mesmo dia não é espaçar (sem essa trava o botão "Gravar de
+  novo" da etapa 7 levaria a palavra de 1 pra 30 dias em dois minutos e
+  contaria cada regravação como revisão). Acerto sobe um degrau
+  (`srsIntervalsDays` = 1, 3, 10, 30 dias; depois do último repete a cada 30 —
+  consolidada ≠ eterna), erro volta pro primeiro. Agenda só LOCAL (chave
+  `srs_schedule`, JSON palavra→{stage,due}), como o desafio do dia e o de 21
+  dias: não entra no snapshot do progresso, então não exige migração de coluna;
+  prefs corrompido degrada pra agenda vazia em vez de derrubar a home. UI: card
+  "Revisar hoje" na home (`_srsReviewCard`, só quando há palavra vencida) que
+  abre a lição no item da palavra mais atrasada (`srsDueWords` ordena por data
+  de vencimento) — cada revisão passa pelo loop normal, então
+  rende minuto APROVADO, não só tempo de tela. Métrica sai como evento
+  `srs_review_done` (props: item, from_stage, to_stage, approved) — só quando a
+  palavra JÁ estava na escada, porque a 1ª aprovação apenas agenda e não prova
+  que a memória durou.
 - ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
   pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
   sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma
@@ -147,6 +167,31 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   MissingPluginException em runtime (já causou tela branca duas vezes).
 - Build/teste iOS: via CI na nuvem (Codemagic ou GitHub Actions) + TestFlight
   no iPhone do dev. Nunca sugerir instalar Xcode nesta máquina.
+- **Deploy web é AUTOMÁTICO** a cada merge na `main`
+  (`.github/workflows/deploy-web.yml` → force-push na branch `gh-pages` órfã,
+  a mesma que o Pages serve). Roda `analyze` + `test` antes de publicar: main
+  quebrada não chega no testador. Exige os secrets `SUPABASE_URL` e
+  `SUPABASE_ANON_KEY` no repo — sem eles o workflow falha de propósito, em vez
+  de publicar o app na tela de "Supabase não configurado".
+  O `tool/deploy_pages.sh` continua válido pra publicar fora de um merge (da
+  máquina do dev). ⚠️ **As flags de build dos dois precisam ficar iguais.**
+  Motivo de existir: o deploy era só manual e o que estava no ar ficou dois
+  meses atrás da `main` — os testadores usaram o build de 2026-07-08 até
+  setembro, sem o gate de cadastro corrigido em 14/07, que era justamente a
+  correção de funil que se queria medir.
+- ⚠️ **Projeto Supabase free PAUSA sozinho** após ~7 dias sem uso, e aí o app
+  precisa continuar abrindo. Incidente de 2026-09-16: projeto pausado → o
+  refresh da sessão salva entrava em retry dentro de `Supabase.initialize` →
+  como o `runApp` é a ÚLTIMA linha do `main()`, a tela ficava BRANCA. Por isso
+  toda chamada de rede do boot tem `Backend.bootTimeout` (6s) — `try/catch`
+  pega erro, só timeout pega demora — e o `web/index.html` tem um splash
+  próprio (`#boot`, removido no evento `flutter-first-frame`), para nunca
+  existir branco absoluto. Regra: **nada novo no `main()` antes do `runApp`
+  sem timeout.**
+- O build web serve o CanvasKit LOCAL (`--no-web-resources-cdn` no
+  `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
+  publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê
+  tela branca (o engine nem inicializa).
 
 ## Stack
 - Flutter (iOS + Android)
