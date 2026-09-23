@@ -22,7 +22,13 @@ set +a
 REPO="https://github.com/484Method/484-method.git"
 URL="https://484method.github.io/484-method/"
 
+# --no-web-resources-cdn: serve o CanvasKit do PRÓPRIO Pages em vez de
+# gstatic.com. Sem isso o build embute engineRevision e o loader baixa o
+# CanvasKit do CDN do Google — os ~7 MB de canvaskit/ que este script publica
+# ficavam sem uso, e quem está em rede que bloqueia gstatic (corporativa,
+# escola) via tela branca, porque o engine nem chega a inicializar.
 flutter build web --release --base-href /484-method/ --pwa-strategy=none \
+  --no-web-resources-cdn \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 

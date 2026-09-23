@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +46,7 @@ class ProgressStore {
   static const _kCohortStart = 'cohort_start_date';
   static const _kBaselineConfidence = 'cohort_baseline_confidence';
   static const _kFinalConfidence = 'cohort_final_confidence';
+  static const _kSrsSchedule = 'srs_schedule';
 
   /// Meta do produto: 484 horas de prática aprovada.
   static const goalSeconds = 484 * 3600;
@@ -338,6 +340,107 @@ class ProgressStore {
 
   Future<void> setFinalConfidence(int value) =>
       _prefs.setInt(_kFinalConfidence, value);
+
+  // --- Repetição espaçada (SRS) ---
+  // Estado só local, como o desafio do dia e o de 21 dias: agendar revisão é
+  // conveniência de UX, não a métrica norte — o que vira métrica sai como
+  // EVENTO (`srs_review_done`), sem exigir migração de coluna no progresso.
+  //
+  // Divisão de trabalho com o mapa de fala (WordMemoryScreen): lá a pergunta é
+  // "o que eu nunca acertei" (problema de APRENDER); aqui é "o que eu acertei
+  // e já está na hora de checar se ainda sai" (problema de ESQUECER). Por isso
+  // só palavra APROVADA entra na escada — não dá pra esquecer o que nunca se
+  // soube, e reprovar uma palavra nova não é recaída, é o começo.
+
+  /// Degraus da curva de esquecimento, em dias. Expandem porque cada acerto
+  /// espaçado deixa a memória mais durável. Depois do último degrau a palavra
+  /// continua voltando a cada 30 dias — consolidada não é o mesmo que eterna.
+  static const srsIntervalsDays = [1, 3, 10, 30];
+
+  /// Agenda crua: palavra → {stage, due}. Tolera prefs corrompido voltando
+  /// vazia — agenda de revisão nunca pode derrubar a home.
+  Map<String, Map<String, dynamic>> _srsSchedule() {
+    final raw = _prefs.getString(_kSrsSchedule);
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      final out = <String, Map<String, dynamic>>{};
+      decoded.forEach((k, v) {
+        if (k is String && v is Map) out[k] = v.cast<String, dynamic>();
+      });
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Degrau atual da palavra na escada; null se ela ainda não entrou (nunca
+  /// foi aprovada). Serve pra distinguir a PRIMEIRA aprovação — que só agenda
+  /// — de uma revisão de verdade, na hora de logar o evento.
+  int? srsStageOf(String word) {
+    final stage = _srsSchedule()[word]?['stage'];
+    return stage is int ? stage : null;
+  }
+
+  /// Palavras cuja revisão venceu (hoje ou atrasada), da MAIS atrasada para a
+  /// mais recente — o card da home abre a primeira, e o que está esquecido há
+  /// mais tempo é o que mais precisa voltar. Empate desempata em ordem
+  /// alfabética, pra a lista ser estável entre rebuilds.
+  /// Comparar as datas como texto funciona porque [_ymd] é zero-padded.
+  List<String> srsDueWords() {
+    final today = _ymd(DateTime.now());
+    final dueEntries = <({String word, String date})>[];
+    _srsSchedule().forEach((word, entry) {
+      final d = entry['due'];
+      if (d is String && d.compareTo(today) <= 0) {
+        dueEntries.add((word: word, date: d));
+      }
+    });
+    dueEntries.sort((a, b) {
+      final byDate = a.date.compareTo(b.date);
+      return byDate != 0 ? byDate : a.word.compareTo(b.word);
+    });
+    return [for (final e in dueEntries) e.word];
+  }
+
+  /// Registra o resultado da gravação FINAL de uma palavra (etapa 7 do loop).
+  /// Aprovou → sobe um degrau, volta mais longe no tempo; errou → cai pro
+  /// primeiro degrau e volta amanhã. Palavra que nunca foi aprovada não entra
+  /// na escada por reprovação: isso é aprender, e a lista "a revisar" do mapa
+  /// de fala já cobre. Retorna o novo degrau, ou null quando não fez nada.
+  ///
+  /// O degrau só se mexe quando a revisão está VENCIDA (ou quando a palavra
+  /// ainda não entrou na escada). Sem essa trava, o botão "Gravar de novo" da
+  /// etapa 7 levaria a palavra de 1 para 30 dias em dois minutos — repetir
+  /// hoje não é espaçar — e contaria cada regravação como uma revisão na
+  /// métrica `srs_review_done`.
+  Future<int?> recordSrsOutcome(String word, {required bool approved}) async {
+    final schedule = _srsSchedule();
+    final entry = schedule[word];
+    final last = srsIntervalsDays.length - 1;
+    final raw = entry?['stage'];
+    // Clampado já na leitura: agenda adulterada (localStorage é editável) não
+    // pode estourar o índice da escada no meio da lição — este arquivo degrada
+    // com prefs corrompido, não quebra.
+    final currentStage = raw is int ? raw.clamp(0, last).toInt() : null;
+    if (currentStage == null) {
+      if (!approved) return null;
+    } else {
+      final due = entry?['due'];
+      final notDue = due is String && due.compareTo(_ymd(DateTime.now())) > 0;
+      if (notDue) return null;
+    }
+    final raised = (currentStage ?? -1) + 1;
+    final nextStage = approved ? (raised > last ? last : raised) : 0;
+    schedule[word] = {
+      'stage': nextStage,
+      'due': _ymd(
+          DateTime.now().add(Duration(days: srsIntervalsDays[nextStage]))),
+    };
+    await _prefs.setString(_kSrsSchedule, jsonEncode(schedule));
+    return nextStage;
+  }
 
   /// Em que item da lição a pessoa estava (pra retomar, não recomeçar do
   /// zero ao reabrir). Só local — é conveniência de UX, não a métrica norte,
