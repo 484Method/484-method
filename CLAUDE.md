@@ -203,6 +203,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
   publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê
   tela branca (o engine nem inicializa).
+- ⚠️ **Deploy das Edge Functions (`assess`, `feedback`, `dev-stats`) NÃO é
+  automático** — só o build web tem CI. O schema.sql e as functions foram
+  aplicados ao projeto via MCP em sessões anteriores; se o código de uma
+  function mudar no repo e ninguém rodar o deploy de novo, o que está no
+  Supabase fica dessincronizado — foi assim que o painel do dev apareceu como
+  "indisponível" (2026-09-24): `Backend.fetchDevStats` lança essa mensagem
+  sempre que `dev-stats` responde algo != 200/401 (função não implantada,
+  secret `DEV_STATS_PASSWORD` ausente → 503, ou erro interno → 500).
+  `tool/deploy_functions.sh` (novo) faz o deploy das três de uma vez — requer
+  `supabase` CLI autenticada (`supabase login`) rodando na máquina do dev,
+  não dá pra rodar daqui.
 
 ## Stack
 - Flutter (iOS + Android)
