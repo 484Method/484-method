@@ -22,6 +22,13 @@ class Backend {
 
   static Backend? instance;
 
+  /// true assim que URL/chave chegam preenchidas em [init], mesmo que a
+  /// conexão falhe depois. Distingue "esqueceu de configurar" (tela de setup
+  /// pro dev) de "configurado mas o Supabase não respondeu agora" (a UI deve
+  /// oferecer tentar de novo, não instruções de `.env` pra quem não tem o
+  /// código-fonte).
+  static bool configured = false;
+
   /// Teto de espera das chamadas do BOOT. O `main()` só chama `runApp` depois
   /// que elas voltam, então backend pendurado = tela branca — foi exatamente
   /// o que aconteceu em 2026-09-16, com o projeto Supabase pausado: o refresh
@@ -38,6 +45,7 @@ class Backend {
     required String anonKey,
   }) async {
     if (url.isEmpty || anonKey.isEmpty) return;
+    configured = true;
     try {
       // publishableKey aceita tanto a anon key (JWT legado) quanto a
       // publishable key nova — ambas são apenas a chave pública da API.

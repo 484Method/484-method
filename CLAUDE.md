@@ -188,6 +188,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   próprio (`#boot`, removido no evento `flutter-first-frame`), para nunca
   existir branco absoluto. Regra: **nada novo no `main()` antes do `runApp`
   sem timeout.**
+  Faltava o passo seguinte: quando o timeout estourava (ou qualquer outra
+  falha de conexão), `Backend.instance` ficava null e a Home mostrava a
+  MESMA tela que um dev sem `.env` vê — "Supabase não configurado... copie
+  .env.example... rode ./tool/run_web.sh" — instruções sem sentido pra um
+  usuário de verdade no celular, que descrevia isso como "não consegui
+  usar"/tela em branco. `Backend.configured` (true assim que URL/chave
+  chegam preenchidas, mesmo se a conexão falhar depois) distingue os dois
+  casos; falha de conexão com credenciais presentes mostra
+  `_ConnectionErrorScreen` (mensagem + botão "Tentar de novo", que só
+  re-roda `_boot()` — `Supabase.initialize` é idempotente) em vez da tela de
+  setup do dev.
 - O build web serve o CanvasKit LOCAL (`--no-web-resources-cdn` no
   `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
   publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê
