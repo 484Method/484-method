@@ -9,18 +9,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 ///
 /// Toda chamada de rede é fire-and-forget e protegida: o local é a fonte de
 /// verdade da UI; o Supabase é o espelho durável (cross-device + analytics).
-/// Senha errada no painel de uso — distinta de outras falhas (rede,
-/// secret não configurado) para a UI poder dizer "senha incorreta".
-class DevStatsAuthException implements Exception {
-  const DevStatsAuthException();
-}
-
 class Backend {
   Backend._(this.client);
 
   final SupabaseClient client;
 
   static Backend? instance;
+
+  /// true assim que URL/chave chegam preenchidas em [init], mesmo que a
+  /// conexão falhe depois. Distingue "esqueceu de configurar" (tela de setup
+  /// pro dev) de "configurado mas o Supabase não respondeu agora" (a UI deve
+  /// oferecer tentar de novo, não instruções de `.env` pra quem não tem o
+  /// código-fonte).
+  static bool configured = false;
 
   /// Teto de espera das chamadas do BOOT. O `main()` só chama `runApp` depois
   /// que elas voltam, então backend pendurado = tela branca — foi exatamente
@@ -38,6 +39,7 @@ class Backend {
     required String anonKey,
   }) async {
     if (url.isEmpty || anonKey.isEmpty) return;
+    configured = true;
     try {
       // publishableKey aceita tanto a anon key (JWT legado) quanto a
       // publishable key nova — ambas são apenas a chave pública da API.
@@ -195,16 +197,13 @@ class Backend {
     }
   }
 
-  /// Painel de uso interno. A senha é checada pela Edge Function `dev-stats`
-  /// (secret DEV_STATS_PASSWORD) — get_dev_stats() não é mais chamável direto
-  /// pelo cliente (EXECUTE revogado de anon/authenticated), então não basta
-  /// ter a anon key pública para ler os agregados de todos os usuários.
-  Future<Map<String, dynamic>> fetchDevStats(String password) async {
-    final res = await client.functions.invoke(
-      'dev-stats',
-      body: {'password': password},
-    );
-    if (res.status == 401) throw const DevStatsAuthException();
+  /// Painel de uso interno. `get_dev_stats()` não é chamável direto pelo
+  /// cliente (EXECUTE revogado de anon/authenticated) — só a Edge Function
+  /// `dev-stats`, com a service role, consegue ler os agregados de todos os
+  /// usuários. Sem gate de senha (decisão de produto, ver CLAUDE.md): qualquer
+  /// sessão anônima do app consegue chamar essa function.
+  Future<Map<String, dynamic>> fetchDevStats() async {
+    final res = await client.functions.invoke('dev-stats', body: const {});
     if (res.status != 200) {
       throw Exception('Painel indisponível (código ${res.status}).');
     }
@@ -213,15 +212,13 @@ class Backend {
 
   /// Rating cego: lista as gravações do desafio (baseline/final) com URLs
   /// ASSINADAS geradas pela Edge Function `dev-stats` (service role assina o
-  /// bucket privado), atrás do mesmo gate de senha do painel. Cada item traz
-  /// url, kind, duration_ms e a nota já dada (score/note), se houver.
-  Future<List<Map<String, dynamic>>> fetchCohortRecordings(
-      String password) async {
+  /// bucket privado). Cada item traz url, kind, duration_ms e a nota já dada
+  /// (score/note), se houver.
+  Future<List<Map<String, dynamic>>> fetchCohortRecordings() async {
     final res = await client.functions.invoke(
       'dev-stats',
-      body: {'password': password, 'action': 'list_recordings'},
+      body: {'action': 'list_recordings'},
     );
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Falha ao carregar gravações (código ${res.status}).');
     }
@@ -231,18 +228,16 @@ class Backend {
   }
 
   /// Rating cego: grava/atualiza a nota (1–5) de uma gravação. Passa pela
-  /// mesma Edge Function/gate de senha; a tabela cohort_ratings não tem policy
-  /// de cliente (só a service role escreve).
+  /// mesma Edge Function; a tabela cohort_ratings não tem policy de cliente
+  /// (só a service role escreve).
   Future<void> saveCohortRating(
-      String password, String recordingId, int score, String? note) async {
+      String recordingId, int score, String? note) async {
     final res = await client.functions.invoke('dev-stats', body: {
-      'password': password,
       'action': 'rate',
       'recording_id': recordingId,
       'score': score,
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     });
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Falha ao salvar a nota (código ${res.status}).');
     }
@@ -285,16 +280,13 @@ class Backend {
   }
 
   /// Gera um código de acesso novo (painel do dev) pra entregar a quem pagou
-  /// via Pix. Passa pela Edge Function `dev-stats` (service role + senha).
-  Future<String> generateAccessCode(String password,
-      {String? note, String? priceBucket}) async {
+  /// via Pix. Passa pela Edge Function `dev-stats` (service role).
+  Future<String> generateAccessCode({String? note, String? priceBucket}) async {
     final res = await client.functions.invoke('dev-stats', body: {
-      'password': password,
       'action': 'gen_access_code',
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       'price_bucket': ?priceBucket,
     });
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Falha ao gerar código (código ${res.status}).');
     }
@@ -304,32 +296,29 @@ class Backend {
   }
 
   /// Liga a cobrança: grava a chave Pix da PJ (app_config 'pix') pelo painel.
-  /// A escrita passa pela Edge Function `dev-stats` (service role + senha) — a
-  /// tabela não tem policy de escrita. `key` vazia desliga o passo Pix (o
-  /// checkout cai no fallback de e-mail). O paywall lê via [fetchPixConfig].
-  Future<void> setPixConfig(String password,
+  /// A escrita passa pela Edge Function `dev-stats` (service role) — a tabela
+  /// não tem policy de escrita. `key` vazia desliga o passo Pix (o checkout
+  /// cai no fallback de e-mail). O paywall lê via [fetchPixConfig].
+  Future<void> setPixConfig(
       {required String key, String name = '', String city = ''}) async {
     final res = await client.functions.invoke('dev-stats', body: {
-      'password': password,
       'action': 'set_pix',
       'pix_key': key.trim(),
       'pix_name': name.trim(),
       'pix_city': city.trim(),
     });
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Falha ao salvar o Pix (código ${res.status}).');
     }
   }
 
   /// Export CSV do painel: uma linha por usuário (métricas do progress), via
-  /// Edge Function `dev-stats` (service role + gate de senha).
-  Future<List<Map<String, dynamic>>> fetchUserExport(String password) async {
+  /// Edge Function `dev-stats` (service role).
+  Future<List<Map<String, dynamic>>> fetchUserExport() async {
     final res = await client.functions.invoke(
       'dev-stats',
-      body: {'password': password, 'action': 'export_users'},
+      body: {'action': 'export_users'},
     );
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Falha ao exportar (código ${res.status}).');
     }
@@ -357,16 +346,13 @@ class Backend {
   }
 
   /// Liga/desliga o app pelo painel do dev. A escrita passa pela Edge
-  /// Function `dev-stats` (a tabela não tem policy de escrita), atrás do
-  /// mesmo gate de senha do painel. Devolve as stats atualizadas (inclui
-  /// `maintenance_mode` confirmado pelo servidor).
-  Future<Map<String, dynamic>> setMaintenanceMode(
-      String password, bool on) async {
+  /// Function `dev-stats` (a tabela não tem policy de escrita). Devolve as
+  /// stats atualizadas (inclui `maintenance_mode` confirmado pelo servidor).
+  Future<Map<String, dynamic>> setMaintenanceMode(bool on) async {
     final res = await client.functions.invoke(
       'dev-stats',
-      body: {'password': password, 'set_maintenance': on},
+      body: {'set_maintenance': on},
     );
-    if (res.status == 401) throw const DevStatsAuthException();
     if (res.status != 200) {
       throw Exception('Não foi possível alterar (código ${res.status}).');
     }

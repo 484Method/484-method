@@ -336,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openStats() async {
     final backend = Backend.instance;
     if (backend == null) return;
-    await StatsScreen.openWithPasswordGate(context, backend);
+    await StatsScreen.open(context, backend);
   }
 
   /// Explica o efeito antes de ligar: o critério mais rígido vale para

@@ -1,14 +1,18 @@
-// Edge Function: gate de senha para o painel de uso interno (get_dev_stats).
-// A senha vive como secret do Supabase (DEV_STATS_PASSWORD) — nunca no
-// cliente, então a checagem não pode ser pulada chamando a RPC direto com a
-// anon key (get_dev_stats() teve EXECUTE revogado de anon/authenticated;
-// só esta função, com a service role key, consegue chamá-la).
+// Edge Function: painel de uso interno (get_dev_stats). get_dev_stats() teve
+// EXECUTE revogado de anon/authenticated — só esta função, com a service
+// role key, consegue chamá-la, então a anon key pública sozinha não lê os
+// agregados de todos os usuários.
+//
+// SEM gate de senha (decisão de produto, 2026-09-25 — ver CLAUDE.md): não há
+// autorização própria aqui além de "tem uma sessão Supabase válida" (que
+// qualquer instalação do app ganha via sign-in anônimo). Risco aceito
+// conscientemente na Fase 0/1; ver CLAUDE.md antes de reintroduzir algo aqui.
 //
 // Também é o ÚNICO caminho de escrita do liga/desliga do app (app_config/
-// 'maintenance'): body opcional { set_maintenance: bool } atualiza a flag
-// atrás do mesmo gate de senha; a tabela tem RLS sem policy de escrita, então
-// a anon key não consegue alterá-la por fora. A resposta sempre inclui
-// maintenance_mode junto das stats (estado do switch no painel).
+// 'maintenance'): body opcional { set_maintenance: bool } atualiza a flag; a
+// tabela tem RLS sem policy de escrita, então a anon key não consegue
+// alterá-la por fora. A resposta sempre inclui maintenance_mode junto das
+// stats (estado do switch no painel).
 //
 // Rating cego das gravações do desafio de 21 dias (bucket privado
 // cohort-recordings): { action: 'list_recordings' } devolve as gravações com
@@ -20,7 +24,7 @@
 // resgate é pela RPC redeem_access_code (não passa aqui).
 // Ligar a cobrança: { action: 'set_pix', pix_key, pix_name?, pix_city? }
 // grava a chave Pix da PJ em app_config/'pix' (chave vazia desliga); a resposta
-// padrão inclui `pix` pra o painel prefill. Tudo atrás do mesmo gate de senha.
+// padrão inclui `pix` pra o painel prefill.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -39,12 +43,8 @@ const json = (body: unknown, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
-  const expected = Deno.env.get("DEV_STATS_PASSWORD");
-  if (!expected) return json({ error: "password_unconfigured" }, 503);
-
   try {
     const {
-      password,
       set_maintenance,
       action,
       recording_id,
@@ -54,8 +54,7 @@ Deno.serve(async (req) => {
       pix_key,
       pix_name,
       pix_city,
-    } = await req.json();
-    if (password !== expected) return json({ error: "wrong_password" }, 401);
+    } = await req.json().catch(() => ({}));
 
     const client = createClient(
       Deno.env.get("SUPABASE_URL")!,

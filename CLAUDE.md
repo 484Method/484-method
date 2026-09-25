@@ -103,7 +103,8 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   gravações embaralhadas e às CEGAS (não revela baseline/final), dá nota 1–5 de
   clareza e mostra o antes/depois agregado (média baseline vs final). URLs
   assinadas e escrita das notas via Edge Function `dev-stats` (novas actions
-  `list_recordings`/`rate`, service role + gate de senha; deploy v6); notas em
+  `list_recordings`/`rate`, service role; deploy v6 — ver nota sobre remoção
+  da senha do painel mais abaixo); notas em
   `public.cohort_ratings` (migração `cohort_ratings`; RLS sem policy de cliente,
   igual feedback_quota).
 - ✅ Teste de willingness-to-pay com COBRANÇA REAL (Pix manual, memo §13 Opção
@@ -188,10 +189,78 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   próprio (`#boot`, removido no evento `flutter-first-frame`), para nunca
   existir branco absoluto. Regra: **nada novo no `main()` antes do `runApp`
   sem timeout.**
+  Faltava o passo seguinte: quando o timeout estourava (ou qualquer outra
+  falha de conexão), `Backend.instance` ficava null e a Home mostrava a
+  MESMA tela que um dev sem `.env` vê — "Supabase não configurado... copie
+  .env.example... rode ./tool/run_web.sh" — instruções sem sentido pra um
+  usuário de verdade no celular, que descrevia isso como "não consegui
+  usar"/tela em branco. `Backend.configured` (true assim que URL/chave
+  chegam preenchidas, mesmo se a conexão falhar depois) distingue os dois
+  casos; falha de conexão com credenciais presentes mostra
+  `_ConnectionErrorScreen` (mensagem + botão "Tentar de novo", que só
+  re-roda `_boot()` — `Supabase.initialize` é idempotente) em vez da tela de
+  setup do dev.
+  Pausou de novo em 24/09 (2ª vez em ~9 dias — ninguém usa o app com
+  frequência suficiente pra manter o projeto "ativo" sozinho na Fase 0/1).
+  `.github/workflows/keep-supabase-awake.yml` (novo) faz uma leitura pública
+  em `app_config` a cada ~3 dias (bem dentro da janela de 7) pra contar como
+  uso e evitar a próxima pausa — reaproveita os secrets `SUPABASE_URL`/
+  `SUPABASE_ANON_KEY` já cadastrados pro deploy-web.yml. Não substitui
+  resolver uma pausa já em curso: isso só o dono do projeto faz, clicando em
+  "Restore" no dashboard (https://supabase.com/dashboard/project/pwijrjgdbosxamybukhg) — 1–2min pra voltar.
 - O build web serve o CanvasKit LOCAL (`--no-web-resources-cdn` no
   `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
   publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê
   tela branca (o engine nem inicializa).
+- ⚠️ **Deploy das Edge Functions (`assess`, `feedback`, `dev-stats`) NÃO é
+  automático** — só o build web tem CI. O schema.sql e as functions foram
+  aplicados ao projeto via MCP em sessões anteriores; se o código de uma
+  function mudar no repo e ninguém rodar o deploy de novo, o que está no
+  Supabase fica dessincronizado — foi assim que o painel do dev apareceu como
+  "indisponível" (2026-09-24): `Backend.fetchDevStats` lança essa mensagem
+  sempre que `dev-stats` responde algo != 200 (função não implantada ou erro
+  interno → 500).
+  `tool/deploy_functions.sh` (novo) faz o deploy das três de uma vez — requer
+  `supabase` CLI autenticada (`supabase login`) rodando na máquina do dev,
+  não dá pra rodar daqui.
+- ⚠️ **Painel do dev (`dev-stats`) SEM senha, de propósito (2026-09-25).**
+  Decisão consciente, não descuido: a auditoria de segurança encontrou a
+  senha compartilhada sem rate-limit/lockout (força-bruta viável via curl
+  direto na Edge Function, sem passar pelo app) como risco ALTO, dado o que o
+  painel expõe — export de nome+e-mail de todo mundo, URLs assinadas das
+  gravações de voz (`cohort-recordings`), geração de código de Fundador, e o
+  kill-switch do app (`app_config/maintenance`). Em vez de manter uma senha
+  fraca, ela foi REMOVIDA (secret `DEV_STATS_PASSWORD` não existe mais;
+  `Backend.fetchDevStats`/`fetchUserExport`/`generateAccessCode`/
+  `setPixConfig`/`setMaintenanceMode`/`fetchCohortRecordings`/
+  `saveCohortRating` não recebem mais `password`). O acesso oculto (segurar o
+  ícone) continua existindo só pra evitar clique acidental de um usuário
+  comum — **não é controle de acesso**: qualquer sessão anônima do app
+  (ou seja, qualquer instalação, já que o sign-in é sem fricção) consegue
+  chamar `dev-stats` direto. Risco aceito EXPLICITAMENTE na Fase 0/1 (tráfego
+  baixo, sem usuários reais em escala ainda); antes de crescer, o caminho
+  certo é login real (Supabase Auth + allowlist de e-mail do dono), não senha
+  compartilhada de novo — não reintroduzir uma senha simples achando que
+  "resolve" isto.
+- ⚠️ **`assess` (Azure) tem teto diário por usuário desde 2026-09-25**
+  (achado ALTO da auditoria de segurança: sign-in anônimo sem fricção +
+  ZERO limite = qualquer script cria contas em loop e estoura a fatura
+  Azure, cobrado por hora de áudio). Mesmo padrão de `feedback_quota`/
+  `consume_feedback_quota` (RLS sem policy, só a RPC SECURITY DEFINER
+  mexe): tabela `assess_quota` + `consume_assess_quota(p_limit)`, migração
+  `assess_daily_quota` em schema.sql. Limite: **150/usuário/dia**
+  (secret `ASSESS_DAILY_LIMIT`, trocável sem redeploy) — decisão de produto
+  de manter no mínimo que não quebra o uso normal: mesmo teto já validado
+  em produção pro `feedback`, e `assess` é chamado NO MÍNIMO tanto quanto
+  `feedback` (todo `assess` bem-sucedido tenta gerar feedback em seguida,
+  exceto a regravação final já aprovada). Acima do teto → 429 →
+  `BackendPronunciationAssessor` mostra "Você já usou toda a sua prática de
+  hoje. Volta amanhã pra continuar." (não é a msg fixa de erro de conexão).
+  Fail-open: se o contador falhar (RPC ausente, rede), a avaliação segue
+  sem travar o loop core — mas isso também significa que **a SQL da
+  migração precisa estar aplicada no banco** pra quota valer de verdade
+  (`tool/deploy_functions.sh` avisa isso; deploy das functions sozinho não
+  aplica schema.sql).
 
 ## Stack
 - Flutter (iOS + Android)

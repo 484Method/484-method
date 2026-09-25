@@ -8,6 +8,18 @@
 // cliente por banda de nota (lib/services/feedback_messages.dart) — nada de
 // chamada a IA aqui, que custava uma segunda viagem de rede em série por
 // tentativa e deixava a tela "Avaliando..." mais lenta sem ganho real.
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+// Teto diário de avaliações por usuário — o Azure é cobrado por hora de
+// áudio, e sign-in anônimo sem fricção significa que criar conta nova é
+// grátis, então SEM isto não existe teto de custo nenhum (achado ALTO da
+// auditoria de segurança, 2026-09-25). ~150/dia cobre um dia bem puxado de
+// prática de verdade (25 lições × poucas tentativas + revisões espaçadas) —
+// mesmo teto já usado em `feedback` (que é chamado no MÁXIMO uma vez por
+// avaliação, geralmente menos). Trocável por secret ASSESS_DAILY_LIMIT sem
+// redeploy — "mínimo possível pro funcionamento", não generoso de propósito.
+const DAILY_LIMIT = Number(Deno.env.get("ASSESS_DAILY_LIMIT") ?? "150");
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -25,6 +37,32 @@ Deno.serve(async (req) => {
       status: 503,
       headers: { ...cors, "Content-Type": "application/json" },
     });
+  }
+
+  // Teto por usuário/dia: incrementa atômico via RPC (conta por auth.uid()).
+  // Acima do limite → 429. Fail-open: uma falha do contador não pode derrubar
+  // o loop core do app por causa de um problema no próprio contador.
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const authHeader = req.headers.get("Authorization");
+    if (supabaseUrl && anonKey && authHeader) {
+      const supabase = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: allowed, error } = await supabase.rpc(
+        "consume_assess_quota",
+        { p_limit: DAILY_LIMIT },
+      );
+      if (!error && allowed === false) {
+        return new Response(JSON.stringify({ error: "quota_exceeded" }), {
+          status: 429,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+    }
+  } catch (_e) {
+    // fail-open: não bloqueia a avaliação por causa do contador
   }
 
   try {

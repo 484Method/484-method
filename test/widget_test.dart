@@ -57,6 +57,19 @@ void main() {
     expect(find.textContaining('Supabase não configurado'), findsOneWidget);
   });
 
+  testWidgets(
+      'Supabase configurado mas fora do ar: tela de erro de conexão, não instruções de dev',
+      (tester) async {
+    await tester.pumpWidget(Method484App(
+      store: await _emptyStore(),
+      entitlement: await LocalEntitlementService.load(),
+      connectionFailed: true,
+    ));
+    expect(find.textContaining('Supabase não configurado'), findsNothing);
+    expect(find.textContaining('Não foi possível conectar'), findsOneWidget);
+    expect(find.text('Tentar de novo'), findsOneWidget);
+  });
+
   testWidgets('lição começa pela introdução e não mostra a palavra antes',
       (tester) async {
     await tester.pumpWidget(MaterialApp(

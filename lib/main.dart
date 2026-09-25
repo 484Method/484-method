@@ -20,8 +20,20 @@ const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await _boot();
+}
+
+/// Sequência de boot inteira, isolada de `main()` pra poder rodar de novo
+/// quando o usuário aperta "tentar de novo" na tela de erro de conexão —
+/// chamar `runApp` outra vez troca a árvore de widgets sem precisar recarregar
+/// a página (Supabase.initialize é idempotente: se a 1ª tentativa já tiver
+/// terminado, a 2ª só reaproveita a instância).
+Future<void> _boot() async {
   // Backend é obrigatório: a avaliação de pronúncia roda pela Edge Function.
-  // Sem credenciais Supabase, Backend.instance fica null → tela de setup.
+  // Sem credenciais Supabase, Backend.instance fica null → tela de setup;
+  // COM credenciais mas sem conseguir conectar, também fica null, mas aí é
+  // uma falha de conexão de verdade — a UI trata os dois casos diferente
+  // (ver Backend.configured e _ConnectionErrorScreen).
   await Backend.init(url: _supabaseUrl, anonKey: _supabaseAnonKey);
   // Liga/desliga da fase de construção (toggle no painel do dev). Checado só
   // no boot: quem está no meio de um treino termina; ninguém novo entra.
@@ -40,7 +52,8 @@ Future<void> main() async {
       store: store,
       analytics: analytics,
       entitlement: entitlement,
-      maintenanceOnBoot: maintenance));
+      maintenanceOnBoot: maintenance,
+      connectionFailed: Backend.configured && Backend.instance == null));
 }
 
 class Method484App extends StatefulWidget {
@@ -50,6 +63,7 @@ class Method484App extends StatefulWidget {
     required this.entitlement,
     this.analytics,
     this.maintenanceOnBoot = false,
+    this.connectionFailed = false,
   });
 
   final ProgressStore store;
@@ -59,6 +73,11 @@ class Method484App extends StatefulWidget {
   /// Estado da flag app_config/'maintenance' lido no boot (main). Quando
   /// true, tudo fica atrás da MaintenanceScreen até a flag ser religada.
   final bool maintenanceOnBoot;
+
+  /// true quando SUPABASE_URL/ANON_KEY estavam preenchidas no boot mas a
+  /// conexão falhou (rede ruim, projeto fora do ar) — distinto de nunca ter
+  /// sido configurado. Ver _ConnectionErrorScreen.
+  final bool connectionFailed;
 
   @override
   State<Method484App> createState() => _Method484AppState();
@@ -192,7 +211,9 @@ class _Method484AppState extends State<Method484App> {
     final Widget home;
     final backend = Backend.instance;
     if (backend == null) {
-      home = const _MissingConfigScreen();
+      home = widget.connectionFailed
+          ? const _ConnectionErrorScreen()
+          : const _MissingConfigScreen();
     } else if (_maintenance) {
       // Fase de construção: app desligado pelo painel do dev. Antes de
       // qualquer outra tela — inclusive onboarding — ninguém entra.
@@ -255,6 +276,69 @@ class _MissingConfigScreen extends StatelessWidget {
             'SUPABASE_ANON_KEY.\n'
             '2. Rode o app com: ./tool/run_web.sh',
             textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Credenciais configuradas, mas o boot não conseguiu falar com o Supabase
+/// (rede ruim no celular, projeto pausado demorando mais que o timeout,
+/// etc.) — quem vê essa tela é um usuário de verdade, não um dev sem `.env`,
+/// então a mensagem e a ação (tentar de novo) são as dele.
+class _ConnectionErrorScreen extends StatefulWidget {
+  const _ConnectionErrorScreen();
+
+  @override
+  State<_ConnectionErrorScreen> createState() =>
+      _ConnectionErrorScreenState();
+}
+
+class _ConnectionErrorScreenState extends State<_ConnectionErrorScreen> {
+  bool _retrying = false;
+
+  Future<void> _retry() async {
+    setState(() => _retrying = true);
+    // Refaz o boot inteiro; se conectar dessa vez, o runApp novo substitui
+    // esta tela. Se falhar de novo, _boot() volta a montar esta mesma tela
+    // (novo connectionFailed=true) e o spinner some.
+    await _boot();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1B2D4F),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off_rounded,
+                  color: Color(0xFFF5F2EB), size: 40),
+              const SizedBox(height: 16),
+              const Text(
+                'Não foi possível conectar.\nVerifique sua internet e tente de novo.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFFF5F2EB), fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _retrying ? null : _retry,
+                child: _retrying
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Tentar de novo'),
+              ),
+            ],
           ),
         ),
       ),
