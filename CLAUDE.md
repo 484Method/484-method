@@ -242,6 +242,25 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   certo é login real (Supabase Auth + allowlist de e-mail do dono), não senha
   compartilhada de novo — não reintroduzir uma senha simples achando que
   "resolve" isto.
+- ⚠️ **`assess` (Azure) tem teto diário por usuário desde 2026-09-25**
+  (achado ALTO da auditoria de segurança: sign-in anônimo sem fricção +
+  ZERO limite = qualquer script cria contas em loop e estoura a fatura
+  Azure, cobrado por hora de áudio). Mesmo padrão de `feedback_quota`/
+  `consume_feedback_quota` (RLS sem policy, só a RPC SECURITY DEFINER
+  mexe): tabela `assess_quota` + `consume_assess_quota(p_limit)`, migração
+  `assess_daily_quota` em schema.sql. Limite: **150/usuário/dia**
+  (secret `ASSESS_DAILY_LIMIT`, trocável sem redeploy) — decisão de produto
+  de manter no mínimo que não quebra o uso normal: mesmo teto já validado
+  em produção pro `feedback`, e `assess` é chamado NO MÍNIMO tanto quanto
+  `feedback` (todo `assess` bem-sucedido tenta gerar feedback em seguida,
+  exceto a regravação final já aprovada). Acima do teto → 429 →
+  `BackendPronunciationAssessor` mostra "Você já usou toda a sua prática de
+  hoje. Volta amanhã pra continuar." (não é a msg fixa de erro de conexão).
+  Fail-open: se o contador falhar (RPC ausente, rede), a avaliação segue
+  sem travar o loop core — mas isso também significa que **a SQL da
+  migração precisa estar aplicada no banco** pra quota valer de verdade
+  (`tool/deploy_functions.sh` avisa isso; deploy das functions sozinho não
+  aplica schema.sql).
 
 ## Stack
 - Flutter (iOS + Android)

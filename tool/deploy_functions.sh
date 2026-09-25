@@ -29,8 +29,17 @@ cat <<EOF
 Deploy concluído. Secrets exigidos por cada function (conferir se já estão
 setados — não são recriados pelo deploy):
   - assess:     AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
+               (opcional: ASSESS_DAILY_LIMIT, padrão 150/usuário/dia)
   - feedback:   ANTHROPIC_API_KEY
+               (opcional: FEEDBACK_DAILY_LIMIT, padrão 150/usuário/dia)
   - dev-stats:  nenhum (sem senha, de propósito — ver CLAUDE.md, 2026-09-25)
 Setar: supabase secrets set NOME=valor --project-ref $PROJECT_REF
 Listar (só os nomes, nunca o valor): supabase secrets list --project-ref $PROJECT_REF
+
+⚠️  O deploy das functions NÃO aplica supabase/schema.sql. A quota de
+`assess` (tabela assess_quota + consume_assess_quota, migração
+assess_daily_quota) precisa estar no banco também, senão a function falha
+aberto (não erra, mas também não limita nada). Aplique o schema.sql
+atualizado no SQL editor do dashboard, ou via `supabase db push` se o
+projeto estiver linkado (supabase link --project-ref $PROJECT_REF).
 EOF

@@ -29,6 +29,11 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
           'attempt': attempt,
         },
       );
+      if (res.status == 429) {
+        throw PronunciationAssessmentException(
+          'Você já usou toda a sua prática de hoje. Volta amanhã pra continuar.',
+        );
+      }
       if (res.status != 200) {
         throw PronunciationAssessmentException(
           'Não consegui avaliar agora (código ${res.status}).',

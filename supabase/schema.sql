@@ -580,3 +580,47 @@ grant execute on function public.purge_expired_cohort_recordings(int) to service
 -- pg_cron: create extension if not exists pg_cron;
 -- select cron.schedule('purge-cohort-recordings','0 3 1 * *',
 --   $$select public.purge_expired_cohort_recordings(12)$$);
+
+-- Teto diário de avaliações via Azure por usuário (guarda de custo contra
+-- loop/abuso — sign-in anônimo sem fricção significa que criar contas novas
+-- é grátis, então o teto tem que existir mesmo sendo "por usuário"). Mesmo
+-- padrão de feedback_quota/consume_feedback_quota, tabela e função própria
+-- porque é um recurso de custo diferente (Azure por hora de áudio, não
+-- tokens de LLM). RLS ligado SEM policies = nenhum acesso direto do cliente;
+-- só a função SECURITY DEFINER abaixo lê/escreve.
+-- Aplicado em 2026-09-25 (migração assess_daily_quota — achado da auditoria
+-- de segurança: `assess` não tinha NENHUM teto).
+create table if not exists public.assess_quota (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null default current_date,
+  count int not null default 0,
+  primary key (user_id, day)
+);
+alter table public.assess_quota enable row level security;
+
+-- Incrementa o contador do dia de forma atômica e devolve se a chamada é
+-- permitida (false acima do teto). Chamada pela Edge Function `assess` antes
+-- de chamar o Azure; acima do teto → 429 → cliente avisa "volta amanhã".
+create or replace function public.consume_assess_quota(p_limit int)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  v_count int;
+begin
+  if auth.uid() is null then
+    return true; -- sem usuário identificado: não conta, deixa passar
+  end if;
+  insert into public.assess_quota as aq (user_id, day, count)
+  values (auth.uid(), current_date, 1)
+  on conflict (user_id, day) do update
+    set count = aq.count + 1
+    where aq.count < p_limit
+  returning aq.count into v_count;
+  return v_count is not null;
+end;
+$function$;
+revoke all on function public.consume_assess_quota(int) from public;
+grant execute on function public.consume_assess_quota(int) to authenticated, anon;
