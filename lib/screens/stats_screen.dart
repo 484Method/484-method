@@ -5,49 +5,21 @@ import '../services/backend.dart';
 import '../services/csv_download.dart';
 import 'cohort_rating_screen.dart';
 
-/// Painel de uso — apenas para o desenvolvedor (acessível via menu oculto).
-/// A senha digitada no diálogo de acesso é verificada pela Edge Function
-/// `dev-stats` (secret no servidor), não no cliente: get_dev_stats() não é
-/// mais chamável direto com a anon key, então o gate não pode ser pulado
-/// chamando a RPC pelo console do navegador.
+/// Painel de uso — apenas para o desenvolvedor (acessível via menu oculto:
+/// segurar o ícone na home/tela de manutenção). SEM senha (decisão de
+/// produto, 2026-09-25 — risco aceito conscientemente, ver CLAUDE.md): o
+/// gesto oculto evita clique acidental de um usuário comum, mas não é
+/// controle de acesso — qualquer sessão do app consegue chamar a Edge
+/// Function `dev-stats` direto.
 class StatsScreen extends StatefulWidget {
-  const StatsScreen({super.key, required this.backend, required this.password});
+  const StatsScreen({super.key, required this.backend});
   final Backend backend;
-  final String password;
 
-  /// Diálogo de senha + navegação para o painel. Compartilhado entre o menu
-  /// oculto da home e a saída de dev da tela de manutenção — a validação real
-  /// acontece no servidor quando o painel carrega.
-  static Future<void> openWithPasswordGate(
-      BuildContext context, Backend backend) async {
-    final controller = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Acesso restrito'),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Senha'),
-          onSubmitted: (_) => Navigator.of(ctx).pop(true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Entrar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          StatsScreen(backend: backend, password: controller.text),
+  /// Navegação pro painel. Compartilhado entre o menu oculto da home e a
+  /// saída de dev da tela de manutenção.
+  static Future<void> open(BuildContext context, Backend backend) {
+    return Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => StatsScreen(backend: backend),
     ));
   }
 
@@ -73,14 +45,9 @@ class _StatsScreenState extends State<StatsScreen> {
       _error = null;
     });
     try {
-      final stats = await widget.backend.fetchDevStats(widget.password);
+      final stats = await widget.backend.fetchDevStats();
       setState(() {
         _stats = stats;
-        _loading = false;
-      });
-    } on DevStatsAuthException {
-      setState(() {
-        _error = 'Senha incorreta.';
         _loading = false;
       });
     } catch (e) {
@@ -95,7 +62,7 @@ class _StatsScreenState extends State<StatsScreen> {
   /// pra análise de coorte/retenção em planilha ou pro data room do investidor.
   Future<void> _exportUsersCsv() async {
     try {
-      final users = await widget.backend.fetchUserExport(widget.password);
+      final users = await widget.backend.fetchUserExport();
       if (users.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +107,7 @@ class _StatsScreenState extends State<StatsScreen> {
   /// num diálogo com botão de copiar (o dev manda pro pagante fora do app).
   Future<void> _generateAccessCode() async {
     try {
-      final code = await widget.backend.generateAccessCode(widget.password);
+      final code = await widget.backend.generateAccessCode();
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -237,9 +204,8 @@ class _StatsScreenState extends State<StatsScreen> {
     cityCtrl.dispose();
     if (save != true || !mounted) return;
     try {
-      await widget.backend
-          .setPixConfig(widget.password, key: key, name: name, city: city);
-      final stats = await widget.backend.fetchDevStats(widget.password);
+      await widget.backend.setPixConfig(key: key, name: name, city: city);
+      final stats = await widget.backend.fetchDevStats();
       if (!mounted) return;
       setState(() => _stats = stats);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -283,8 +249,7 @@ class _StatsScreenState extends State<StatsScreen> {
     }
     setState(() => _toggling = true);
     try {
-      final stats =
-          await widget.backend.setMaintenanceMode(widget.password, !online);
+      final stats = await widget.backend.setMaintenanceMode(!online);
       if (!mounted) return;
       setState(() => _stats = stats);
     } catch (e) {
@@ -366,7 +331,6 @@ class _StatsScreenState extends State<StatsScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => CohortRatingScreen(
                                     backend: widget.backend,
-                                    password: widget.password,
                                   ),
                                 ),
                               ),

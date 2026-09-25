@@ -30,7 +30,7 @@ Deploy concluído. Secrets exigidos por cada function (conferir se já estão
 setados — não são recriados pelo deploy):
   - assess:     AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
   - feedback:   ANTHROPIC_API_KEY
-  - dev-stats:  DEV_STATS_PASSWORD
+  - dev-stats:  nenhum (sem senha, de propósito — ver CLAUDE.md, 2026-09-25)
 Setar: supabase secrets set NOME=valor --project-ref $PROJECT_REF
 Listar (só os nomes, nunca o valor): supabase secrets list --project-ref $PROJECT_REF
 EOF

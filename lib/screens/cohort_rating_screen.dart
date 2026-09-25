@@ -10,16 +10,14 @@ import '../services/backend.dart';
 /// assim a expectativa "tem que ter melhorado" não enviesa a nota.
 ///
 /// URLs assinadas e escrita das notas passam pela Edge Function `dev-stats`
-/// (service role + gate de senha) — ver Backend.fetchCohortRecordings/saveCohortRating.
+/// (service role) — ver Backend.fetchCohortRecordings/saveCohortRating.
 class CohortRatingScreen extends StatefulWidget {
   const CohortRatingScreen({
     super.key,
     required this.backend,
-    required this.password,
   });
 
   final Backend backend;
-  final String password;
 
   @override
   State<CohortRatingScreen> createState() => _CohortRatingScreenState();
@@ -54,7 +52,7 @@ class _CohortRatingScreenState extends State<CohortRatingScreen> {
       _error = null;
     });
     try {
-      final recs = await widget.backend.fetchCohortRecordings(widget.password);
+      final recs = await widget.backend.fetchCohortRecordings();
       // Embaralha 1x pra ordem não denunciar baseline vs final (o cego real).
       recs.shuffle();
       if (!mounted) return;
@@ -93,7 +91,7 @@ class _CohortRatingScreenState extends State<CohortRatingScreen> {
     final id = rec['id'] as String;
     setState(() => _savingId = id);
     try {
-      await widget.backend.saveCohortRating(widget.password, id, score, null);
+      await widget.backend.saveCohortRating(id, score, null);
       if (!mounted) return;
       setState(() => rec['score'] = score); // atualiza local; sai da fila
     } catch (e) {

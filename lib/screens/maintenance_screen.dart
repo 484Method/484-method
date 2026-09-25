@@ -5,10 +5,10 @@ import 'stats_screen.dart';
 
 /// Tela exibida quando o liga/desliga do app (app_config/'maintenance') está
 /// desligado — fase de construção. Bloqueia o uso, mas precisa de uma saída
-/// para o próprio dev: pressionar e segurar o ícone abre o gate de senha do
-/// painel, de onde a flag pode ser religada; ao voltar (e no botão "Verificar
-/// de novo") a flag é rechecada e, se o app voltou ao ar, [onBackOnline]
-/// destrava a navegação normal sem exigir reload.
+/// para o próprio dev: pressionar e segurar o ícone abre o painel, de onde a
+/// flag pode ser religada; ao voltar (e no botão "Verificar de novo") a flag
+/// é rechecada e, se o app voltou ao ar, [onBackOnline] destrava a navegação
+/// normal sem exigir reload.
 class MaintenanceScreen extends StatefulWidget {
   const MaintenanceScreen({
     super.key,
@@ -47,7 +47,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   Future<void> _openDevPanel() async {
     final backend = widget.backend;
     if (backend == null) return;
-    await StatsScreen.openWithPasswordGate(context, backend);
+    await StatsScreen.open(context, backend);
     // Dev pode ter religado o app pelo painel — rechecar sem avisar de erro.
     if (!mounted) return;
     final stillOff = await backend.fetchMaintenanceMode();
@@ -66,7 +66,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Acesso oculto do dev: segurar o ícone abre o gate de senha.
+                // Acesso oculto do dev: segurar o ícone abre o painel.
                 GestureDetector(
                   onLongPress: _openDevPanel,
                   child: Icon(Icons.construction,

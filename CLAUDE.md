@@ -103,7 +103,8 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   gravações embaralhadas e às CEGAS (não revela baseline/final), dá nota 1–5 de
   clareza e mostra o antes/depois agregado (média baseline vs final). URLs
   assinadas e escrita das notas via Edge Function `dev-stats` (novas actions
-  `list_recordings`/`rate`, service role + gate de senha; deploy v6); notas em
+  `list_recordings`/`rate`, service role; deploy v6 — ver nota sobre remoção
+  da senha do painel mais abaixo); notas em
   `public.cohort_ratings` (migração `cohort_ratings`; RLS sem policy de cliente,
   igual feedback_quota).
 - ✅ Teste de willingness-to-pay com COBRANÇA REAL (Pix manual, memo §13 Opção
@@ -217,11 +218,30 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   function mudar no repo e ninguém rodar o deploy de novo, o que está no
   Supabase fica dessincronizado — foi assim que o painel do dev apareceu como
   "indisponível" (2026-09-24): `Backend.fetchDevStats` lança essa mensagem
-  sempre que `dev-stats` responde algo != 200/401 (função não implantada,
-  secret `DEV_STATS_PASSWORD` ausente → 503, ou erro interno → 500).
+  sempre que `dev-stats` responde algo != 200 (função não implantada ou erro
+  interno → 500).
   `tool/deploy_functions.sh` (novo) faz o deploy das três de uma vez — requer
   `supabase` CLI autenticada (`supabase login`) rodando na máquina do dev,
   não dá pra rodar daqui.
+- ⚠️ **Painel do dev (`dev-stats`) SEM senha, de propósito (2026-09-25).**
+  Decisão consciente, não descuido: a auditoria de segurança encontrou a
+  senha compartilhada sem rate-limit/lockout (força-bruta viável via curl
+  direto na Edge Function, sem passar pelo app) como risco ALTO, dado o que o
+  painel expõe — export de nome+e-mail de todo mundo, URLs assinadas das
+  gravações de voz (`cohort-recordings`), geração de código de Fundador, e o
+  kill-switch do app (`app_config/maintenance`). Em vez de manter uma senha
+  fraca, ela foi REMOVIDA (secret `DEV_STATS_PASSWORD` não existe mais;
+  `Backend.fetchDevStats`/`fetchUserExport`/`generateAccessCode`/
+  `setPixConfig`/`setMaintenanceMode`/`fetchCohortRecordings`/
+  `saveCohortRating` não recebem mais `password`). O acesso oculto (segurar o
+  ícone) continua existindo só pra evitar clique acidental de um usuário
+  comum — **não é controle de acesso**: qualquer sessão anônima do app
+  (ou seja, qualquer instalação, já que o sign-in é sem fricção) consegue
+  chamar `dev-stats` direto. Risco aceito EXPLICITAMENTE na Fase 0/1 (tráfego
+  baixo, sem usuários reais em escala ainda); antes de crescer, o caminho
+  certo é login real (Supabase Auth + allowlist de e-mail do dono), não senha
+  compartilhada de novo — não reintroduzir uma senha simples achando que
+  "resolve" isto.
 
 ## Stack
 - Flutter (iOS + Android)
