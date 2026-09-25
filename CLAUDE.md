@@ -199,6 +199,14 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `_ConnectionErrorScreen` (mensagem + botão "Tentar de novo", que só
   re-roda `_boot()` — `Supabase.initialize` é idempotente) em vez da tela de
   setup do dev.
+  Pausou de novo em 24/09 (2ª vez em ~9 dias — ninguém usa o app com
+  frequência suficiente pra manter o projeto "ativo" sozinho na Fase 0/1).
+  `.github/workflows/keep-supabase-awake.yml` (novo) faz uma leitura pública
+  em `app_config` a cada ~3 dias (bem dentro da janela de 7) pra contar como
+  uso e evitar a próxima pausa — reaproveita os secrets `SUPABASE_URL`/
+  `SUPABASE_ANON_KEY` já cadastrados pro deploy-web.yml. Não substitui
+  resolver uma pausa já em curso: isso só o dono do projeto faz, clicando em
+  "Restore" no dashboard (https://supabase.com/dashboard/project/pwijrjgdbosxamybukhg) — 1–2min pra voltar.
 - O build web serve o CanvasKit LOCAL (`--no-web-resources-cdn` no
   `deploy_pages.sh`), não o gstatic.com. Sem o flag, os ~7 MB de `canvaskit/`
   publicados ficam sem uso e quem está em rede que bloqueia o CDN do Google vê

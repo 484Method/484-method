@@ -1,0 +1,36 @@
+name: Manter Supabase acordado
+
+# O projeto free do Supabase pausa sozinho depois de ~7 dias sem uso (ver
+# CLAUDE.md > Ambiente de desenvolvimento). Isso já causou tela branca no
+# boot (16/09) e o painel do dev caindo com "Failed to fetch" no refresh de
+# sessão (24/09) — ninguém usa o app com frequência suficiente pra manter o
+# projeto "ativo" sozinho. Esta rotina só faz uma leitura pública real no
+# banco (app_config), a cada 3 dias — bem dentro da janela de 7 — pra contar
+# como uso e nunca deixar passar disso.
+#
+# Reaproveita os secrets SUPABASE_URL/SUPABASE_ANON_KEY já cadastrados pro
+# deploy-web.yml — nenhum secret novo precisa ser criado.
+
+on:
+  schedule:
+    - cron: '0 12 */3 * *' # a cada ~3 dias, 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping no Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar app_config (leitura pública, conta como uso)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Secrets SUPABASE_URL/SUPABASE_ANON_KEY ausentes — cadastre em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          curl -sS -f "$SUPABASE_URL/rest/v1/app_config?select=key&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -o /dev/null -w 'HTTP %{http_code}\n'
