@@ -135,6 +135,44 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   todos). Métrica que importa: `access_code_redeemed`/`paywall_viewed` por
   `price_bucket`. Dev precisa preencher `app_config 'pix'` (key/name) pra o Pix
   aparecer.
+- ✅ **"Treino de hoje" (2026-09-28) — 1º experimento de retenção D2.** Gargalo
+  identificado: quem faz a 1ª sessão não necessariamente volta em 48h. A Home
+  ganhou um hero card (`HomeScreen._dailyTrainingCard`, no lugar do antigo
+  card "Próxima melhor ação") que resume o que há pra fazer — revisão de SRS
+  vencida, conteúdo novo (próxima lição), desafio de fala — e leva direto pra
+  lá com um único CTA. **Nenhuma unidade de conteúdo nova**: reaproveita a
+  agenda de SRS (`ProgressStore.srsDueWords`), `_nextLesson()` e o desafio do
+  dia já existentes; o "desafio de fala" É o desafio do dia (lição sorteada,
+  avaliada pelo Azure com texto de referência) — decisão explícita de NÃO
+  implementar fala aberta de 15s sem referência (o Azure não pontua isso, e
+  fala não-pontuável não vira "minuto aprovado"; ver seção de fala livre
+  abaixo). Roteamento único (`_goToNextTrainingStep`, ordem revisão → novo →
+  desafio) serve tanto o CTA principal quanto o "treino mínimo" ("Sem tempo
+  hoje? Fale agora") — não são dois sistemas; como a aprovação já é por
+  gravação (não por lição), uma única palavra aprovada já mantém o dia. O
+  estado do card (Começar/Continuar treino/resumo do dia) reaproveita a meta
+  diária já existente (`ProgressStore.dailyGoalSeconds`, #7) em vez de um
+  novo "sistema de sessão" — bater a meta = treino concluído. Streak
+  (`ProgressStore.streakDays`) não mudou: já era por PRÁTICA APROVADA
+  (`addApproved`), não por app aberto — a unidade de manutenção do dia pedida
+  pelo experimento já existia. Retorno depois de ausência nunca puna: sem
+  mensagem de "perdeu sua sequência"; `ProgressStore.daysSinceLastPractice`
+  (novo, mesmo padrão de `cohortDay`) só troca a saudação por "Bom te ver de
+  novo" quando ≥2 dias sem praticar. Hierarquia da Home reordenada (hero →
+  meta/marco → revisão pendente → jornada 484h → dados secundários), sem
+  remover nenhum card existente. Analytics: 4 eventos novos —
+  `daily_training_viewed`/`started`/`completed`, `minimum_training_started`
+  — deliberadamente SEM `speech_practice_approved`/`daily_training_abandoned`/
+  `daily_training_returned` (redundantes com `attempt_assessed{approved}` e
+  computáveis no servidor, como `started_not_finished` já faz). D2 é a
+  métrica PRIMÁRIA: `get_daily_training_stats()` (schema.sql, migração
+  `daily_training_retention`, mesclada em `get_dev_stats` como
+  `get_phase0_activation`) define "sessão válida de prática" como dia com
+  `attempt_assessed{approved:true}` — não "abriu o app" — e calcula D1/D2/D7
+  sobre essa base (`practice_retention`), separado da retenção genérica
+  (`v_retention`, que conta qualquer evento). ⚠️ Essa SQL precisa ser
+  aplicada ao projeto (não é automático — ver nota de deploy das Edge
+  Functions abaixo).
 
 ## Fora de escopo (NÃO implementar)
 - Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA

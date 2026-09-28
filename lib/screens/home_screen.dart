@@ -19,6 +19,14 @@ import 'terms_of_use_screen.dart';
 import 'stats_screen.dart';
 import 'word_memory_screen.dart';
 
+/// Estado do "Treino de hoje" (experimento de retenção D2): deriva do que já
+/// existe (minutos aprovados hoje vs. a meta diária existente,
+/// [ProgressStore.dailyGoalSeconds]) — não é um novo sistema de progresso,
+/// só uma leitura do que a meta de hoje já significa. `notStarted` → CTA
+/// "Começar treino"; `inProgress` → "Continuar treino"; `done` → resumo do
+/// dia + próximo treino.
+enum _DailySessionState { notStarted, inProgress, done }
+
 /// Índice palavra → (lição, item) do currículo, montado uma vez. A revisão
 /// espaçada consulta isto a cada build da home e de novo ao abrir a palavra;
 /// varrer as 25 lições item a item toda vez era trabalho repetido à toa.
@@ -75,6 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
   // Survey de abandono respondido nesta sessão (esconde o card na hora).
   bool _abandonAnswered = false;
   bool _pmfAnswered = false;
+
+  // Evita logar 'daily_training_completed' de novo a cada rebuild depois que
+  // a meta de hoje foi batida — o evento é disparado uma vez por estado desta
+  // tela (não persiste entre sessões; reabrir o app e bater a meta nunca é
+  // problema, só relogaria o mesmo dia uma vez a mais).
+  bool _dailyTrainingCompletedLogged = false;
 
   // #8: por padrão só mostra concluídos + treino atual + poucos bloqueados —
   // muitos cadeados em sequência davam sensação de caminho longo e cansativo.
@@ -135,6 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _ensureDailyChallenge();
+    // Experimento de retenção D2 ("Treino de hoje"): visto uma vez por
+    // abertura da Home, com o resumo do que há pra fazer — alimenta o funil
+    // visualizou → iniciou → concluiu (get_daily_training_stats no painel).
+    widget.analytics?.log('daily_training_viewed', _dailyTrainingProps());
     // Conserto do funil: quem acabou de consentir entra direto na 1ª lição,
     // em vez de cair na dashboard vazia ("0 de 484h" assusta e não tem CTA).
     // Só no 1º acesso (progresso zero); initState roda 1x, sem repetir.
@@ -329,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
         startItemIndex: found.index,
       ),
     )).then((_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        _maybeLogDailyTrainingCompleted();
+        setState(() {});
+      }
     });
   }
 
@@ -692,63 +713,243 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  /// Card de uma única ação clara no topo do dashboard (#8): evita o paradoxo
-  /// de escolha — diz o próximo passo e leva direto a ele.
-  Widget _nextBestActionCard(ThemeData theme, Lesson next, bool isFirst) {
-    // #9: a ação precisa nomear o treino, a micro-habilidade e a recompensa
-    // concreta mais próxima — meta de hoje ou primeiro marco, o que fizer
-    // mais sentido pra quem ainda não chegou lá.
-    final String text;
-    if (isFirst) {
-      text = 'Seu próximo passo: fazer sua primeira tentativa de fala '
-          '(~5 min) e destravar sua meta de hoje.';
-    } else if (!widget.store.reachedFirstMilestone) {
-      final remaining = ProgressStore.firstMilestoneSeconds -
-          widget.store.totalApproved.inSeconds;
-      final remainingMin = (remaining / 60).ceil().clamp(1, 999);
-      text = 'Seu próximo passo: treinar "${next.title}" — foco: '
-          '${next.microSkill} (${next.items.length} tentativas de fala) e '
-          'chegar mais perto do seu primeiro marco — faltam '
-          '~${remainingMin}min aprovados.';
-    } else {
-      text = 'Seu próximo passo: treinar "${next.title}" — foco: '
-          '${next.microSkill} (${next.items.length} tentativas de fala) e '
-          'ganhar mais minutos aprovados na sua jornada.';
+  /// Quantas palavras vencidas entram no resumo do treino de hoje. A agenda
+  /// de SRS pode acumular muitas atrasadas (quem sumiu por semanas); o
+  /// treino de hoje continua sendo ~5min, não "zerar o backlog inteiro" — as
+  /// que sobrarem continuam aparecendo amanhã (a agenda em si não perde nada,
+  /// ver [_dueReviewWords]).
+  static const _sessionReviewCap = 3;
+
+  /// Resumo do que compõe o treino de hoje, na ordem pedagógica exigida
+  /// (revisão → novo conteúdo → desafio de fala). Reaproveita 100% de
+  /// entidades existentes (agenda de SRS, próxima lição, desafio do dia) —
+  /// não há uma "unidade de treino" nova. `estimatedMinutes` segue a mesma
+  /// convenção já usada nos cards de lição (~1min por tentativa de fala).
+  ({
+    int reviewCount,
+    Lesson? newLesson,
+    Lesson? challengeLesson,
+    int estimatedMinutes
+  }) _dailyTrainingSummary() {
+    final due = _dueReviewWords();
+    final reviewCount =
+        due.length > _sessionReviewCap ? _sessionReviewCap : due.length;
+    final newLesson = _nextLesson();
+    final challenge = _challenge;
+    // Mesma regra de dedup do card de desafio existente: não contar a mesma
+    // lição duas vezes quando o sorteio do dia coincide com a próxima lição.
+    final hasChallenge = challenge != null && challenge.id != newLesson?.id;
+    final minutes = reviewCount +
+        (newLesson?.items.length ?? 0) +
+        (hasChallenge ? challenge.items.length : 0);
+    return (
+      reviewCount: reviewCount,
+      newLesson: newLesson,
+      challengeLesson: hasChallenge ? challenge : null,
+      estimatedMinutes: minutes < 1 ? 1 : minutes,
+    );
+  }
+
+  Map<String, Object?> _dailyTrainingProps() {
+    final s = _dailyTrainingSummary();
+    return {
+      'review_count': s.reviewCount,
+      'has_new_content': s.newLesson != null,
+      'has_challenge': s.challengeLesson != null,
+      'estimated_minutes': s.estimatedMinutes,
+      'session_state': _dailySessionState().name,
+    };
+  }
+
+  /// Estado do dia: nada feito ainda / em andamento / meta batida. Deriva da
+  /// meta diária JÁ existente (#7, [ProgressStore.dailyGoalSeconds]) — não é
+  /// um segundo sistema de progresso, só a leitura que decide o rótulo do
+  /// botão principal (Começar/Continuar treino) e quando mostrar o resumo do
+  /// dia.
+  _DailySessionState _dailySessionState() {
+    final approvedToday = widget.store.approvedToday;
+    if (approvedToday.inSeconds >= ProgressStore.dailyGoalSeconds) {
+      return _DailySessionState.done;
     }
-    final mission = _missionFor(next.id);
+    if (approvedToday > Duration.zero) return _DailySessionState.inProgress;
+    return _DailySessionState.notStarted;
+  }
+
+  /// A ÚNICA regra de roteamento do treino de hoje, na ordem pedida: revisão
+  /// vencida → conteúdo novo → desafio de fala. Usada tanto pelo CTA
+  /// principal quanto pelo "treino mínimo" — não são dois sistemas: o
+  /// mínimo é o mesmo roteamento, só entrando por um botão com outra moldura
+  /// ("sem tempo? fale agora"). Como a aprovação já conta por gravação (não
+  /// por lição inteira — `addApproved` roda por palavra em `LessonScreen`),
+  /// parar depois de uma única gravação aprovada já cumpre a regra "1
+  /// prática = dia mantido"; nada aqui força a pessoa a continuar.
+  void _goToNextTrainingStep() {
+    final due = _dueReviewWords();
+    if (due.isNotEmpty) {
+      _reviewWord(due.first);
+      return;
+    }
+    final next = _nextLesson();
+    if (next != null) {
+      _openLesson(next);
+      return;
+    }
+    final challenge = _challenge;
+    if (challenge != null) _openLesson(challenge);
+  }
+
+  void _startDailyTraining() {
+    widget.analytics?.log('daily_training_started', {
+      'source': 'main_cta',
+      ..._dailyTrainingProps(),
+    });
+    _goToNextTrainingStep();
+  }
+
+  /// "Sem tempo hoje?" — mesmo roteamento do treino completo, só
+  /// instrumentado à parte: mede quantas pessoas usam a porta de saída de
+  /// baixo esforço em vez do treino de hoje inteiro.
+  void _startMinimumTraining() {
+    widget.analytics?.log('minimum_training_started', _dailyTrainingProps());
+    _goToNextTrainingStep();
+  }
+
+  /// Loga a conclusão do treino de hoje (meta diária batida) uma vez por
+  /// abertura da Home. Chamado ao VOLTAR de uma lição/revisão — nunca durante
+  /// o build, que não deve ter efeito colateral — nos mesmos pontos que já
+  /// reavaliam o desafio do dia ([_openLesson], [_reviewWord]).
+  void _maybeLogDailyTrainingCompleted() {
+    if (_dailyTrainingCompletedLogged) return;
+    if (_dailySessionState() != _DailySessionState.done) return;
+    _dailyTrainingCompletedLogged = true;
+    widget.analytics?.log('daily_training_completed', _dailyTrainingProps());
+  }
+
+  /// #8 "Preparar o próximo treino": descreve o que vem a seguir sem
+  /// inventar números que a agenda de SRS não permite prever com precisão
+  /// (quantas palavras vencem amanhã depende de quando cada uma for
+  /// revisada hoje) — mostra a próxima lição do currículo, que é
+  /// determinística.
+  String _nextTrainingPreview() {
+    final next = _nextLesson();
+    if (next == null) {
+      return 'Seu próximo treino: revisões, assim que estiverem prontas.';
+    }
+    return 'Seu próximo treino: "${next.title}" — foco: ${next.microSkill}.';
+  }
+
+  /// Hero da Home (#1 da hierarquia do experimento "Treino de hoje"): a ação
+  /// principal precisa ser evidente, então este card assume o lugar que era
+  /// da "Próxima melhor ação" — mesma ideia (uma ação clara, sem paradoxo de
+  /// escolha), agora com o quadro completo (revisão + novo + desafio) e um
+  /// estado que muda com o dia real da pessoa, nunca com pressão artificial.
+  Widget _dailyTrainingCard(ThemeData theme) {
+    final summary = _dailyTrainingSummary();
+    final hasContent = summary.reviewCount > 0 ||
+        summary.newLesson != null ||
+        summary.challengeLesson != null;
+    if (!hasContent) return _dailyTrainingEmptyCard(theme);
+
+    final state = _dailySessionState();
+    // #9 "retorno de usuário ausente": recepção calorosa, nunca "você
+    // perdeu sua sequência" — só quando ainda não fez nada hoje (senão
+    // soaria estranho depois que a pessoa já começou a praticar agora).
+    final daysSince = widget.store.daysSinceLastPractice;
+    final isReturning = state == _DailySessionState.notStarted &&
+        daysSince != null &&
+        daysSince >= 2;
+
+    final lines = <String>[
+      if (summary.reviewCount > 0)
+        summary.reviewCount == 1
+            ? '1 palavra para revisar'
+            : '${summary.reviewCount} palavras para revisar',
+      if (summary.newLesson != null)
+        '${summary.newLesson!.title} — foco: ${summary.newLesson!.microSkill}',
+      if (summary.challengeLesson != null) '1 desafio de fala',
+    ];
+
     return Card(
       color: theme.colorScheme.secondaryContainer,
-      child: InkWell(
-        onTap: () => _openLesson(next),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Próxima melhor ação',
-                        style: theme.textTheme.bodySmall),
-                    const SizedBox(height: 4),
-                    if (mission != null) ...[
-                      Text('Missão atual: $mission',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.secondary,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text(text, style: theme.textTheme.bodyMedium),
-                    ] else
-                      Text(text, style: theme.textTheme.titleMedium),
-                  ],
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(isReturning ? 'Bom te ver de novo' : 'Seu treino de hoje',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            if (isReturning) ...[
+              const SizedBox(height: 4),
+              Text('Vamos continuar de onde você parou.',
+                  style: theme.textTheme.bodyMedium),
+            ],
+            const SizedBox(height: 12),
+            if (state == _DailySessionState.done) ...[
+              Row(children: [
+                Icon(Icons.check_circle,
+                    color: Colors.green.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Você falou hoje. Treino concluído.',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Text(_nextTrainingPreview(), style: theme.textTheme.bodyMedium),
+            ] else ...[
+              for (final line in lines)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text('•  $line', style: theme.textTheme.bodyMedium),
+                ),
+              const SizedBox(height: 4),
+              Text('Aproximadamente ${summary.estimatedMinutes} min',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSecondaryContainer
+                          .withValues(alpha: 0.75))),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _startDailyTraining,
+                child: Text(state == _DailySessionState.inProgress
+                    ? 'Continuar treino'
+                    : 'Começar treino'),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton(
+                  onPressed: _startMinimumTraining,
+                  child: const Text('Sem tempo hoje? Fale agora'),
                 ),
               ),
-              const SizedBox(width: 12),
-              Icon(Icons.play_circle_fill,
-                  size: 40, color: theme.colorScheme.secondary),
             ],
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Currículo em dia e nada vencido pra revisar: não é um erro nem um
+  /// estado vazio genérico — é a pessoa estar quite com a prática. Some a
+  /// urgência sem esconder que ainda existe um lugar pra voltar amanhã.
+  Widget _dailyTrainingEmptyCard(ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Você está em dia',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text(
+              'Nenhuma revisão vencida agora e você já concluiu o conteúdo '
+              'disponível. Volte amanhã para continuar.',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
         ),
       ),
     );
@@ -1104,6 +1305,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Progresso pode ter mudado: reavalia elegibilidade e refaz o sorteio se
     // o dia virou enquanto a tela estava aberta.
     _ensureDailyChallenge();
+    _maybeLogDailyTrainingCompleted();
     setState(() {});
   }
 
@@ -1222,17 +1424,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 _pmfCard(theme),
                 const SizedBox(height: 12),
               ],
-              if (next != null) ...[
-                _nextBestActionCard(theme, next, isBrandNew),
-                const SizedBox(height: 12),
-              ],
-              if (showCohort) ...[
-                _cohortCard(theme),
-                const SizedBox(height: 12),
-              ],
-              // #7: meta de hoje → primeiro marco → jornada 484h, do mais
-              // imediato pro mais distante. Escondidos no dia 0 (a próxima
-              // ação já carrega a promessa da meta de hoje).
+              // Hierarquia do experimento "Treino de hoje" (#11): a ação
+              // principal (1: treino de hoje / continuar treino) evidente no
+              // topo, seguida de progresso (3), revisões pendentes (4),
+              // jornada 484h (5) e só depois os dados secundários (6) — nunca
+              // um painel cheio de números antes da ação.
+              _dailyTrainingCard(theme),
+              const SizedBox(height: 12),
+              // #7: meta de hoje → primeiro marco, do mais imediato pro mais
+              // distante. Escondidos no dia 0 (o hero já carrega a promessa
+              // da meta de hoje).
               if (!isBrandNew) ...[
                 _todayGoalCard(theme),
                 const SizedBox(height: 12),
@@ -1245,16 +1446,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 _srsReviewCard(theme, dueReview),
                 const SizedBox(height: 12),
               ],
+              if (!isBrandNew) ...[
+                _journeyCard(theme),
+                const SizedBox(height: 12),
+              ],
+              // Dados secundários (#6): desafio do dia, desafio de 21 dias,
+              // oferta de Fundador e modo precisão — acesso direto opcional,
+              // sem competir com a ação principal do hero.
               if (showChallenge) ...[
                 _dailyChallengeCard(theme, challenge),
                 const SizedBox(height: 12),
               ],
-              if (showFounderOffer) ...[
-                _founderOfferCard(theme),
+              if (showCohort) ...[
+                _cohortCard(theme),
                 const SizedBox(height: 12),
               ],
-              if (!isBrandNew) ...[
-                _journeyCard(theme),
+              if (showFounderOffer) ...[
+                _founderOfferCard(theme),
                 const SizedBox(height: 12),
               ],
               if (showPrecision) ...[

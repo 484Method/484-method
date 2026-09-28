@@ -624,3 +624,112 @@ end;
 $function$;
 revoke all on function public.consume_assess_quota(int) from public;
 grant execute on function public.consume_assess_quota(int) to authenticated, anon;
+
+-- ── Retenção D2 do experimento "Treino de hoje" (2026-09-28, migração ────────
+-- daily_training_retention). A retenção genérica em get_dev_stats_base
+-- (v_retention) conta QUALQUER evento como "voltou" — inclui quem só abriu o
+-- app e olhou a Home sem falar, o que contraria a métrica norte (nunca
+-- otimizar tempo de tela). Esta função mede especificamente "sessão válida de
+-- prática": um dia em que o usuário teve pelo menos 1 attempt_assessed com
+-- approved=true — a MESMA definição que já move o streak
+-- (ProgressStore.addApproved/dailyGoalSeconds no cliente). D2 é a métrica
+-- PRIMÁRIA do experimento: usuário que praticou (aprovado) num dia voltou a
+-- praticar (aprovado) de novo dentro de 48h (dia+1 ou dia+2) — mesma técnica
+-- de cohort de v_retention em get_dev_stats_base, só trocando a base de
+-- "qualquer evento" para "prática aprovada".
+create or replace function public.get_daily_training_stats()
+returns json
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+DECLARE
+  tz CONSTANT text := 'America/Sao_Paulo';
+  v_today date := (NOW() AT TIME ZONE tz)::date;
+  v_practice_retention json;
+BEGIN
+  SELECT json_build_object(
+    'd1', json_build_object(
+      'pct', ROUND(100.0 * COUNT(*) FILTER (WHERE r1 AND fd <= v_today - 1)
+             / NULLIF(COUNT(*) FILTER (WHERE fd <= v_today - 1), 0), 1),
+      'n', COUNT(*) FILTER (WHERE fd <= v_today - 1)),
+    'd2', json_build_object(
+      'pct', ROUND(100.0 * COUNT(*) FILTER (WHERE r2 AND fd <= v_today - 2)
+             / NULLIF(COUNT(*) FILTER (WHERE fd <= v_today - 2), 0), 1),
+      'n', COUNT(*) FILTER (WHERE fd <= v_today - 2)),
+    'd7', json_build_object(
+      'pct', ROUND(100.0 * COUNT(*) FILTER (WHERE r7 AND fd <= v_today - 7)
+             / NULLIF(COUNT(*) FILTER (WHERE fd <= v_today - 7), 0), 1),
+      'n', COUNT(*) FILTER (WHERE fd <= v_today - 7))
+  ) INTO v_practice_retention
+  FROM (
+    SELECT user_id, fd,
+           BOOL_OR(d = fd + 1)                  AS r1,
+           BOOL_OR(d BETWEEN fd + 1 AND fd + 2)  AS r2,
+           BOOL_OR(d BETWEEN fd + 1 AND fd + 7)  AS r7
+    FROM (
+      SELECT user_id,
+             DATE(created_at AT TIME ZONE tz) AS d,
+             MIN(DATE(created_at AT TIME ZONE tz)) OVER (PARTITION BY user_id) AS fd
+      FROM events
+      WHERE event = 'attempt_assessed' AND props->>'approved' = 'true'
+    ) x
+    GROUP BY user_id, fd
+  ) base;
+
+  RETURN json_build_object(
+    -- Retenção de PRÁTICA (não de "abriu o app") — a métrica primária do
+    -- experimento de retenção D2.
+    'practice_retention', v_practice_retention,
+
+    -- Funil do experimento (usuários distintos): viu o treino de hoje →
+    -- iniciou → concluiu (bateu a meta diária) — instrumentado em
+    -- home_screen.dart (_dailyTrainingCard).
+    'daily_training_funnel', json_build_object(
+      'viewed',    (SELECT COUNT(DISTINCT user_id) FROM events WHERE event = 'daily_training_viewed'),
+      'started',   (SELECT COUNT(DISTINCT user_id) FROM events WHERE event = 'daily_training_started'),
+      'completed', (SELECT COUNT(DISTINCT user_id) FROM events WHERE event = 'daily_training_completed'),
+      'minimum_started', (SELECT COUNT(DISTINCT user_id) FROM events WHERE event = 'minimum_training_started'),
+      -- "Treino mínimo" concluído: uma prática aprovada nos 10min depois de
+      -- entrar pela porta "sem tempo hoje?" — sem precisar de um 2º evento
+      -- de conclusão no cliente (já dá pra derivar de attempt_assessed).
+      'minimum_completed', (
+        SELECT COUNT(*) FROM events s WHERE s.event = 'minimum_training_started'
+          AND EXISTS (
+            SELECT 1 FROM events a WHERE a.user_id = s.user_id AND a.event = 'attempt_assessed'
+              AND a.props->>'approved' = 'true'
+              AND a.created_at BETWEEN s.created_at AND s.created_at + INTERVAL '10 minutes'
+          )
+      )
+    ),
+
+    -- Abandono: viu/iniciou o treino de hoje mas nunca bateu a meta diária
+    -- naquele dia (mesmo padrão de started_not_finished em get_dev_stats_base,
+    -- aplicado ao treino de hoje em vez de uma lição individual).
+    'daily_training_started_not_completed', (
+      SELECT COUNT(DISTINCT s.user_id) FROM events s WHERE s.event = 'daily_training_started'
+        AND NOT EXISTS (SELECT 1 FROM events c WHERE c.user_id = s.user_id AND c.event = 'daily_training_completed')
+    )
+  );
+END;
+$function$;
+revoke execute on function public.get_daily_training_stats() from public, anon, authenticated;
+grant execute on function public.get_daily_training_stats() to service_role;
+
+-- Mescla no wrapper get_dev_stats, mesmo padrão incremental já usado por
+-- get_phase0_activation (não editar o corpo de get_dev_stats_base):
+create or replace function public.get_dev_stats()
+returns json language sql stable security definer set search_path = public
+as $function$
+  select (
+    public.get_dev_stats_base()::jsonb
+    || public.get_phase0_activation()::jsonb
+    || public.get_daily_training_stats()::jsonb
+    || jsonb_build_object('signup_completed',
+         (select count(*) from events where event = 'signup_completed'))
+  )::json;
+$function$;
+-- SEGURANÇA: mesma armadilha documentada acima — CREATE OR REPLACE regranta
+-- EXECUTE pro PUBLIC por padrão, então os revokes têm que rodar DEPOIS.
+revoke execute on function public.get_dev_stats() from public, anon, authenticated;
+grant execute on function public.get_dev_stats() to service_role;

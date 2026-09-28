@@ -209,8 +209,9 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    // O caminho único: próxima ação + a trilha de lições.
-    expect(find.textContaining('Próxima melhor ação'), findsOneWidget);
+    // O caminho único: o hero "Seu treino de hoje" + a trilha de lições.
+    expect(find.textContaining('Seu treino de hoje'), findsOneWidget);
+    expect(find.text('Começar treino'), findsOneWidget);
     expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
         findsOneWidget);
     // Medidores e ofertas secundárias NÃO aparecem no dia 0.
@@ -218,6 +219,107 @@ void main() {
     expect(find.textContaining('Jornada 484h'), findsNothing);
     expect(find.textContaining('Desafio de 21 dias'), findsNothing);
     expect(find.text('Modo precisão'), findsNothing);
+  });
+
+  testWidgets(
+      'treino de hoje: CTA muda de Começar → Continuar → resumo do dia '
+      'conforme a meta diária', (tester) async {
+    final store = await _emptyStore();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Começar treino'), findsOneWidget);
+    expect(find.text('Sem tempo hoje? Fale agora'), findsOneWidget);
+
+    // Praticou um pouco, mas abaixo da meta diária (3min): "Continuar".
+    await store.addApproved(const Duration(seconds: 30));
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Continuar treino'), findsOneWidget);
+    expect(find.text('Começar treino'), findsNothing);
+
+    // Bateu a meta diária: resumo do dia, sem mais pedir pra continuar.
+    await store.addApproved(const Duration(minutes: 3));
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Você falou hoje. Treino concluído.'),
+        findsOneWidget);
+    expect(find.text('Continuar treino'), findsNothing);
+    expect(find.text('Sem tempo hoje? Fale agora'), findsNothing);
+    // #8 "próximo treino": indica o que vem a seguir mesmo com o dia feito.
+    expect(find.textContaining('Seu próximo treino'), findsOneWidget);
+  });
+
+  testWidgets(
+      'treino de hoje: tocar Começar treino abre a lição diretamente',
+      (tester) async {
+    final store = await _emptyStore();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Começar treino'));
+    await tester.pumpAndSettle();
+    // Som primeiro: cai direto na intro da lição, sem pular a sequência.
+    expect(find.textContaining('Regra do jogo'), findsOneWidget);
+  });
+
+  testWidgets(
+      'treino de hoje: revisão vencida tem prioridade sobre conteúdo novo',
+      (tester) async {
+    final yesterday = _ymd(DateTime.now().subtract(const Duration(days: 1)));
+    SharedPreferences.setMockInitialValues({
+      'completed_lessons': [licao01.id], // licao01 concluída, já dominada
+      'srs_schedule': jsonEncode({
+        licao01.items.first.text: {'stage': 0, 'due': yesterday},
+      }),
+    });
+    final store = await ProgressStore.load();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('palavra para revisar'), findsWidgets);
+    await tester.tap(find.text('Começar treino'));
+    await tester.pumpAndSettle();
+    // Abre a lição que contém a palavra vencida (licao01), no item dela —
+    // não a próxima lição do currículo (licao02). (AppBar + intro citam o
+    // título, por isso findsWidgets em vez de findsOneWidget.)
+    expect(find.textContaining(licao01.title), findsWidgets);
   });
 
   testWidgets('priorização: Modo precisão aparece após 30min aprovados',
@@ -454,6 +556,27 @@ void main() {
     await store.addApproved(const Duration(seconds: 5));
     expect(store.totalApproved.inSeconds, 15);
     expect(store.streakDays, 1);
+  });
+
+  test(
+      'daysSinceLastPractice: null antes da 1ª prática; conta dias corridos '
+      'depois', () async {
+    final store = await _emptyStore();
+    expect(store.lastPracticeDay, isNull);
+    expect(store.daysSinceLastPractice, isNull);
+
+    await store.addApproved(const Duration(seconds: 5));
+    expect(store.daysSinceLastPractice, 0); // praticou hoje
+
+    // Simula quem praticou há 3 dias (sem tocar addApproved de novo) — base
+    // pra "Bom te ver de novo" na Home, sem punir quem volta depois de um tempo.
+    final threeDaysAgo =
+        _ymd(DateTime.now().subtract(const Duration(days: 3)));
+    SharedPreferences.setMockInitialValues({
+      'last_practice_day': threeDaysAgo,
+    });
+    final store2 = await ProgressStore.load();
+    expect(store2.daysSinceLastPractice, 3);
   });
 
   test('acesso Beta Fundador começa desligado e persiste quando ligado',

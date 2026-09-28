@@ -98,6 +98,25 @@ class ProgressStore {
 
   int get streakDays => _prefs.getInt(_kStreakDays) ?? 0;
 
+  /// Último dia (formato [_ymd]) em que houve prática APROVADA — base para
+  /// "quantos dias faz que a pessoa não pratica", usado pra dar boas-vindas a
+  /// quem volta depois de um tempo sem punir (nunca "você perdeu sua
+  /// sequência"; ver home_screen.dart, seção "Treino de hoje").
+  DateTime? get lastPracticeDay {
+    final s = _prefs.getString(_kLastPracticeDay);
+    return s == null ? null : DateTime.tryParse(s);
+  }
+
+  /// Dias corridos desde a última prática aprovada; null se nunca praticou.
+  /// Mesmo padrão de [cohortDay]: normaliza as duas datas pro mesmo horário
+  /// do dia antes de subtrair, pra não depender de hora do relógio do aparelho.
+  int? get daysSinceLastPractice {
+    final last = lastPracticeDay;
+    if (last == null) return null;
+    final today = DateTime.parse(_ymd(DateTime.now()));
+    return today.difference(last).inDays;
+  }
+
   double get goalFraction =>
       (totalApproved.inSeconds / goalSeconds).clamp(0.0, 1.0);
 
