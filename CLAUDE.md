@@ -38,6 +38,18 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   opcionais (uma por bloco, `Lesson.bonus = true`, palavras/frases mais
   difíceis do mesmo assunto, nunca exigidas para progredir) — 25 lições no
   total (matriz completa em docs/curriculo-fase1.md)
+- 🚧 **Fase 2 "Verbo To Be — Forma e Som" — decidida em 2026-09-28.** Muda a
+  decisão anterior de escopo (ver "Fora de escopo" logo abaixo): não é mais
+  só Fase 1 até ter usuários reais — o dono decidiu abrir a Fase 2 agora. 8
+  blocos pedagógicos (forma completa → contraste → som da contração isolada
+  → frase contraída → contraste contraído), 1 lição por bloco, 10 itens
+  cada (item já é frase curta, não palavra solta — matriz completa em
+  docs/curriculo-fase2.md). Hoje só o DADO existe (`lib/data/fase2.dart`,
+  `fase2Lessons`) — ainda falta: gerar os 80 áudios (`tool/
+  gen_lesson_audio.sh` já tem os comandos, mas rodar exige `AZURE_SPEECH_KEY`
+  local) e decidir + implementar a integração de UI/progressão em
+  `home_screen.dart` (dashboard, desafio do dia, se entra no gate de
+  paywall e no threshold de 484h — nada disso decidido ainda).
 - ✅ Loop core completo: áudio pré-gerado → gravação → Azure Pronunciation
   Assessment → feedback pedagógico em PT-BR → liberação da escrita → regravação
 - ✅ Feedback gerado pela Claude API via Edge Function (fallback p/ mensagens
@@ -137,7 +149,9 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   aparecer.
 
 ## Fora de escopo (NÃO implementar)
-- Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA
+- Fases 3–8, múltiplos sotaques, connected speech, pares mínimos, IPA. A
+  Fase 2 SAIU dessa lista em 2026-09-28 — ver "Escopo do MVP" acima; isto
+  não reabre o resto das fases futuras automaticamente, só a 2.
 - Conversa livre com IA generativa — **decidido em 2026-09-16: on hold. Se
   voltar, é como PACOTE DE SERVIÇOS cobrado à parte, NUNCA dentro de uma
   trilha.** Motivo 1 (contratual): o Fundador é pagamento ÚNICO (R$ 27,90–67,90,
