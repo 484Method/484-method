@@ -289,6 +289,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   migração precisa estar aplicada no banco** pra quota valer de verdade
   (`tool/deploy_functions.sh` avisa isso; deploy das functions sozinho não
   aplica schema.sql).
+- ⚠️ **`deleteRemoteData` (exclusão de conta) não limpava `feedback_quota`/
+  `assess_quota` — corrigido em 2026-09-28.** As duas tabelas de cota são
+  RLS-sem-policy (só a RPC SECURITY DEFINER de cada uma mexe nelas), então o
+  delete direto que já limpa `signups`/`events`/`progress` não alcançava
+  essas linhas. Nova função `delete_own_quota_rows()` (mesmo padrão de
+  `consume_feedback_quota`/`consume_assess_quota`, também precisa estar
+  aplicada no banco — mesma ressalva do item acima) chamada num bloco próprio
+  de `Backend.deleteRemoteData`. **Propositalmente NÃO mexe em
+  `access_codes.redeemed_by`**: apagar isso reabriria o código de Fundador
+  pra resgate via exclusão de conta + recadastro — o registro de quem já
+  resgatou precisa sobreviver à exclusão da conta que resgatou.
 
 ## Stack
 - Flutter (iOS + Android)

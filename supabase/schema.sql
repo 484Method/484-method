@@ -624,3 +624,29 @@ end;
 $function$;
 revoke all on function public.consume_assess_quota(int) from public;
 grant execute on function public.consume_assess_quota(int) to authenticated, anon;
+
+-- LGPD: exclusão de conta (Backend.deleteRemoteData) apaga signups/events/
+-- progress direto (têm policy de dono), mas feedback_quota/assess_quota são
+-- RLS-sem-policy como as funções acima — só uma SECURITY DEFINER pode limpar
+-- as linhas do próprio usuário. Aplicado em 2026-09-28 (achado: exclusão de
+-- conta não limpava essas duas tabelas).
+-- Propositalmente NÃO mexe em access_codes.redeemed_by: apagar isso
+-- reabriria o código de Fundador pra resgate de novo (deletar a conta e
+-- se cadastrar de novo reusaria o mesmo código) — o registro do resgate
+-- precisa sobreviver à exclusão da conta que resgatou.
+create or replace function public.delete_own_quota_rows()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $function$
+begin
+  if auth.uid() is null then
+    return;
+  end if;
+  delete from public.feedback_quota where user_id = auth.uid();
+  delete from public.assess_quota where user_id = auth.uid();
+end;
+$function$;
+revoke all on function public.delete_own_quota_rows() from public;
+grant execute on function public.delete_own_quota_rows() to authenticated, anon;
