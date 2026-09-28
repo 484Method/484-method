@@ -44,12 +44,26 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   blocos pedagógicos (forma completa → contraste → som da contração isolada
   → frase contraída → contraste contraído), 1 lição por bloco, 10 itens
   cada (item já é frase curta, não palavra solta — matriz completa em
-  docs/curriculo-fase2.md). Hoje só o DADO existe (`lib/data/fase2.dart`,
-  `fase2Lessons`) — ainda falta: gerar os 80 áudios (`tool/
-  gen_lesson_audio.sh` já tem os comandos, mas rodar exige `AZURE_SPEECH_KEY`
-  local) e decidir + implementar a integração de UI/progressão em
-  `home_screen.dart` (dashboard, desafio do dia, se entra no gate de
-  paywall e no threshold de 484h — nada disso decidido ainda).
+  docs/curriculo-fase2.md). UI ligada em `home_screen.dart` (2026-09-28):
+  "Trilha 2 — Verbo To Be" aparece embaixo da Trilha 1 na Home, SEMPRE atrás
+  do Fundador (`_fase2LessonList`, `!hasFounderAccess` → toda a trilha
+  mostra "Beta Fundador" e abre o paywall ao tocar) — diferente da Trilha 1
+  (grátis pra todos de propósito), aqui vale a promessa já feita no resgate
+  do Fundador ("trava de preço/acesso às PRÓXIMAS trilhas", ver a decisão do
+  Fundador mais abaixo). Progressão sequencial simples (lição N exige N-1
+  concluída; sem lição bônus nesta trilha, então sem o pulo que a Trilha 1
+  precisa). Reaproveita `LessonScreen`/`_openLesson` sem mudança — os
+  minutos aprovados entram na MESMA barra/streak da Trilha 1 (o contador não
+  distingue fase), e a gravação final de cada item TAMBÉM entra na escada de
+  revisão espaçada (`recordSrsOutcome` não distingue fase; consequência
+  aceita, não uma feature pensada — os itens de Fase 2 são frases inteiras,
+  não palavras, então podem aparecer maiores que o normal no mapa de fala/
+  "Revisar hoje").
+  Ainda falta: gerar os 80 áudios de verdade (`tool/gen_lesson_audio.sh` já
+  tem os comandos, mas rodar exige `AZURE_SPEECH_KEY` local — sem áudio
+  gerado, abrir uma lição da Trilha 2 toca silêncio/erro no player) e decidir
+  se ela entra no desafio do dia (`_pickDailyChallenge` ainda sorteia só
+  entre `fase1Lessons`, de propósito — não estendido ainda).
 - ✅ Loop core completo: áudio pré-gerado → gravação → Azure Pronunciation
   Assessment → feedback pedagógico em PT-BR → liberação da escrita → regravação
 - ✅ Feedback gerado pela Claude API via Edge Function (fallback p/ mensagens

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../data/fase1.dart';
+import '../data/fase2.dart';
 import '../models/lesson.dart';
 import '../services/analytics_service.dart';
 import '../services/entitlement_service.dart';
@@ -1025,6 +1026,67 @@ class _HomeScreenState extends State<HomeScreen> {
     return widgets;
   }
 
+  /// Trilha 2 (Fase 2): SEMPRE atrás do Fundador — diferente da Trilha 1
+  /// (grátis pra todos de propósito), aqui vale a promessa já feita no
+  /// resgate do Fundador ("trava de preço/acesso às PRÓXIMAS trilhas", ver
+  /// CLAUDE.md) — é o que dá valor real ao selo hoje, além do apoio. Sem
+  /// lição bônus nesta trilha, então a progressão é sempre N-1 → N, sem o
+  /// pulo que a Trilha 1 precisa pra lições bônus.
+  List<Widget> _fase2LessonList(ThemeData theme) {
+    final hasFounderAccess = widget.entitlement.hasFounderAccess;
+    final widgets = <Widget>[];
+    for (final (i, lesson) in fase2Lessons.indexed) {
+      final completed = widget.store.isLessonCompleted(lesson.id);
+      final paywalled = !hasFounderAccess;
+      final progressionUnlocked =
+          i == 0 || widget.store.isLessonCompleted(fase2Lessons[i - 1].id);
+      final unlocked = !paywalled && progressionUnlocked;
+
+      final String subtitle;
+      if (paywalled) {
+        subtitle = 'Beta Fundador';
+      } else if (!progressionUnlocked) {
+        subtitle = 'Complete a lição anterior para liberar';
+      } else {
+        subtitle = '${lesson.items.length} tentativas de fala · ~5-10 min';
+      }
+      final IconData trailing;
+      if (paywalled) {
+        trailing = Icons.workspace_premium_outlined;
+      } else if (!progressionUnlocked) {
+        trailing = Icons.lock_outline;
+      } else {
+        trailing = completed ? Icons.replay : Icons.play_arrow;
+      }
+      widgets.add(Card(
+        child: ListTile(
+          // Paywalled fica tocável pra mostrar o aviso do gate (igual à Trilha 1).
+          enabled: unlocked || paywalled,
+          leading: CircleAvatar(
+            backgroundColor: completed
+                ? theme.colorScheme.secondary.withValues(alpha: 0.18)
+                : theme.colorScheme.surfaceContainerHighest,
+            foregroundColor: completed
+                ? theme.colorScheme.secondary
+                : theme.colorScheme.onSurface,
+            child: completed
+                ? const Icon(Icons.check, size: 20)
+                : Text('${i + 1}'),
+          ),
+          title: Text(lesson.title),
+          subtitle: Text(subtitle),
+          trailing: Icon(trailing),
+          onTap: paywalled
+              ? _openPaywall
+              : unlocked
+                  ? () => _openLesson(lesson)
+                  : null,
+        ),
+      ));
+    }
+    return widgets;
+  }
+
   // #10 Card de abandono: aparece quando a pessoa começou mas não fechou o
   // 1º ciclo (gravou, mas não chegou ao antes/depois). Pergunta o porquê.
   Widget _abandonCard(ThemeData theme) => Card(
@@ -1269,6 +1331,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: theme.colorScheme.onSurfaceVariant)),
               const SizedBox(height: 8),
               ..._lessonList(theme),
+              const SizedBox(height: 24),
+              Text('Trilha 2 — Verbo To Be',
+                  style: theme.textTheme.titleMedium),
+              Text('Forma completa, contraste e o som da contração',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              ..._fase2LessonList(theme),
             ],
           ),
         ),
