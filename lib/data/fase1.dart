@@ -1,12 +1,15 @@
 import '../models/lesson.dart';
 
-/// Lições da Fase 1 ("Inglês que Você Já Conhece"), organizadas em 4 blocos
+/// Lições da Fase 1 ("Inglês que Você Já Conhece"), organizadas em 5 blocos
 /// pedagógicos — ver docs/curriculo-fase1.md.
 ///
 /// Bloco 1 — Reconhecimento e confiança: vocabulário familiar.
 /// Bloco 2 — Som e sílaba forte: ritmo e armadilhas de pronúncia.
 /// Bloco 3 — Da palavra à frase: chunks, cortesia e situações reais.
 /// Bloco 4 — Conversa do dia a dia: small talk, saudações e planos.
+/// Bloco 5 — Perguntas e respostas com "to be": perguntar, responder
+/// (afirmativo/negativo), contrastar numa frase só e voltar às contrações
+/// (licao28-33, novo — 2026-09-28).
 ///
 /// Os ids (`fase1-licaoNN`) têm lacunas: licao05 ("Muito fácil 2") e
 /// licao08 ("Trabalho") foram removidas do currículo, mas os nomes não
@@ -31,6 +34,7 @@ const fase1Lessons = [
   licao09, licao10, licao11, licao12, licao13,
   licao14, licao15, licao16, licao17, licao18, licao19, licao20,
   licao21, licao22, licao23, licao24, licao25, licao26, licao27,
+  licao28, licao29, licao30, licao31, licao32, licao33,
 ];
 
 // ---------------------------------------------------------------------------
@@ -1499,6 +1503,661 @@ const licao27 = Lesson(
           'audio/fase1/bloco4_bonus/Do_you_have_any_plans_for_the_weekend.mp3',
       ipa: '/du ju hæv ˈɛni plænz fɔːr ðə ˈwiːkɛnd/',
       phonetic: 'du iu rrév É-ni plénz for de UÍK-end',
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// BLOCO 5 (novo, 2026-09-28) — Perguntas e respostas com "to be"
+// ---------------------------------------------------------------------------
+// Grade gramatical, não mais vocabulário solto: pergunta de sim/não com
+// "to be" → resposta curta afirmativa → negativa → as duas contrastadas numa
+// frase só → de volta às contrações (que sumiram desde o Bloco 1). O texto
+// PRATICADO (`text`, o que vira áudio e ReferenceText do Azure) é sempre UMA
+// frase; quando a lição é sobre RESPONDER (licao30-33), a pergunta que a
+// provoca vira `example` — mostrada só no Livro Aberto, nunca antes da 1ª
+// tentativa (som primeiro continua intacto). Textos repetidos entre lições
+// (ex.: "Yes, I am." aparece em licao30, 31 e 33) reaproveitam o MESMO
+// audioAsset — mesmo padrão das lições de revisão (licao06/12/19/26).
+
+/// Lição 28 — Perguntas de sim/não com "to be" ("Are you...?"/"Is he...?").
+const licao28 = Lesson(
+  id: 'fase1-licao28',
+  title: 'Perguntas com to be',
+  objective: 'Perguntas de sim ou não com "to be" — "Are you...?" e '
+      '"Is he/she/it...?" — sobre sentimentos e estados do dia a dia.',
+  microSkill: 'Perguntas de sim/não com to be',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'Are you hungry?',
+      translation: 'você está com fome?',
+      example: "Are you hungry? Let's eat something.",
+      exampleTranslation: 'Você está com fome? Vamos comer alguma coisa.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_you_hungry.mp3',
+      ipa: '/ər ju ˈhʌŋɡri/',
+      phonetic: 'ar iú RÂN-gri',
+    ),
+    LessonItem(
+      text: 'Are you thirsty?',
+      translation: 'você está com sede?',
+      example: "Are you thirsty? There's water in the fridge.",
+      exampleTranslation: 'Você está com sede? Tem água na geladeira.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_you_thirsty.mp3',
+      ipa: '/ər ju ˈθɜːrsti/',
+      phonetic: 'ar iú TSÉRS-ti',
+    ),
+    LessonItem(
+      text: 'Are you comfortable?',
+      translation: 'você está confortável?',
+      example: 'Are you comfortable? We can change seats.',
+      exampleTranslation:
+          'Você está confortável? A gente pode trocar de lugar.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_you_comfortable.mp3',
+      ipa: '/ər ju ˈkʌmftərbəl/',
+      phonetic: 'ar iú CÂMF-ter-bou',
+    ),
+    LessonItem(
+      text: 'Are you worried?',
+      translation: 'você está preocupado(a)?',
+      example: 'Are you worried? Everything is fine.',
+      exampleTranslation: 'Você está preocupado(a)? Está tudo bem.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_you_worried.mp3',
+      ipa: '/ər ju ˈwɜːrid/',
+      phonetic: 'ar iú UÉ-rid',
+    ),
+    LessonItem(
+      text: 'Are you available?',
+      translation: 'você está disponível?',
+      example: 'Are you available? I need five minutes.',
+      exampleTranslation: 'Você está disponível? Eu preciso de cinco minutos.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_you_available.mp3',
+      ipa: '/ər ju əˈveɪləbəl/',
+      phonetic: 'ar iú e-VÊI-la-bou',
+    ),
+    LessonItem(
+      text: 'Is he polite?',
+      translation: 'ele é educado?',
+      example: 'Is he polite? He seems nice.',
+      exampleTranslation: 'Ele é educado? Ele parece legal.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Is_he_polite.mp3',
+      ipa: '/ɪz hi pəˈlaɪt/',
+      phonetic: 'iz rri pu-LÁIT',
+    ),
+    LessonItem(
+      text: 'Is she patient?',
+      translation: 'ela é paciente?',
+      example: 'Is she patient? This can take a while.',
+      exampleTranslation: 'Ela é paciente? Isso pode demorar um pouco.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Is_she_patient.mp3',
+      ipa: '/ɪz ʃi ˈpeɪʃənt/',
+      phonetic: 'iz chi PÊI-chent',
+    ),
+    LessonItem(
+      text: 'Is it necessary?',
+      translation: 'é necessário?',
+      example: "Is it necessary? Let's check first.",
+      exampleTranslation: 'É necessário? Vamos conferir primeiro.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Is_it_necessary.mp3',
+      ipa: '/ɪz ɪt ˈnɛsəsɛri/',
+      phonetic: 'iz it NÉ-se-se-ri',
+    ),
+    LessonItem(
+      text: 'Are we early?',
+      translation: 'a gente está adiantado(a)?',
+      example: 'Are we early? The place looks empty.',
+      exampleTranslation: 'A gente está adiantado(a)? O lugar parece vazio.',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_we_early.mp3',
+      ipa: '/ər wi ˈɜːrli/',
+      phonetic: 'ar uí ÉR-li',
+    ),
+    LessonItem(
+      text: 'Are they interested?',
+      translation: 'eles(as) estão interessados(as)?',
+      example: "Are they interested? Let's ask them.",
+      exampleTranslation:
+          'Eles(as) estão interessados(as)? Vamos perguntar a eles(as).',
+      audioAsset: 'audio/fase1/bloco5_perguntas/Are_they_interested.mp3',
+      ipa: '/ər ðeɪ ˈɪntrəstɪd/',
+      phonetic: 'ar dêi ÍN-tres-tid',
+    ),
+  ],
+);
+
+/// Lição 29 — as mesmas perguntas, trocando o sujeito (he/she/it/we/they).
+/// Item 8 repete "Is it necessary?" (sujeito "it" não muda) — mesmo áudio da
+/// licao28, sem gerar de novo.
+const licao29 = Lesson(
+  id: 'fase1-licao29',
+  title: 'Perguntas com outros sujeitos',
+  objective: 'As mesmas perguntas, trocando o sujeito — he, she, it, we, '
+      'they — pra você reconhecer o padrão em qualquer pessoa.',
+  microSkill: 'Trocar o sujeito sem travar',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'Is he hungry?',
+      translation: 'ele está com fome?',
+      example: 'Is he hungry? Let\'s order some food.',
+      exampleTranslation: 'Ele está com fome? Vamos pedir uma comida.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_he_hungry.mp3',
+      ipa: '/ɪz hi ˈhʌŋɡri/',
+      phonetic: 'iz rri RÂN-gri',
+    ),
+    LessonItem(
+      text: 'Is she thirsty?',
+      translation: 'ela está com sede?',
+      example: 'Is she thirsty? Give her some water.',
+      exampleTranslation: 'Ela está com sede? Dá um pouco de água pra ela.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_she_thirsty.mp3',
+      ipa: '/ɪz ʃi ˈθɜːrsti/',
+      phonetic: 'iz chi TSÉRS-ti',
+    ),
+    LessonItem(
+      text: 'Is he comfortable?',
+      translation: 'ele está confortável?',
+      example: 'Is he comfortable? Ask him.',
+      exampleTranslation: 'Ele está confortável? Pergunta pra ele.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_he_comfortable.mp3',
+      ipa: '/ɪz hi ˈkʌmftərbəl/',
+      phonetic: 'iz rri CÂMF-ter-bou',
+    ),
+    LessonItem(
+      text: 'Is she worried?',
+      translation: 'ela está preocupada?',
+      example: 'Is she worried? She looks quiet.',
+      exampleTranslation: 'Ela está preocupada? Ela está quieta.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_she_worried.mp3',
+      ipa: '/ɪz ʃi ˈwɜːrid/',
+      phonetic: 'iz chi UÉ-rid',
+    ),
+    LessonItem(
+      text: 'Is he available?',
+      translation: 'ele está disponível?',
+      example: 'Is he available? I need to talk to him.',
+      exampleTranslation: 'Ele está disponível? Eu preciso falar com ele.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_he_available.mp3',
+      ipa: '/ɪz hi əˈveɪləbəl/',
+      phonetic: 'iz rri e-VÊI-la-bou',
+    ),
+    LessonItem(
+      text: 'Is she polite?',
+      translation: 'ela é educada?',
+      example: 'Is she polite? She seems nice too.',
+      exampleTranslation: 'Ela é educada? Ela também parece legal.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_she_polite.mp3',
+      ipa: '/ɪz ʃi pəˈlaɪt/',
+      phonetic: 'iz chi pu-LÁIT',
+    ),
+    LessonItem(
+      text: 'Is he patient?',
+      translation: 'ele é paciente?',
+      example: 'Is he patient? We might need more time.',
+      exampleTranslation:
+          'Ele é paciente? A gente pode precisar de mais tempo.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Is_he_patient.mp3',
+      ipa: '/ɪz hi ˈpeɪʃənt/',
+      phonetic: 'iz rri PÊI-chent',
+    ),
+    LessonItem(
+      text: 'Is it necessary?',
+      translation: 'é necessário?',
+      example: "Is it necessary? Let's check first.",
+      exampleTranslation: 'É necessário? Vamos conferir primeiro.',
+      // Mesma pergunta da licao28 (sujeito "it" não muda) — reaproveita o áudio.
+      audioAsset: 'audio/fase1/bloco5_perguntas/Is_it_necessary.mp3',
+      ipa: '/ɪz ɪt ˈnɛsəsɛri/',
+      phonetic: 'iz it NÉ-se-se-ri',
+    ),
+    LessonItem(
+      text: 'Are they early?',
+      translation: 'eles(as) estão adiantados(as)?',
+      example: 'Are they early? The door is still closed.',
+      exampleTranslation:
+          'Eles(as) estão adiantados(as)? A porta ainda está fechada.',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Are_they_early.mp3',
+      ipa: '/ər ðeɪ ˈɜːrli/',
+      phonetic: 'ar dêi ÉR-li',
+    ),
+    LessonItem(
+      text: 'Are we interested?',
+      translation: 'a gente está interessado(a)?',
+      example: "Are we interested? Let's decide together.",
+      exampleTranslation:
+          'A gente está interessado(a)? Vamos decidir juntos(as).',
+      audioAsset: 'audio/fase1/bloco5_sujeitos/Are_we_interested.mp3',
+      ipa: '/ər wi ˈɪntrəstɪd/',
+      phonetic: 'ar uí ÍN-tres-tid',
+    ),
+  ],
+);
+
+/// Lição 30 — a resposta curta afirmativa de cada pergunta da licao28. O
+/// texto praticado é a RESPOSTA; a pergunta que a provoca aparece como
+/// `example` (só no Livro Aberto — depois da 1ª tentativa, então não fere o
+/// som primeiro). "Yes, I am." se repete 3x (itens 1/3/5): mesmo áudio.
+const licao30 = Lesson(
+  id: 'fase1-licao30',
+  title: 'Respostas curtas — sim',
+  objective: 'A resposta curta e automática pra qualquer pergunta com '
+      '"to be": "Yes, I am.", "Yes, he is." e por aí vai.',
+  microSkill: 'Responder sem travar',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'Yes, I am.',
+      translation: 'sim, estou.',
+      example: 'Are you hungry?',
+      exampleTranslation: 'você está com fome?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_I_am.mp3',
+      ipa: '/jɛs aɪ æm/',
+      phonetic: 'iés ái ém',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you thirsty?',
+      exampleTranslation: 'você está com sede?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'Yes, I am.',
+      translation: 'sim, estou.',
+      example: 'Are you comfortable?',
+      exampleTranslation: 'você está confortável?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_I_am.mp3',
+      ipa: '/jɛs aɪ æm/',
+      phonetic: 'iés ái ém',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you worried?',
+      exampleTranslation: 'você está preocupado(a)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'Yes, I am.',
+      translation: 'sim, estou.',
+      example: 'Are you available?',
+      exampleTranslation: 'você está disponível?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_I_am.mp3',
+      ipa: '/jɛs aɪ æm/',
+      phonetic: 'iés ái ém',
+    ),
+    LessonItem(
+      text: 'Yes, he is.',
+      translation: 'sim, ele é.',
+      example: 'Is he polite?',
+      exampleTranslation: 'ele é educado?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_he_is.mp3',
+      ipa: '/jɛs hi ɪz/',
+      phonetic: 'iés rri iz',
+    ),
+    LessonItem(
+      text: 'No, she is not.',
+      translation: 'não, ela não é.',
+      example: 'Is she patient?',
+      exampleTranslation: 'ela é paciente?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_she_is_not.mp3',
+      ipa: '/noʊ ʃi ɪz nɑːt/',
+      phonetic: 'nôu chi iz nát',
+    ),
+    LessonItem(
+      text: 'Yes, it is.',
+      translation: 'sim, é.',
+      example: 'Is it necessary?',
+      exampleTranslation: 'é necessário?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_it_is.mp3',
+      ipa: '/jɛs ɪt ɪz/',
+      phonetic: 'iés it iz',
+    ),
+    LessonItem(
+      text: 'No, we are not.',
+      translation: 'não, não estamos.',
+      example: 'Are we early?',
+      exampleTranslation: 'a gente está adiantado(a)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_we_are_not.mp3',
+      ipa: '/noʊ wi ər nɑːt/',
+      phonetic: 'nôu uí ar nát',
+    ),
+    LessonItem(
+      text: 'Yes, they are.',
+      translation: 'sim, estão.',
+      example: 'Are they interested?',
+      exampleTranslation: 'eles(as) estão interessados(as)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_they_are.mp3',
+      ipa: '/jɛs ðeɪ ər/',
+      phonetic: 'iés dêi ar',
+    ),
+  ],
+);
+
+/// Lição 31 — o mesmo padrão, respostas negativas. Perguntas 3/5/8/10 usam o
+/// ANTÔNIMO (uncomfortable/unavailable/unnecessary/uninterested) — ensina o
+/// vocabulário negativo junto com a forma. Textos de resposta repetidos
+/// (No, I am not. / No, she is not. / No, we are not.) reaproveitam o áudio
+/// já gerado na licao30.
+const licao31 = Lesson(
+  id: 'fase1-licao31',
+  title: 'Respostas curtas — não',
+  objective: 'O mesmo padrão, agora dizendo não — sem travar e sem soar '
+      'estranho.',
+  microSkill: 'Dizer não com naturalidade',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you hungry?',
+      exampleTranslation: 'você está com fome?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you thirsty?',
+      exampleTranslation: 'você está com sede?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you uncomfortable?',
+      exampleTranslation: 'você está desconfortável?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you worried?',
+      exampleTranslation: 'você está preocupado(a)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'No, I am not.',
+      translation: 'não, não estou.',
+      example: 'Are you unavailable?',
+      exampleTranslation: 'você está indisponível?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_I_am_not.mp3',
+      ipa: '/noʊ aɪ æm nɑːt/',
+      phonetic: 'nôu ái ém nát',
+    ),
+    LessonItem(
+      text: 'No, he is not.',
+      translation: 'não, ele não é.',
+      example: 'Is he rude?',
+      exampleTranslation: 'ele é grosseiro?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_he_is_not.mp3',
+      ipa: '/noʊ hi ɪz nɑːt/',
+      phonetic: 'nôu rri iz nát',
+    ),
+    LessonItem(
+      text: 'No, she is not.',
+      translation: 'não, ela não é.',
+      example: 'Is she impatient?',
+      exampleTranslation: 'ela é impaciente?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_she_is_not.mp3',
+      ipa: '/noʊ ʃi ɪz nɑːt/',
+      phonetic: 'nôu chi iz nát',
+    ),
+    LessonItem(
+      text: 'No, it is not.',
+      translation: 'não, não é.',
+      example: 'Is it unnecessary?',
+      exampleTranslation: 'é desnecessário?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_it_is_not.mp3',
+      ipa: '/noʊ ɪt ɪz nɑːt/',
+      phonetic: 'nôu it iz nát',
+    ),
+    LessonItem(
+      text: 'No, we are not.',
+      translation: 'não, não estamos.',
+      example: 'Are we late?',
+      exampleTranslation: 'a gente está atrasado(a)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_we_are_not.mp3',
+      ipa: '/noʊ wi ər nɑːt/',
+      phonetic: 'nôu uí ar nát',
+    ),
+    LessonItem(
+      text: 'No, they are not.',
+      translation: 'não, não estão.',
+      example: 'Are they uninterested?',
+      exampleTranslation: 'eles(as) estão desinteressados(as)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/No,_they_are_not.mp3',
+      ipa: '/noʊ ðeɪ ər nɑːt/',
+      phonetic: 'nôu dêi ar nát',
+    ),
+  ],
+);
+
+/// Lição 32 — confirma uma coisa e nega outra na MESMA frase (duas orações
+/// num único texto praticado — a intenção do bloco é treinar isso como uma
+/// unidade de fala só, não duas gravações separadas). Itens 9-10 usam
+/// perguntas novas (confident/comfortable) só como `example`, sem áudio
+/// próprio.
+const licao32 = Lesson(
+  id: 'fase1-licao32',
+  title: 'Sim e não na mesma frase',
+  objective: 'Confirmar uma coisa e negar outra na mesma resposta — assim '
+      'que se fala de verdade.',
+  microSkill: 'Contrastar numa frase só',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'Yes, I am. I am not thirsty.',
+      translation: 'sim, estou. não estou com sede.',
+      example: 'Are you hungry?',
+      exampleTranslation: 'você está com fome?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_I_am._I_am_not_thirsty.mp3',
+      ipa: '/jɛs aɪ æm | aɪ æm nɑːt ˈθɜːrsti/',
+      phonetic: 'iés ái ém · ái ém nát TSÉRS-ti',
+    ),
+    LessonItem(
+      text: 'Yes, I am. I am not worried.',
+      translation: 'sim, estou. não estou preocupado(a).',
+      example: 'Are you comfortable?',
+      exampleTranslation: 'você está confortável?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_I_am._I_am_not_worried.mp3',
+      ipa: '/jɛs aɪ æm | aɪ æm nɑːt ˈwɜːrid/',
+      phonetic: 'iés ái ém · ái ém nát UÉ-rid',
+    ),
+    LessonItem(
+      text: 'Yes, I am. I am not busy.',
+      translation: 'sim, estou. não estou ocupado(a).',
+      example: 'Are you available?',
+      exampleTranslation: 'você está disponível?',
+      audioAsset: 'audio/fase1/bloco5_contraste/Yes,_I_am._I_am_not_busy.mp3',
+      ipa: '/jɛs aɪ æm | aɪ æm nɑːt ˈbɪzi/',
+      phonetic: 'iés ái ém · ái ém nát BÍ-zi',
+    ),
+    LessonItem(
+      text: 'Yes, he is. He is not rude.',
+      translation: 'sim, ele é. ele não é grosseiro.',
+      example: 'Is he polite?',
+      exampleTranslation: 'ele é educado?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_he_is._He_is_not_rude.mp3',
+      ipa: '/jɛs hi ɪz | hi ɪz nɑːt ruːd/',
+      phonetic: 'iés rri iz · rri iz nát rúd',
+    ),
+    LessonItem(
+      text: 'Yes, she is. She is not impatient.',
+      translation: 'sim, ela é. ela não é impaciente.',
+      example: 'Is she patient?',
+      exampleTranslation: 'ela é paciente?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_she_is._She_is_not_impatient.mp3',
+      ipa: '/jɛs ʃi ɪz | ʃi ɪz nɑːt ɪmˈpeɪʃənt/',
+      phonetic: 'iés chi iz · chi iz nát im-PÊI-chent',
+    ),
+    LessonItem(
+      text: 'Yes, it is. It is not optional.',
+      translation: 'sim, é. não é opcional.',
+      example: 'Is it necessary?',
+      exampleTranslation: 'é necessário?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_it_is._It_is_not_optional.mp3',
+      ipa: '/jɛs ɪt ɪz | ɪt ɪz nɑːt ˈɑːpʃənəl/',
+      phonetic: 'iés it iz · it iz nát ÁP-she-nou',
+    ),
+    LessonItem(
+      text: 'Yes, we are. We are not late.',
+      translation: 'sim, estamos. não estamos atrasados(as).',
+      example: 'Are we early?',
+      exampleTranslation: 'a gente está adiantado(a)?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_we_are._We_are_not_late.mp3',
+      ipa: '/jɛs wi ər | wi ər nɑːt leɪt/',
+      phonetic: 'iés uí ar · uí ar nát lêit',
+    ),
+    LessonItem(
+      text: 'Yes, they are. They are not bored.',
+      translation: 'sim, estão. não estão entediados(as).',
+      example: 'Are they interested?',
+      exampleTranslation: 'eles(as) estão interessados(as)?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_they_are._They_are_not_bored.mp3',
+      ipa: '/jɛs ðeɪ ər | ðeɪ ər nɑːt bɔːrd/',
+      phonetic: 'iés dêi ar · dêi ar nát bórd',
+    ),
+    LessonItem(
+      text: 'Yes, he is. He is not insecure.',
+      translation: 'sim, ele é. ele não é inseguro.',
+      example: 'Is he confident?',
+      exampleTranslation: 'ele é confiante?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_he_is._He_is_not_insecure.mp3',
+      ipa: '/jɛs hi ɪz | hi ɪz nɑːt ˌɪnsɪˈkjʊr/',
+      phonetic: 'iés rri iz · rri iz nát in-si-KIÚR',
+    ),
+    LessonItem(
+      text: 'Yes, she is. She is not nervous.',
+      translation: 'sim, ela está. ela não está nervosa.',
+      example: 'Is she comfortable?',
+      exampleTranslation: 'ela está confortável?',
+      audioAsset:
+          'audio/fase1/bloco5_contraste/Yes,_she_is._She_is_not_nervous.mp3',
+      ipa: '/jɛs ʃi ɪz | ʃi ɪz nɑːt ˈnɜːrvəs/',
+      phonetic: 'iés chi iz · chi iz nát NÉR-vâs',
+    ),
+  ],
+);
+
+/// Lição 33 — as contrações voltam (sumidas desde o Bloco 1), agora com o
+/// vocabulário deste bloco. Ímpares reaproveitam o áudio afirmativo da
+/// licao30 (mesmo texto); pares são contrações novas.
+const licao33 = Lesson(
+  id: 'fase1-licao33',
+  title: 'Respostas com contrações',
+  objective: 'De volta às contrações — "I\'m not", "isn\'t", "aren\'t" — '
+      'agora com o vocabulário que você acabou de treinar.',
+  microSkill: 'Contrações do dia a dia',
+  approvalThreshold: 75,
+  items: [
+    LessonItem(
+      text: 'Yes, I am.',
+      translation: 'sim, estou.',
+      example: 'Are you hungry?',
+      exampleTranslation: 'você está com fome?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_I_am.mp3',
+      ipa: '/jɛs aɪ æm/',
+      phonetic: 'iés ái ém',
+    ),
+    LessonItem(
+      text: "No, I'm not.",
+      translation: 'não, não estou.',
+      example: 'Are you thirsty?',
+      exampleTranslation: 'você está com sede?',
+      audioAsset: "audio/fase1/bloco5_contracoes/No,_I'm_not.mp3",
+      ipa: '/noʊ aɪm nɑːt/',
+      phonetic: 'nôu áim nát',
+    ),
+    LessonItem(
+      text: 'Yes, he is.',
+      translation: 'sim, ele é.',
+      example: 'Is he polite?',
+      exampleTranslation: 'ele é educado?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_he_is.mp3',
+      ipa: '/jɛs hi ɪz/',
+      phonetic: 'iés rri iz',
+    ),
+    LessonItem(
+      text: "No, he isn't.",
+      translation: 'não, ele não é.',
+      example: 'Is he rude?',
+      exampleTranslation: 'ele é grosseiro?',
+      audioAsset: "audio/fase1/bloco5_contracoes/No,_he_isn't.mp3",
+      ipa: "/noʊ hi ˈɪzənt/",
+      phonetic: 'nôu rri Í-zent',
+    ),
+    LessonItem(
+      text: 'Yes, she is.',
+      translation: 'sim, ela é.',
+      example: 'Is she patient?',
+      exampleTranslation: 'ela é paciente?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_she_is.mp3',
+      ipa: '/jɛs ʃi ɪz/',
+      phonetic: 'iés chi iz',
+    ),
+    LessonItem(
+      text: "No, she isn't.",
+      translation: 'não, ela não é.',
+      example: 'Is she impatient?',
+      exampleTranslation: 'ela é impaciente?',
+      audioAsset: "audio/fase1/bloco5_contracoes/No,_she_isn't.mp3",
+      ipa: "/noʊ ʃi ˈɪzənt/",
+      phonetic: 'nôu chi Í-zent',
+    ),
+    LessonItem(
+      text: 'Yes, it is.',
+      translation: 'sim, é.',
+      example: 'Is it necessary?',
+      exampleTranslation: 'é necessário?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_it_is.mp3',
+      ipa: '/jɛs ɪt ɪz/',
+      phonetic: 'iés it iz',
+    ),
+    LessonItem(
+      text: "No, it isn't.",
+      translation: 'não, não é.',
+      example: 'Is it optional?',
+      exampleTranslation: 'é opcional?',
+      audioAsset: "audio/fase1/bloco5_contracoes/No,_it_isn't.mp3",
+      ipa: "/noʊ ɪt ˈɪzənt/",
+      phonetic: 'nôu it Í-zent',
+    ),
+    LessonItem(
+      text: 'Yes, they are.',
+      translation: 'sim, estão.',
+      example: 'Are they interested?',
+      exampleTranslation: 'eles(as) estão interessados(as)?',
+      audioAsset: 'audio/fase1/bloco5_respostas/Yes,_they_are.mp3',
+      ipa: '/jɛs ðeɪ ər/',
+      phonetic: 'iés dêi ar',
+    ),
+    LessonItem(
+      text: "No, they aren't.",
+      translation: 'não, não estão.',
+      example: 'Are they bored?',
+      exampleTranslation: 'eles(as) estão entediados(as)?',
+      audioAsset: "audio/fase1/bloco5_contracoes/No,_they_aren't.mp3",
+      ipa: '/noʊ ðeɪ ɑːrnt/',
+      phonetic: 'nôu dêi ánt',
     ),
   ],
 );

@@ -322,6 +322,56 @@ void main() {
     expect(find.textContaining(licao01.title), findsWidgets);
   });
 
+  testWidgets(
+      'Bloco 5 (licao28-33): Zona 5 e as novas lições renderizam na trilha '
+      'sem quebrar (texto de duas frases, contrações e "(a)" inclusos)',
+      (tester) async {
+    final store = await _emptyStore();
+    tester.view.physicalSize = const Size(1200, 9000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: store,
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    // Por padrão só mostra concluídas + atual + poucas bloqueadas (#8) — a
+    // Zona 5 (índice 25+) só aparece expandindo a lista inteira.
+    await tester.tap(find.text('Ver próximos treinos da trilha'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Zona 5 — Perguntas e respostas com to be'),
+        findsOneWidget);
+    expect(find.textContaining(licao28.title), findsOneWidget);
+    expect(find.textContaining(licao33.title), findsOneWidget);
+    expect(find.textContaining('Sim e não na mesma frase'), findsOneWidget);
+  });
+
+  test('Bloco 5: 6 lições novas, todas grátis, com áudio único por texto',
+      () {
+    // Reaproveitamento de áudio entre lições (mesmo texto → mesmo arquivo):
+    // confere que o mapeamento (feito à mão em fase1.dart) não divergiu.
+    final byText = <String, String>{};
+    for (final l in [licao28, licao29, licao30, licao31, licao32, licao33]) {
+      expect(l.items, hasLength(10));
+      expect(l.bonus, isFalse); // nenhuma bônus: todas exigidas pra progredir
+      for (final item in l.items) {
+        final prevAsset = byText[item.text];
+        if (prevAsset != null) {
+          expect(item.audioAsset, prevAsset,
+              reason: '"${item.text}" deveria reusar o mesmo áudio');
+        } else {
+          byText[item.text] = item.audioAsset;
+        }
+      }
+    }
+    // Trilha 1 inteira (25 + 6) continua grátis pra todos (ver CLAUDE.md).
+    expect(kFreeLessonCount, fase1Lessons.length);
+    expect(fase1Lessons.length, 31);
+  });
+
   testWidgets('priorização: Modo precisão aparece após 30min aprovados',
       (tester) async {
     final store = await _emptyStore();

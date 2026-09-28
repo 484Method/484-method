@@ -18,10 +18,12 @@ abstract interface class EntitlementService {
 
 /// Quantas lições da Fase 1 ficam liberadas sem o Beta Fundador.
 ///
-/// 2026-06: todas as 25 lições estão grátis — sem usuário pagante real
-/// ainda (RevenueCat bloqueado por conta Apple), priorizar conseguir os
-/// primeiros usuários reais de teste em vez de gatear conteúdo.
-const int kFreeLessonCount = 25;
+/// 2026-06: todas as lições estão grátis — sem usuário pagante real ainda
+/// (RevenueCat bloqueado por conta Apple), priorizar conseguir os primeiros
+/// usuários reais de teste em vez de gatear conteúdo. Atualizado pra 31 em
+/// 2026-09-28 com o Bloco 5 (licao28-33): mesma decisão de produto, a
+/// Trilha 1 inteira segue grátis pra todos (ver CLAUDE.md).
+const int kFreeLessonCount = 31;
 
 /// Implementação local (web/dev): persiste o acesso em SharedPreferences,
 /// permitindo testar os dois estados sem loja. Default: sem acesso.

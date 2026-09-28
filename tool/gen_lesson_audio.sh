@@ -51,4 +51,14 @@ gen bloco4_clima "It's sunny today" "It's a bit cloudy today" "It's really hot t
 gen bloco4_dia_bonito "It's a beautiful day to go outside" "It's a beautiful day to have a walk" "It's a beautiful day to study English" "It's a beautiful day to drink some coffee" "It's a beautiful day to enjoy the morning"
 gen bloco4_planos "What's the plan for today" "What's the plan for this morning" "What's the plan for the afternoon" "What's the plan after class" "What's the plan for the weekend"
 gen bloco4_bonus "How have you been doing lately" "I've been pretty busy, but I'm good" "It looks like it might rain later" "It's the perfect day to relax outside" "Do you have any plans for the weekend"
+# Bloco 5 (licao28-33, 2026-09-28) — perguntas e respostas com "to be".
+# Textos repetidos entre lições (ex.: "Yes, I am.") geram uma vez só; o
+# `gen()` já pula arquivo existente, então mesmo rodando de novo não duplica.
+gen bloco5_perguntas "Are you hungry" "Are you thirsty" "Are you comfortable" "Are you worried" "Are you available" "Is he polite" "Is she patient" "Is it necessary" "Are we early" "Are they interested"
+gen bloco5_sujeitos "Is he hungry" "Is she thirsty" "Is he comfortable" "Is she worried" "Is he available" "Is she polite" "Is he patient" "Are they early" "Are we interested"
+gen bloco5_respostas "Yes, I am" "No, I am not" "Yes, he is" "No, he is not" "Yes, she is" "No, she is not" "Yes, it is" "No, it is not" "No, we are not" "Yes, they are" "No, they are not"
+gen bloco5_contraste "Yes, I am. I am not thirsty" "Yes, I am. I am not worried" "Yes, I am. I am not busy" "Yes, he is. He is not rude" "Yes, she is. She is not impatient" "Yes, it is. It is not optional" "Yes, we are. We are not late" "Yes, they are. They are not bored" "Yes, he is. He is not insecure" "Yes, she is. She is not nervous"
+gen bloco5_contracoes "No, I'm not" "No, he isn't" "No, she isn't" "No, it isn't" "No, they aren't"
 # Lições de revisão (06, 12, 19, 26) reusam áudios das lições anteriores — nada a gerar.
+# licao29 item 8 ("Is it necessary?") e licao30/31/33 (respostas repetidas)
+# também reusam áudio já gerado acima — ver audioAsset em fase1.dart.

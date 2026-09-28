@@ -1127,7 +1127,7 @@ class _HomeScreenState extends State<HomeScreen> {
         continue;
       }
 
-      if (i == 0 || i == 6 || i == 11 || i == 18) {
+      if (i == 0 || i == 6 || i == 11 || i == 18 || i == 25) {
         widgets.add(Padding(
           padding: EdgeInsets.only(top: i == 0 ? 0 : 16, bottom: 4),
           child: Text(
@@ -1135,7 +1135,8 @@ class _HomeScreenState extends State<HomeScreen> {
               0 => 'Zona 1 — Reconhecimento e confiança',
               6 => 'Zona 2 — Som e sílaba forte',
               11 => 'Zona 3 — Da palavra à frase',
-              _ => 'Zona 4 — Conversa do dia a dia',
+              18 => 'Zona 4 — Conversa do dia a dia',
+              _ => 'Zona 5 — Perguntas e respostas com to be',
             },
             style: theme.textTheme.titleSmall?.copyWith(
               color: theme.colorScheme.secondary,

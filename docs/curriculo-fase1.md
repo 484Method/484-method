@@ -28,12 +28,13 @@ comerciais novas — Fase 1 continua sendo um único módulo/oferta):
 | Familiar com som enganoso | business, comfortable, interesting, manager, project | Reduzir pronúncia aportuguesada |
 | Familiar com uso diferente | outdoor, notebook, shopping, home office, chips | Explicar uso real quando necessário |
 
-## As 25 microlições (5–10 min cada): 21 obrigatórias + 4 bônus opcionais
+## As 31 microlições (5–10 min cada): 27 obrigatórias + 4 bônus opcionais
 
-Cada bloco termina com uma revisão (obrigatória) e um bônus (`Lesson.bonus =
-true`, opcional): mesmo assunto do bloco, palavras/frases mais difíceis. O
-bônus nunca é pré-requisito da próxima lição — a progressão pula direto para
-ela a partir da revisão anterior.
+Cada um dos Blocos 1–4 termina com uma revisão (obrigatória) e um bônus
+(`Lesson.bonus = true`, opcional): mesmo assunto do bloco, palavras/frases
+mais difíceis. O bônus nunca é pré-requisito da próxima lição — a progressão
+pula direto para ela a partir da revisão anterior. O Bloco 5 (novo) não segue
+esse padrão — ver nota na própria seção do bloco.
 
 Numeração abaixo é a posição real no app (sequencial, sem buracos). Os ids
 internos (`fase1-licaoNN`) têm lacunas — ver comentário em `lib/data/fase1.dart`.
@@ -82,6 +83,25 @@ internos (`fase1-licaoNN`) têm lacunas — ver comentário em `lib/data/fase1.d
 | 23 | "What's the plan…?" | for today, for this morning, for the afternoon, after class, for the weekend | Combinar atividades | Completeness + fluency |
 | 24 | Revisão Bloco 4 | 1 frase de cada lição 19–23 | Progresso visível | Minutos aprovados |
 | 25 | **Bônus** — Desafio: conversa mais natural | How have you been doing lately, I've been pretty busy but I'm good, It looks like it might rain later, It's the perfect day to relax outside, Do you have any plans for the weekend | Mesmo small talk, frases mais longas e naturais | Completeness + fluency (opcional) |
+
+### Bloco 5 — Perguntas e respostas com "to be" (novo, 2026-09-28)
+
+Grade gramatical (não mais vocabulário solto): a pergunta de sim/não com "to
+be" → resposta curta afirmativa → negativa → as duas contrastadas numa frase
+só → de volta às contrações. Sem revisão nem bônus próprios (o bloco em si já
+é a revisão/expansão do padrão "to be" usado desde o Bloco 1). ⚠️ Introduz
+deliberadamente o som TH ("thirsty") e frases de duas orações (licao32) —
+ambos fora da regra "O que NÃO fazer" abaixo, que vale para os Blocos 1–4;
+graduação intencional pro público que já passou pelo básico.
+
+| # | Tema | Palavras/frases | Foco | Critério de aprovação |
+|---|---|---|---|---|
+| 26 | Perguntas com to be | Are you hungry?, Are you thirsty?, Are you comfortable?, Are you worried?, Are you available?, Is he polite?, Is she patient?, Is it necessary?, Are we early?, Are they interested? | Perguntas de sim/não com to be | Accuracy + completude |
+| 27 | Perguntas com outros sujeitos | as mesmas perguntas com he, she, it, we, they | Trocar o sujeito sem travar | Accuracy + completude |
+| 28 | Respostas curtas — sim | Yes, I am. / Yes, he is. / Yes, she is. / Yes, it is. / Yes, they are. (+ negativas correspondentes) | Responder sem travar | Completeness + fluency |
+| 29 | Respostas curtas — não | No, I am not. / No, he is not. / No, she is not. / No, it is not. / No, we are not. / No, they are not. — perguntas com antônimo (uncomfortable, unavailable, rude, impatient, unnecessary, late, uninterested) | Dizer não com naturalidade + vocabulário negativo | Completeness + fluency |
+| 30 | Sim e não na mesma frase | "Yes, I am. I am not thirsty.", "Yes, he is. He is not rude." — 10 combinações | Contrastar numa frase só | Completeness + fluency |
+| 31 | Respostas com contrações | Yes, I am. / No, I'm not. / Yes, he is. / No, he isn't. — contrações de volta, vocabulário deste bloco | Contrações do dia a dia | Completeness + fluency |
 
 ## Regra de liberação da escrita
 Uma tentativa oral é obrigatória antes de qualquer texto. Após a tentativa e

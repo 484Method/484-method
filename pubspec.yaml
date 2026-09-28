@@ -89,6 +89,11 @@ flutter:
     - assets/audio/fase1/bloco4_dia_bonito/
     - assets/audio/fase1/bloco4_planos/
     - assets/audio/fase1/bloco4_bonus/
+    - assets/audio/fase1/bloco5_perguntas/
+    - assets/audio/fase1/bloco5_sujeitos/
+    - assets/audio/fase1/bloco5_respostas/
+    - assets/audio/fase1/bloco5_contraste/
+    - assets/audio/fase1/bloco5_contracoes/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

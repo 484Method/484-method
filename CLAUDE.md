@@ -32,12 +32,28 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   verificação. PII isolada na tabela `signups` (RLS por dono, migração
   `signups`), separada de progress/events/gravações; entra no export CSV do
   painel (nome/e-mail + atividade) e é apagada no clearAll (LGPD).
-- Fase 1 "Inglês que Você Já Conhece": 21 microlições obrigatórias de 5–10
-  min, em 4 blocos pedagógicos internos — reconhecimento/confiança, som/
-  sílaba forte, palavra/frase, conversa do dia a dia — mais 4 lições BÔNUS
-  opcionais (uma por bloco, `Lesson.bonus = true`, palavras/frases mais
-  difíceis do mesmo assunto, nunca exigidas para progredir) — 25 lições no
-  total (matriz completa em docs/curriculo-fase1.md)
+- Fase 1 "Inglês que Você Já Conhece": 27 microlições obrigatórias de 5–10
+  min, em 5 blocos pedagógicos internos — reconhecimento/confiança, som/
+  sílaba forte, palavra/frase, conversa do dia a dia, **perguntas e
+  respostas com "to be"** (Bloco 5, novo, 2026-09-28: licao28-33,
+  `fase1-licao28`–`33`, Zona 5 na home) — mais 4 lições BÔNUS opcionais
+  (uma por bloco dos 4 primeiros, `Lesson.bonus = true`, palavras/frases
+  mais difíceis do mesmo assunto, nunca exigidas para progredir; o Bloco 5
+  não tem bônus/revisão próprios) — 31 lições no total (matriz completa em
+  docs/curriculo-fase1.md). ⚠️ O Bloco 5 introduz de propósito o que os
+  Blocos 1–4 evitam (som TH em "thirsty", frases de duas orações em
+  licao32) — graduação intencional pro público que já passou pelo básico,
+  não um erro de conteúdo. `kFreeLessonCount` (entitlement_service.dart)
+  acompanha o total (31) — a Trilha 1 inteira segue grátis pra todos.
+  ⚠️ **Sem áudio ainda**: os 5 novos diretórios em `assets/audio/fase1/`
+  (bloco5_perguntas/sujeitos/respostas/contraste/contracoes) têm só um
+  `.gitkeep` — sem isso o build falhava com "unable to find directory
+  entry" (não trava o build, mas suja o log; ver teste). Precisa rodar
+  `tool/gen_lesson_audio.sh` (Azure Speech, `en-US-JennyNeural`, já
+  estendido com os textos do Bloco 5) com `AZURE_SPEECH_KEY`/
+  `AZURE_SPEECH_REGION` válidos antes de anunciar essas lições — sem áudio,
+  "Ouvir" cai no erro genérico existente ("Não consegui tocar o áudio"),
+  não trava o app, mas a lição fica inutilizável.
 - ✅ Loop core completo: áudio pré-gerado → gravação → Azure Pronunciation
   Assessment → feedback pedagógico em PT-BR → liberação da escrita → regravação
 - ✅ Feedback gerado pela Claude API via Edge Function (fallback p/ mensagens
