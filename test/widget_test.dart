@@ -277,6 +277,50 @@ void main() {
     expect(find.text('Fundador'), findsNothing); // sem selo
   });
 
+  testWidgets(
+      'Trilha 2 (Fase 2): não-Fundador vê a trilha, mas toda atrás do gate',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 9000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: await _emptyStore(),
+        entitlement: await LocalEntitlementService.load(),
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Trilha 2 — Verbo To Be'), findsOneWidget);
+    expect(find.text('Eu sou, eu estou'), findsOneWidget); // 1ª lição
+    // As 8 lições da trilha 2 aparecem com o mesmo aviso "Beta Fundador"
+    // que a trilha 1 usa pra item paywalled — aqui todas, já que a trilha
+    // inteira é Fundador (ao contrário da trilha 1, hoje 100% grátis).
+    expect(find.text('Beta Fundador'), findsNWidgets(8));
+  });
+
+  testWidgets('Trilha 2 (Fase 2): Fundador libera a 1ª lição, resto trancado',
+      (tester) async {
+    final ent = await LocalEntitlementService.load();
+    await ent.setFounderAccess(true);
+    tester.view.physicalSize = const Size(1200, 9000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        store: await _emptyStore(),
+        entitlement: ent,
+        assessor: _FakeAssessor(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Beta Fundador'), findsNothing); // gate caiu
+    expect(find.textContaining('10 tentativas de fala'), findsOneWidget);
+    // Progressão sequencial: só a 1ª lição libera antes de concluir nada.
+    expect(find.text('Complete a lição anterior para liberar'),
+        findsNWidgets(7));
+  });
+
   testWidgets('teste de PMF: aparece pra quem sentiu valor e voltou (streak≥2)',
       (tester) async {
     SharedPreferences.setMockInitialValues({

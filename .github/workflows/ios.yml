@@ -12,6 +12,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Só builda (não faz push nem release) — least-privilege: read é suficiente.
+permissions:
+  contents: read
+
 jobs:
   build-ios:
     name: Build iOS (sem assinatura)
