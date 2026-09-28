@@ -233,10 +233,15 @@ class AudioRecorderService {
     return inRange / checked > 0.95;
   }
 
-  Future<void> dispose() {
+  /// Se a tela fechar com uma gravação em andamento (usuário saiu sem tocar
+  /// em "parar"), só `stop()` cancelava `_subscription` — aqui ela ficava
+  /// viva e podia disparar `onAutoStop`/detector de silêncio (a closure
+  /// `_stopAndAssess` de uma tela já destruída) além de vazar o stream.
+  Future<void> dispose() async {
     _autoStopTimer?.cancel();
     _silenceStopTimer?.cancel();
-    return _recorder.dispose();
+    await _subscription?.cancel();
+    await _recorder.dispose();
   }
 
   bool _isSilence(Uint8List pcm) {

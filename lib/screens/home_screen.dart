@@ -1166,7 +1166,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Progresso pode ter mudado: reavalia elegibilidade e refaz o sorteio se
     // o dia virou enquanto a tela estava aberta.
     _ensureDailyChallenge();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
