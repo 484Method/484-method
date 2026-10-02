@@ -22,8 +22,21 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
     int attempt = 1,
   }) async {
     try {
+      // Token da sessão passado EXPLÍCITO: não confiamos no cabeçalho padrão
+      // da biblioteca, que pode carregar a chave pública (não é JWT de
+      // usuário) e levar 401 do gateway/da function. Se a sessão expirou,
+      // renova antes (o refresh é barato e idempotente).
+      final auth = _backend.client.auth;
+      var session = auth.currentSession;
+      if (session == null || session.isExpired) {
+        try {
+          session = (await auth.refreshSession()).session ?? session;
+        } catch (_) {}
+      }
+      final token = session?.accessToken;
       final res = await _backend.client.functions.invoke(
         'assess',
+        headers: token == null ? null : {'Authorization': 'Bearer $token'},
         body: {
           'referenceText': referenceText,
           'audioBase64': base64.encode(wavAudio),
@@ -58,7 +71,7 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
       }
       throw PronunciationAssessmentException(
         'Não consegui avaliar agora (código ${e.status}). '
-        'Tente de novo em instantes.',
+        'Tente de novo em instantes. [${_short(e.details)}]',
       );
     } catch (e) {
       debugPrint('[assessor] falha na Edge Function assess: $e');
@@ -70,5 +83,11 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
         'Confira sua conexão e tente de novo. [${e.runtimeType}]',
       );
     }
+  }
+
+  /// Corpo do erro do servidor, curto, pra aparecer na tela (diagnóstico).
+  static String _short(dynamic details) {
+    final t = details is String ? details : jsonEncode(details);
+    return t.length > 120 ? '${t.substring(0, 120)}…' : t;
   }
 }
