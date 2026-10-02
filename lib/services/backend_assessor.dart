@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FunctionException;
 
 import 'backend.dart';
 import 'pronunciation_assessor.dart';
@@ -46,6 +47,19 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
       return parseAzureResponse(json);
     } on PronunciationAssessmentException {
       rethrow;
+    } on FunctionException catch (e) {
+      // `functions.invoke` LANÇA em qualquer resposta não-2xx, então o
+      // `res.status` acima nunca vê erro: o código real chega aqui.
+      debugPrint('[assessor] assess respondeu ${e.status}: ${e.details}');
+      if (e.status == 429) {
+        throw PronunciationAssessmentException(
+          'Você já usou toda a sua prática de hoje. Volta amanhã pra continuar.',
+        );
+      }
+      throw PronunciationAssessmentException(
+        'Não consegui avaliar agora (código ${e.status}). '
+        'Tente de novo em instantes.',
+      );
     } catch (e) {
       debugPrint('[assessor] falha na Edge Function assess: $e');
       throw PronunciationAssessmentException(
