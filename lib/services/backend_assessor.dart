@@ -62,9 +62,12 @@ class BackendPronunciationAssessor implements PronunciationAssessor {
       );
     } catch (e) {
       debugPrint('[assessor] falha na Edge Function assess: $e');
+      // Sufixo com o TIPO do erro (não o texto, que pode ser longo): separa
+      // rede/CORS (ClientException) de resposta mal formada (TypeError) sem
+      // exigir o console do navegador de quem está testando.
       throw PronunciationAssessmentException(
         'Não consegui avaliar sua gravação agora. '
-        'Confira sua conexão e tente de novo.',
+        'Confira sua conexão e tente de novo. [${e.runtimeType}]',
       );
     }
   }
