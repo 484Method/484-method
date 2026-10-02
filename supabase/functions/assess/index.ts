@@ -1,7 +1,7 @@
 // Edge Function: proxy do Azure Pronunciation Assessment. A chave do Azure
 // vive como secret do Supabase (AZURE_SPEECH_KEY / AZURE_SPEECH_REGION) —
 // nunca no cliente, para a web pública não vazar a chave. verify_jwt fica
-// ligado: só a sessão anônima do app chama.
+// DESLIGADO no gateway (--no-verify-jwt): a function valida o usuário sozinha.
 //
 // Recebe JSON { referenceText, audioBase64, attempt? } e devolve o JSON
 // detalhado do Azure sem modificar. O feedback pedagógico é calculado no
@@ -39,27 +39,45 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Autenticação feita AQUI (a function é implantada com --no-verify-jwt): o
+  // gateway rejeitava com 401 os tokens do próprio projeto (chaves de JWT
+  // novas/assimétricas), e isso derrubava o loop core inteiro. `getUser()`
+  // valida o token no servidor de Auth, então funciona com qualquer chave de
+  // assinatura. FAIL-CLOSED: sem usuário válido → 401, senão qualquer script
+  // gastaria o Azure sem teto (o teto abaixo é por auth.uid()).
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authHeader = req.headers.get("Authorization");
+  if (!supabaseUrl || !anonKey || !authHeader) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+  const supabase = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
   // Teto por usuário/dia: incrementa atômico via RPC (conta por auth.uid()).
   // Acima do limite → 429. Fail-open: uma falha do contador não pode derrubar
   // o loop core do app por causa de um problema no próprio contador.
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const authHeader = req.headers.get("Authorization");
-    if (supabaseUrl && anonKey && authHeader) {
-      const supabase = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
+    const { data: allowed, error } = await supabase.rpc(
+      "consume_assess_quota",
+      { p_limit: DAILY_LIMIT },
+    );
+    if (!error && allowed === false) {
+      return new Response(JSON.stringify({ error: "quota_exceeded" }), {
+        status: 429,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
-      const { data: allowed, error } = await supabase.rpc(
-        "consume_assess_quota",
-        { p_limit: DAILY_LIMIT },
-      );
-      if (!error && allowed === false) {
-        return new Response(JSON.stringify({ error: "quota_exceeded" }), {
-          status: 429,
-          headers: { ...cors, "Content-Type": "application/json" },
-        });
-      }
     }
   } catch (_e) {
     // fail-open: não bloqueia a avaliação por causa do contador
