@@ -1,7 +1,9 @@
 // Edge Function: gera feedback de pronúncia em PT-BR a partir dos scores do
 // Azure, no tom da marca. A chave da Anthropic vive como secret do Supabase
-// (ANTHROPIC_API_KEY) — nunca no cliente. verify_jwt fica ligado, então só
-// usuários autenticados (sessão anônima do app) conseguem chamar.
+// (ANTHROPIC_API_KEY) — nunca no cliente. verify_jwt fica DESLIGADO no gateway
+// (--no-verify-jwt), igual ao `assess`: o gateway devolvia 401 pra tokens do
+// próprio projeto (chaves de JWT novas) e o cliente engolia o erro, caindo
+// SEMPRE na mensagem fixa. A function valida o usuário sozinha (getUser).
 //
 // Sem a secret configurada, retorna 503 e o app cai nas mensagens fixas.
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.0";
@@ -65,27 +67,36 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Autenticação aqui (fail-closed): sem usuário válido → 401, senão qualquer
+  // script gastaria a Anthropic sem teto (o teto abaixo é por auth.uid()).
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authHeader = req.headers.get("Authorization");
+  const unauthorized = () =>
+    new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  if (!supabaseUrl || !anonKey || !authHeader) return unauthorized();
+  const supabase = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) return unauthorized();
+
   // Teto por usuário/dia: incrementa atômico via RPC (conta por auth.uid()).
   // Acima do limite → 429, e o cliente cai na mensagem fixa. Fail-open: uma
   // falha do contador não derruba o feedback (o pré-pago é o teto de custo duro).
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const authHeader = req.headers.get("Authorization");
-    if (supabaseUrl && anonKey && authHeader) {
-      const supabase = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
+    const { data: allowed, error } = await supabase.rpc(
+      "consume_feedback_quota",
+      { p_limit: DAILY_LIMIT },
+    );
+    if (!error && allowed === false) {
+      return new Response(JSON.stringify({ error: "quota_exceeded" }), {
+        status: 429,
+        headers: { ...cors, "Content-Type": "application/json" },
       });
-      const { data: allowed, error } = await supabase.rpc(
-        "consume_feedback_quota",
-        { p_limit: DAILY_LIMIT },
-      );
-      if (!error && allowed === false) {
-        return new Response(JSON.stringify({ error: "quota_exceeded" }), {
-          status: 429,
-          headers: { ...cors, "Content-Type": "application/json" },
-        });
-      }
     }
   } catch (_e) {
     // fail-open: não bloqueia o feedback por causa do contador

@@ -150,8 +150,15 @@ class Backend {
   Future<String?> generateFeedback(Map<String, Object?> params) async {
     if (userId == null) return null;
     try {
+      // Token da sessão EXPLÍCITO (mesmo motivo do assessor): o cabeçalho
+      // padrão pode levar a chave pública, que não é JWT de usuário.
+      final token = client.auth.currentSession?.accessToken;
       final res = await client.functions
-          .invoke('feedback', body: params)
+          .invoke(
+            'feedback',
+            headers: token == null ? null : {'Authorization': 'Bearer $token'},
+            body: params,
+          )
           .timeout(const Duration(seconds: 6));
       if (res.status != 200) return null;
       final data = res.data;

@@ -128,11 +128,28 @@ Deno.serve(async (req) => {
       clearTimeout(timer);
     }
 
-    const azureStatus = azureRes.status;
     const text = await azureRes.text();
 
+    // Erro do AZURE (chave/região errada, 400, 429...) não pode sair com o
+    // mesmo status que o cliente usa pra erro nosso (401 de auth, 429 de
+    // teto diário): vira 502 com o status e o corpo do Azure, pra diagnóstico.
+    if (!azureRes.ok) {
+      console.error(`azure ${azureRes.status}: ${text.slice(0, 300)}`);
+      return new Response(
+        JSON.stringify({
+          error: "azure_error",
+          azureStatus: azureRes.status,
+          detail: text.slice(0, 300),
+        }),
+        {
+          status: 502,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     return new Response(text, {
-      status: azureStatus,
+      status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {

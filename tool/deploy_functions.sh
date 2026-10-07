@@ -21,8 +21,8 @@ fi
 
 for fn in assess feedback dev-stats; do
   echo "==> Deploy $fn"
-  if [ "$fn" = "assess" ]; then
-    # assess valida o usuário DENTRO da function (auth.getUser, fail-closed).
+  if [ "$fn" = "assess" ] || [ "$fn" = "feedback" ]; then
+    # assess e feedback validam o usuário DENTRO da function (auth.getUser, fail-closed).
     # O verify_jwt do gateway devolvia 401 pra tokens do próprio projeto
     # (2026-10-02) e derrubava o loop core inteiro.
     supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --no-verify-jwt
