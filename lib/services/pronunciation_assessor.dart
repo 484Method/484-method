@@ -137,6 +137,7 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
       'Granularity': 'Phoneme',
       'Dimension': 'Comprehensive',
       'EnableProsodyAssessment': 'True',
+      'EnableMiscue': 'True',
     })));
 
     final response = await _client.post(
@@ -166,9 +167,18 @@ class AzurePronunciationAssessor implements PronunciationAssessor {
 /// backend (Edge Function), que retorna o mesmo corpo do Azure.
 PronunciationResult parseAzureResponse(Map<String, dynamic> json) {
   if (json['RecognitionStatus'] != 'Success') {
+    final status = json['RecognitionStatus'];
     throw PronunciationAssessmentException(
-      'Fala não reconhecida (${json['RecognitionStatus']}). '
-      'Tente de novo mais perto do microfone.',
+      switch (status) {
+        'InitialSilenceTimeout' =>
+          'Não ouvi sua voz. Fale logo depois do sinal, mais perto do '
+              'microfone.',
+        'NoMatch' =>
+          'Não consegui entender o que você disse. Ouça o áudio de novo e '
+              'repita a palavra com calma.',
+        _ => 'Fala não reconhecida ($status). '
+            'Tente de novo mais perto do microfone.',
+      },
     );
   }
 

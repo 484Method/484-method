@@ -101,6 +101,10 @@ Deno.serve(async (req) => {
         Granularity: "Phoneme",
         Dimension: "Comprehensive",
         EnableProsodyAssessment: "True",
+        // Sem miscue o Azure não marca omissão/inserção por palavra, e o
+        // CompletenessScore (que o feedback usa pra "faltou um pedaço") fica
+        // pouco confiável em chunks.
+        EnableMiscue: "True",
       }),
     );
 

@@ -242,6 +242,13 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   certo é login real (Supabase Auth + allowlist de e-mail do dono), não senha
   compartilhada de novo — não reintroduzir uma senha simples achando que
   "resolve" isto.
+- ⚠️ **`assess` e `feedback` são implantados com `--no-verify-jwt`** (2026-10-08):
+  o gateway devolvia 401 pros tokens do projeto; cada function valida o usuário
+  com `auth.getUser()` (fail-closed) e o cliente manda o token da sessão
+  explicitamente. O `feedback` ficou de fora do conserto de 02/10 e o cliente
+  engolia o 401 → o aluno via SEMPRE a mensagem fixa, nunca a da Claude.
+  Erro do Azure no `assess` sai como 502 (`azure_error` + `azureStatus`), nunca
+  como 401/429, que são códigos nossos. Pede redeploy: `tool/deploy_functions.sh`.
 - ⚠️ **`assess` (Azure) tem teto diário por usuário desde 2026-09-25**
   (achado ALTO da auditoria de segurança: sign-in anônimo sem fricção +
   ZERO limite = qualquer script cria contas em loop e estoura a fatura

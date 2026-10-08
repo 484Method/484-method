@@ -344,6 +344,45 @@ void main() {
     expect(done, isTrue);
   });
 
+  test('parseAzureResponse lê scores e traduz falha de reconhecimento', () {
+    final r = parseAzureResponse({
+      'RecognitionStatus': 'Success',
+      'NBest': [
+        {
+          'AccuracyScore': 80,
+          'FluencyScore': 90,
+          'CompletenessScore': 100,
+          'PronScore': 85,
+          'ProsodyScore': 70,
+          'Display': 'Chocolate.',
+          'Words': [
+            {
+              'Word': 'chocolate',
+              'AccuracyScore': 80,
+              'ErrorType': 'None',
+              'Syllables': [
+                {'Grapheme': 'cho', 'AccuracyScore': 40},
+              ],
+              'Phonemes': [
+                {'AccuracyScore': 40},
+                {'AccuracyScore': 95},
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(r.accuracy, 80);
+    expect(r.prosody, 70);
+    expect(r.minPhoneme, 40);
+    expect(r.worstSyllable?.grapheme, 'cho');
+    expect(
+      () => parseAzureResponse({'RecognitionStatus': 'NoMatch'}),
+      throwsA(isA<PronunciationAssessmentException>()
+          .having((e) => e.message, 'message', contains('entender'))),
+    );
+  });
+
   test('feedback varia por desempenho e aponta o som fraco', () {
     const lesson = Lesson(
       id: 't', title: 't', objective: 't', microSkill: 't',
