@@ -52,17 +52,39 @@ String _diagnostic(
   if (r.minPhoneme < phonemeFloor &&
       worst != null &&
       worst.grapheme.isNotEmpty) {
+    final useTip = tip != null && _tipCovers(r, worst, tip);
     return 'O trecho "${worst.grapheme}" saiu com som de português. '
-        '${tip ?? 'Escute de novo prestando atenção nesse pedaço.'}';
+        '${useTip ? tip : 'Escute de novo prestando atenção nesse pedaço.'}';
   }
   // Prosódia: piso da lição (modo normal) ou o do desafio (modo rigoroso).
+  // A dica só vale aqui se a própria lição treina ritmo (tem minProsody) —
+  // no modo rigoroso a prosódia reprova também as lições de som, e aí a dica
+  // de língua/lábios apontaria um som que o Azure já deu como certo.
   final prosodyFloor = rigorous ? Lesson.rigorousProsody : lesson.minProsody;
   if (prosodyFloor != null && (r.prosody ?? 100) < prosodyFloor) {
-    return tip ??
-        'Ouça onde está a força da palavra e copie a música, não as '
+    final useTip = tip != null && lesson.minProsody != null;
+    return useTip
+        ? tip
+        : 'Ouça onde está a força da palavra e copie a música, não as '
             'letras.';
   }
   return tip ??
       'Copie o ritmo do áudio, não a escrita da palavra, e tente outra '
           'vez.';
+}
+
+/// A dica serve pro trecho que o Azure apontou? Item de uma palavra só: sim
+/// (a dica é sobre ela). Frase: só se a dica cita a palavra onde está o
+/// trecho mais fraco — senão o diagnóstico aponta um pedaço ("place") e a
+/// instrução fala de outro ("there").
+bool _tipCovers(PronunciationResult r, SyllableScore worst, String tip) {
+  if (r.words.length <= 1) return true;
+  for (final w in r.words) {
+    if (w.syllables.contains(worst)) {
+      // "brother's" → "brother": a dica cita a palavra, não o possessivo.
+      final word = w.word.toLowerCase().replaceAll(RegExp(r"'.*$"), '');
+      return word.isNotEmpty && tip.toLowerCase().contains(word);
+    }
+  }
+  return false;
 }

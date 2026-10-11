@@ -446,6 +446,44 @@ void main() {
     expect(feedbackFor(mk(98, 96), lesson, tip: tip), isNot(contains(tip)));
     // Sem dica (Trilha 1): mensagem de sempre.
     expect(feedbackFor(mk(72, 40), lesson), contains('Escute de novo'));
+
+    // Frase: a dica só entra se fala da palavra onde está o trecho fraco —
+    // senão o diagnóstico aponta "place" e a instrução falaria de "there".
+    PronunciationResult phrase(String weakWord, String syl) =>
+        PronunciationResult(
+          accuracy: 72, fluency: 100, completeness: 100, pronScore: 72,
+          prosody: 90, recognizedText: 't',
+          words: [
+            for (final w in ['there', 'place', "brother's"])
+              WordScore(
+                word: w, accuracy: w == weakWord ? 40 : 95,
+                phonemes: [w == weakWord ? 40 : 95],
+                syllables: [
+                  SyllableScore(
+                      grapheme: w == weakWord ? syl : w,
+                      accuracy: w == weakWord ? 40 : 95),
+                ],
+              ),
+          ],
+        );
+    const phraseTip = 'Língua entre os dentes no there; brother com voz.';
+    expect(feedbackFor(phrase('place', 'pla'), lesson, tip: phraseTip),
+        allOf(contains('"pla"'), contains('Escute de novo'),
+            isNot(contains(phraseTip))));
+    expect(feedbackFor(phrase('there', 'the'), lesson, tip: phraseTip),
+        contains(phraseTip));
+    expect(feedbackFor(phrase("brother's", 'bro'), lesson, tip: phraseTip),
+        contains(phraseTip));
+
+    // Modo precisão numa lição de SOM (sem minProsody): reprovar só por
+    // prosódia pede a instrução de ritmo, não a dica de língua/lábios.
+    const soundLesson = Lesson(
+      id: 's', title: 's', objective: 's', microSkill: 's',
+      approvalThreshold: 75, items: [],
+    );
+    final rhythmOnly = mk(95, 90, prosody: 60);
+    expect(feedbackFor(rhythmOnly, soundLesson, rigorous: true, tip: tip),
+        allOf(contains('força da palavra'), isNot(contains(tip))));
   });
 
   test('aprovação multicritério barra pronúncia aportuguesada', () {
