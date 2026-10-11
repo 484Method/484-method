@@ -1,4 +1,5 @@
-/// Modelo das microlições da Fase 1.
+/// Modelo das microlições do currículo (Trilhas 1 e 2 — ver
+/// lib/data/curriculum.dart).
 ///
 /// O threshold de aprovação é POR LIÇÃO (regra de produto: configurável,
 /// permissivo no começo da Fase 1 e subindo gradualmente).
@@ -85,6 +86,7 @@ class LessonItem {
     required this.audioAsset,
     this.ipa,
     this.phonetic,
+    this.soundTip,
   });
 
   /// Palavra ou chunk em inglês — é o ReferenceText da avaliação.
@@ -103,4 +105,11 @@ class LessonItem {
   /// Fonética simplificada em PT-BR, sílaba forte em MAIÚSCULA (ex.: ba-NÉ-na).
   /// Apoio para quem não lê IPA — o público falso-iniciante da Fase 1.
   final String? phonetic;
+
+  /// Dica de som (Trilha 2): o "zoom" no ponto difícil deste item — uma
+  /// instrução física curta (língua, lábios, ar, duração) contra a armadilha
+  /// do brasileiro que a lição treina. Aparece no Livro Aberto (depois da 1ª
+  /// tentativa, nunca antes) e vira a parte "o que tentar" do feedback fixo
+  /// quando a tentativa não passa (ver feedback_messages.dart).
+  final String? soundTip;
 }

@@ -4,9 +4,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-set -a
-source .env
-set +a
+# Chave do Azure: do .env (máquina do dev) ou do ambiente (CI).
+if [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
+fi
+: "${AZURE_SPEECH_KEY:?defina AZURE_SPEECH_KEY no .env (ver .env.example)}"
+: "${AZURE_SPEECH_REGION:?defina AZURE_SPEECH_REGION no .env (ver .env.example)}"
 
 voice="en-US-JennyNeural"
 
@@ -52,3 +57,35 @@ gen bloco4_dia_bonito "It's a beautiful day to go outside" "It's a beautiful day
 gen bloco4_planos "What's the plan for today" "What's the plan for this morning" "What's the plan for the afternoon" "What's the plan after class" "What's the plan for the weekend"
 gen bloco4_bonus "How have you been doing lately" "I've been pretty busy, but I'm good" "It looks like it might rain later" "It's the perfect day to relax outside" "Do you have any plans for the weekend"
 # Lições de revisão (06, 12, 19, 26) reusam áudios das lições anteriores — nada a gerar.
+
+# ---------------------------------------------------------------------------
+# Trilha 2 — Sons do inglês real (lib/data/fase2.dart)
+# ---------------------------------------------------------------------------
+# Diferente da Trilha 1: o texto vai pro TTS COM a pontuação (a pergunta
+# precisa soar como pergunta — a lição 26 treina justamente a melodia), e o
+# nome do arquivo fica só com letras, dígitos, apóstrofo e "_"
+# ("Are you ready?" -> Are_you_ready.mp3). Essa regra precisa bater com o
+# `audioAsset` de cada item; o teste de integridade
+# (test/curriculum_test.dart) acusa qualquer arquivo faltando.
+gen2() {
+  local licao="$1"; shift
+  local outdir="assets/audio/fase2/$licao"
+  mkdir -p "$outdir"
+  for w in "$@"; do
+    local stem
+    stem="$(printf '%s' "$w" | tr -cd "A-Za-z0-9' " | tr ' ' '_')"
+    local file="$outdir/$stem.mp3"
+    [[ -f "$file" ]] && { echo "já existe: $file"; continue; }
+    local ssml="<speak version='1.0' xml:lang='en-US'><voice name='$voice'><prosody rate='-10%'>$w</prosody></voice></speak>"
+    curl -sf -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1" \
+      -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
+      -H "Content-Type: application/ssml+xml" \
+      -H "X-Microsoft-OutputFormat: audio-16khz-64kbitrate-mono-mp3" \
+      -H "User-Agent: method484" \
+      --data "$ssml" -o "$file"
+    echo "gerado: $file"
+  done
+}
+
+# FASE2_GEN_LINES
+

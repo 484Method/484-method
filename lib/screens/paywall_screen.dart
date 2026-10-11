@@ -209,9 +209,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
             textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text(
-          'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador agora '
-          'trava o acesso e o preço de tudo que vem depois — e ajuda a decidir '
-          'o que construir.',
+          'As Trilhas 1 e 2 são grátis pra todo mundo. Quem entra como '
+          'Fundador agora trava o acesso e o preço de tudo que vem depois — e '
+          'ajuda a decidir o que construir.',
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),

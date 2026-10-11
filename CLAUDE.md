@@ -38,6 +38,29 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   opcionais (uma por bloco, `Lesson.bonus = true`, palavras/frases mais
   difíceis do mesmo assunto, nunca exigidas para progredir) — 25 lições no
   total (matriz completa em docs/curriculo-fase1.md)
+- ✅ **Trilha 2 "Sons do inglês real" (Fase 2 do currículo) — construída em
+  2026-10-11.** 28 lições (24 obrigatórias + 4 bônus) em 4 zonas organizadas
+  pelas ARMADILHAS DE SOM do brasileiro, não pelos 44 fonemas nem pela letra
+  (nada de phonics): fim de palavra ("i" fantasma, s- inicial, L/M/N/NG
+  finais, -ED), vogais em pares mínimos, consoantes (R inicial/final, T/D sem
+  chiado, TH) e ritmo/entonação (schwa, força da frase, palavras fracas,
+  can/can't, perguntas). Matriz em docs/curriculo-fase2.md. **Decisões do
+  dono:** grátis pra TODOS (o Fundador segue sendo selo + preço travado das
+  trilhas seguintes) e SEQUENCIAL — a 1ª lição da Trilha 2 exige a última
+  obrigatória da Trilha 1 (mesma regra linear de sempre, aplicada à fila
+  inteira). Estrutura trilhas→zonas→lições em `lib/data/curriculum.dart`
+  (fonte única da Home; antes as zonas eram índices fixos no home_screen) —
+  trilha nova = acrescentar um `Trail` ali. Cada item ganhou `soundTip` (a
+  "dica de som": instrução física curta contra a armadilha), que aparece no
+  Livro Aberto (só depois da 1ª tentativa) e vira a instrução do feedback
+  fixo e do da Claude (campo `tip` da Edge Function `feedback`, ignorado por
+  versões antigas — deploy manual). ⚠️ Os MP3 da Trilha 2 são gerados pelo
+  dev com `./tool/gen_lesson_audio.sh` (chave Azure do `.env`; gera só o que
+  falta) — `test/curriculum_test.dart` FALHA enquanto faltar áudio, de
+  propósito: é o que impede o deploy-web de publicar lição muda. ⚠️ Azure não
+  pontua vogal INSERIDA (o "i" fantasma não é fonema do texto de referência),
+  então a Zona 1 depende da dica + prosódia; calibrar com vozes brasileiras
+  reais antes de confiar no critério.
 - ✅ Loop core completo: áudio pré-gerado → gravação → Azure Pronunciation
   Assessment → feedback pedagógico em PT-BR → liberação da escrita → regravação
 - ✅ Feedback gerado pela Claude API via Edge Function (fallback p/ mensagens
@@ -78,7 +101,8 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   decepcionado" (meta >40% = sinal de PMF)**.
 - Paywall (oferta "Beta Fundador" — acesso à Fase 1): gating das lições atrás
   de `EntitlementService` JÁ implementado, fake local na web. 2026-06: todas
-  as 25 lições estão grátis (`kFreeLessonCount`) até ter usuários reais e
+  as lições estão grátis (`kFreeLessonCount` = currículo inteiro: 25 da
+  Trilha 1 + 28 da Trilha 2 desde 2026-10-11) até ter usuários reais e
   monetização ativa — falta a impl real com RevenueCat, bloqueada por conta
   Apple (ver Stack).
 - ✅ Desafio de 21 dias (instrumento de validação — mede OUTCOME, não só
@@ -121,12 +145,13 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   (migração `access_codes`; RLS sem policy de cliente). Quem não quer pagar
   agora ainda entra na lista por e-mail (fake door, sinal fraco). Gatilho: card
   não-bloqueante na home no "momento uau"; não gateia as lições grátis (hoje
-  `kFreeLessonCount`=25=todas). **Decisão de produto (2026-07-06): a Trilha 1 é
+  `kFreeLessonCount`=53=todas). **Decisão de produto (2026-07-06): a Trilha 1 é
   grátis pra TODOS de propósito — não gatear o loop é o que permite validar
   retenção com estranhos (Fase 0/1). O Fundador NÃO é desbloqueio de conteúdo; é
   (1) apoio, (2) selo visível de Fundador na AppBar (`_founderBadge` em
   home_screen, aparece quando `hasFounderAccess`; a oferta some pra quem já é
-  Fundador), (3) trava vitalícia de preço/acesso às PRÓXIMAS trilhas (Fase 2+)
+  Fundador), (3) trava vitalícia de preço/acesso às PRÓXIMAS trilhas (Fase 3+;
+  a Trilha 2 saiu grátis pra todos em 2026-10-11, decisão do dono)
   — PERSISTIDA no resgate via `ProgressStore.lockFounderPrice` (`founderSince` +
   `founderLockedPriceCents`/`Label`), exibida na confirmação do paywall e no
   tooltip do selo; é o que honra a promessa quando houver conteúdo pago,
@@ -137,7 +162,11 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   aparecer.
 
 ## Fora de escopo (NÃO implementar)
-- Fases 2–8, múltiplos sotaques, connected speech, pares mínimos, IPA
+- Fases 3–8, múltiplos sotaques, connected speech (ligação entre palavras —
+  fica pra Fase 3, "Frases Prontas", primeiro como treino de escuta), ensino
+  de IPA (o IPA só aparece como apoio no Livro Aberto). Pares mínimos entraram
+  na Trilha 2 (2026-10-11), sempre em palavra/frase útil, nunca como drill
+  abstrato
 - Conversa livre com IA generativa — **decidido em 2026-09-16: on hold. Se
   voltar, é como PACOTE DE SERVIÇOS cobrado à parte, NUNCA dentro de uma
   trilha.** Motivo 1 (contratual): o Fundador é pagamento ÚNICO (R$ 27,90–67,90,
@@ -284,8 +313,8 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Feedback nunca diz só "errado" — sempre indica o que tentar corrigir. A
   mensagem fixa aparece na hora e é trocada pela da Claude quando chega; sem
   rede/chave fica a fixa (o app nunca depende da Claude para funcionar)
-- Paywall: as 25 lições da Fase 1 são grátis hoje (`kFreeLessonCount`, ver
-  Stack) enquanto não há monetização real ativa; o gate volta a valer quando
+- Paywall: as lições das Trilhas 1 e 2 são grátis hoje (`kFreeLessonCount`,
+  ver Stack) enquanto não há monetização real ativa; o gate volta a valer quando
   RevenueCat entrar. Gating passa SEMPRE pela interface `EntitlementService` —
   nunca checar compra direto da UI
 - Lições bônus (`Lesson.bonus`) nunca são pré-requisito de progressão: a
@@ -297,6 +326,7 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   apaga os dados, nunca usar áudio para treinar modelos
 
 ## Docs
-- docs/curriculo-fase1.md — as 10 lições com palavras, foco e critérios
+- docs/curriculo-fase1.md — as 25 lições da Trilha 1 com palavras, foco e critérios
+- docs/curriculo-fase2.md — as 28 lições da Trilha 2 (armadilhas de som)
 - docs/feedback-library.md — mensagens de feedback por tipo de erro
 - Plano completo: ~/Downloads/484Method_Plano_Projeto_CORRIGIDO.docx

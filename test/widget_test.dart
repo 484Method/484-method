@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:method484/data/curriculum.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/main.dart';
 import 'package:method484/models/lesson.dart';
@@ -220,6 +221,47 @@ void main() {
     expect(find.text('Modo precisão'), findsNothing);
   });
 
+  testWidgets(
+      'Trilha 2 só libera depois da última obrigatória da Trilha 1',
+      (tester) async {
+    final store = await _emptyStore();
+    await store.addApproved(const Duration(minutes: 5));
+    final lastMandatory = trilha1.lessons.lastWhere((l) => !l.bonus);
+    for (final l in trilha1.lessons) {
+      if (!l.bonus && l != lastMandatory) {
+        await store.markLessonCompleted(l.id);
+      }
+    }
+    tester.view.physicalSize = const Size(1200, 8000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    Future<void> pumpHome() async {
+      await tester.pumpWidget(MaterialApp(
+        home: HomeScreen(
+          store: store,
+          entitlement: await LocalEntitlementService.load(),
+          assessor: _FakeAssessor(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    await pumpHome();
+    // Falta a última obrigatória: a Trilha 2 aparece, mas trancada, e diz
+    // o porquê (não é "missão anterior" — é a trilha anterior inteira).
+    expect(find.textContaining('Trilha 2 — ${trilha2.title}'), findsOneWidget);
+    expect(find.text('Conclua a trilha anterior para liberar'), findsOneWidget);
+    expect(find.textContaining('Trilha 1 concluída'), findsNothing);
+
+    await store.markLessonCompleted(lastMandatory.id);
+    await pumpHome();
+    // Concluiu: a 1ª lição da Trilha 2 vira a próxima ação, anunciada como
+    // abertura de trilha.
+    expect(find.text('Conclua a trilha anterior para liberar'), findsNothing);
+    expect(find.textContaining('Trilha 1 concluída'), findsOneWidget);
+    expect(find.textContaining(trilha2.lessons.first.title), findsWidgets);
+  });
+
   testWidgets('priorização: Modo precisão aparece após 30min aprovados',
       (tester) async {
     final store = await _emptyStore();
@@ -368,6 +410,44 @@ void main() {
     expect(feedbackFor(mk(72, 40, syl: 'cho'), lesson), contains('"cho"'));
   });
 
+  test('feedback fixo usa a dica de som do item quando reprova', () {
+    const lesson = Lesson(
+      id: 't', title: 't', objective: 't', microSkill: 't',
+      approvalThreshold: 75, minProsody: 70, items: [],
+    );
+    const tip = 'Feche a boca no fim, sem soltar vogal.';
+    PronunciationResult mk(double acc, double minPhon,
+            {String syl = 'big', double completeness = 100,
+            double prosody = 90}) =>
+        PronunciationResult(
+          accuracy: acc, fluency: 100, completeness: completeness,
+          pronScore: acc, prosody: prosody, recognizedText: 't',
+          words: [
+            WordScore(
+              word: 't', accuracy: acc,
+              phonemes: [minPhon, 100],
+              syllables: [SyllableScore(grapheme: syl, accuracy: minPhon)],
+            ),
+          ],
+        );
+    // Som de português num trecho: aponta o trecho E troca a instrução
+    // genérica pela dica da armadilha que a lição treina.
+    final phon = feedbackFor(mk(72, 40), lesson, tip: tip);
+    expect(phon, contains('"big"'));
+    expect(phon, contains(tip));
+    expect(phon, isNot(contains('Escute de novo')));
+    // Prosódia abaixo do piso: a dica também é a instrução.
+    expect(feedbackFor(mk(80, 80, prosody: 50), lesson, tip: tip),
+        contains(tip));
+    // Palavra cortada continua sendo o diagnóstico — não é problema de som.
+    expect(feedbackFor(mk(72, 40, completeness: 60), lesson, tip: tip),
+        allOf(contains('Faltou um pedaço'), isNot(contains(tip))));
+    // Aprovado: comemora, não ensina a armadilha de novo.
+    expect(feedbackFor(mk(98, 96), lesson, tip: tip), isNot(contains(tip)));
+    // Sem dica (Trilha 1): mensagem de sempre.
+    expect(feedbackFor(mk(72, 40), lesson), contains('Escute de novo'));
+  });
+
   test('aprovação multicritério barra pronúncia aportuguesada', () {
     const lesson = Lesson(
       id: 't',
@@ -470,8 +550,9 @@ void main() {
     expect(ent2.hasFounderAccess, isTrue);
   });
 
-  test('regra de produto: todas as lições estão grátis por enquanto', () {
-    expect(kFreeLessonCount, fase1Lessons.length);
+  test('regra de produto: Trilhas 1 e 2 inteiras são grátis (2026-10-11)',
+      () {
+    expect(kFreeLessonCount, curriculum.length);
   });
 
   // Caminho do dinheiro: código válido → resgate → vira Fundador. Usa os seams

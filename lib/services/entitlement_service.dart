@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// build mobile + conta Apple, uma implementação baseada em RevenueCat
 /// satisfaz ESTA MESMA interface — sem tocar na UI nem no gating.
 abstract interface class EntitlementService {
-  /// O usuário tem acesso à oferta Beta Fundador (Fase 1 completa)?
+  /// O usuário tem acesso à oferta Beta Fundador?
   bool get hasFounderAccess;
 
   /// Define o acesso. Na implementação fake (web/dev) é o gatilho de teste;
@@ -16,12 +16,16 @@ abstract interface class EntitlementService {
   Future<void> setFounderAccess(bool value);
 }
 
-/// Quantas lições da Fase 1 ficam liberadas sem o Beta Fundador.
+/// Quantas lições do currículo (na ordem de progressão — ver
+/// lib/data/curriculum.dart) ficam liberadas sem o Beta Fundador.
 ///
 /// 2026-06: todas as 25 lições estão grátis — sem usuário pagante real
 /// ainda (RevenueCat bloqueado por conta Apple), priorizar conseguir os
 /// primeiros usuários reais de teste em vez de gatear conteúdo.
-const int kFreeLessonCount = 25;
+/// 2026-10-11: a Trilha 2 (28 lições) também entrou grátis pra todos, por
+/// decisão do dono — 25 + 28. O teste "Trilhas 1 e 2 inteiras são grátis"
+/// acusa se o currículo mudar de tamanho sem revisar esta decisão.
+const int kFreeLessonCount = 53;
 
 /// Implementação local (web/dev): persiste o acesso em SharedPreferences,
 /// permitindo testar os dois estados sem loja. Default: sem acesso.

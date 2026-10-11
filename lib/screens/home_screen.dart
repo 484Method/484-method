@@ -2,8 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../data/fase1.dart';
+import '../data/curriculum.dart';
 import '../models/lesson.dart';
+import '../models/trail.dart';
 import '../services/analytics_service.dart';
 import '../services/entitlement_service.dart';
 import '../services/progress_store.dart';
@@ -21,12 +22,12 @@ import 'word_memory_screen.dart';
 
 /// Índice palavra → (lição, item) do currículo, montado uma vez. A revisão
 /// espaçada consulta isto a cada build da home e de novo ao abrir a palavra;
-/// varrer as 25 lições item a item toda vez era trabalho repetido à toa.
+/// varrer o currículo inteiro item a item toda vez era trabalho repetido à toa.
 /// Palavra que aparece em mais de uma lição vale pela PRIMEIRA — é a que a
 /// pessoa viu antes, e é sempre uma lição já liberada.
 final Map<String, ({Lesson lesson, int index})> _wordIndex = () {
   final out = <String, ({Lesson lesson, int index})>{};
-  for (final lesson in fase1Lessons) {
+  for (final lesson in curriculum) {
     for (var i = 0; i < lesson.items.length; i++) {
       out.putIfAbsent(lesson.items[i].text, () => (lesson: lesson, index: i));
     }
@@ -102,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _missionFor(String lessonId) {
     var idx = 0;
-    for (final l in fase1Lessons) {
+    for (final l in curriculum) {
       if (l.bonus) continue;
       if (l.id == lessonId) {
         return idx < _missions.length ? _missions[idx] : null;
@@ -141,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.autostartFirstLesson &&
         widget.store.totalApproved == Duration.zero) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _openLesson(fase1Lessons.first);
+        if (mounted) _openLesson(curriculum.first);
       });
     }
   }
@@ -189,7 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Selo persistente de Fundador na AppBar — torna o status (que hoje é o
-  /// que o Fundador compra, já que a Trilha 1 é grátis pra todos) visível.
+  /// que o Fundador compra, já que as Trilhas 1 e 2 são grátis pra todos)
+  /// visível.
   Widget _founderBadge(ThemeData theme) {
     final since = widget.store.founderSince;
     final price = widget.store.founderLockedPriceLabel;
@@ -253,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Garanta acesso vitalício e ajude a decidir o que vem '
-                      'depois da Trilha 1.',
+                      'nas próximas trilhas.',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
@@ -375,11 +377,11 @@ class _HomeScreenState extends State<HomeScreen> {
   /// bloqueiam (nem precisam de) progressão.
   bool _isProgressionUnlocked(int i) {
     int prereq = i - 1;
-    while (prereq >= 0 && fase1Lessons[prereq].bonus) {
+    while (prereq >= 0 && curriculum[prereq].bonus) {
       prereq--;
     }
     return prereq < 0 ||
-        widget.store.isLessonCompleted(fase1Lessons[prereq].id);
+        widget.store.isLessonCompleted(curriculum[prereq].id);
   }
 
   /// Resolve o desafio de hoje em [_challenge]. Tem efeito colateral (persiste
@@ -390,9 +392,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _ensureDailyChallenge() {
     final savedId = widget.store.dailyChallengeLessonId;
     if (savedId != null) {
-      final idx = fase1Lessons.indexWhere((l) => l.id == savedId);
+      final idx = curriculum.indexWhere((l) => l.id == savedId);
       if (idx >= 0 && !_isPaywalled(idx) && _isProgressionUnlocked(idx)) {
-        _challenge = fase1Lessons[idx];
+        _challenge = curriculum[idx];
         return;
       }
     }
@@ -405,7 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// (não troca a cada rebuild; expira sozinho ao virar o dia).
   Lesson? _pickDailyChallenge() {
     final unlocked = [
-      for (final (i, l) in fase1Lessons.indexed)
+      for (final (i, l) in curriculum.indexed)
         if (!_isPaywalled(i) && _isProgressionUnlocked(i)) l,
     ];
     if (unlocked.isEmpty) return null;
@@ -685,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// A "próxima melhor ação": a 1ª lição não-bônus ainda não concluída (o
   /// caminho principal é linear). Null = concluiu tudo.
   Lesson? _nextLesson() {
-    for (final l in fase1Lessons) {
+    for (final l in curriculum) {
       if (l.bonus) continue;
       if (!widget.store.isLessonCompleted(l.id)) return l;
     }
@@ -699,9 +701,19 @@ class _HomeScreenState extends State<HomeScreen> {
     // concreta mais próxima — meta de hoje ou primeiro marco, o que fizer
     // mais sentido pra quem ainda não chegou lá.
     final String text;
+    // Abertura de trilha: a próxima lição é a 1ª de uma trilha nova, então a
+    // anterior acabou de ser concluída — vale dizer isso, não só "treinar X".
+    final trail = trailOf[next.id];
+    final opensTrail = trail != null &&
+        trail.number > 1 &&
+        trail.lessons.first.id == next.id;
     if (isFirst) {
       text = 'Seu próximo passo: fazer sua primeira tentativa de fala '
           '(~5 min) e destravar sua meta de hoje.';
+    } else if (opensTrail) {
+      text = 'Trilha ${trail.number - 1} concluída! Seu próximo passo: abrir '
+          'a Trilha ${trail.number} — ${trail.title} — com "${next.title}" '
+          '(foco: ${next.microSkill}).';
     } else if (!widget.store.reachedFirstMilestone) {
       final remaining = ProgressStore.firstMilestoneSeconds -
           widget.store.totalApproved.inSeconds;
@@ -896,120 +908,74 @@ class _HomeScreenState extends State<HomeScreen> {
   /// #8: reduz o efeito visual de muitos bloqueios — mostra concluídos, o
   /// treino atual e só os próximos poucos bloqueados; o resto fica atrás de
   /// um botão "Ver próximos treinos da trilha".
+  ///
+  /// Trilhas e zonas vêm de lib/data/curriculum.dart; cada cabeçalho entra
+  /// junto da 1ª lição visível do seu grupo (lições escondidas são sempre a
+  /// cauda bloqueada da fila, então grupo sem lição visível some inteiro).
   List<Widget> _lessonList(ThemeData theme) {
     const lockedVisibleLimit = 3;
     final next = _nextLesson();
-    final nextIndex = next == null ? -1 : fase1Lessons.indexOf(next);
+    final nextIndex = next == null ? -1 : curriculum.indexOf(next);
     final widgets = <Widget>[];
     var lockedShown = 0;
     var hiddenCount = 0;
+    // Índice na fila inteira (paywall e pré-requisito são por posição na
+    // fila); o número exibido no card é a posição DENTRO da trilha.
+    var i = -1;
 
-    for (final (i, lesson) in fase1Lessons.indexed) {
-      final completed = widget.store.isLessonCompleted(lesson.id);
-      final paywalled = _isPaywalled(i);
-      final progressionUnlocked = _isProgressionUnlocked(i);
-      final unlocked = !paywalled && progressionUnlocked;
-      final isCurrent = i == nextIndex;
+    for (final trail in trails) {
+      var trailHeaderShown = false;
+      var numberInTrail = 0;
+      for (final (zoneIndex, zone) in trail.zones.indexed) {
+        var zoneHeaderShown = false;
+        for (final lesson in zone.lessons) {
+          i++;
+          numberInTrail++;
+          final completed = widget.store.isLessonCompleted(lesson.id);
+          final paywalled = _isPaywalled(i);
+          final progressionUnlocked = _isProgressionUnlocked(i);
+          final unlocked = !paywalled && progressionUnlocked;
+          final isCurrent = i == nextIndex;
 
-      bool visible;
-      if (_showAllLessons || completed || isCurrent || unlocked) {
-        visible = true;
-      } else if (lockedShown < lockedVisibleLimit) {
-        visible = true;
-        lockedShown++;
-      } else {
-        visible = false;
-      }
+          bool visible;
+          if (_showAllLessons || completed || isCurrent || unlocked) {
+            visible = true;
+          } else if (lockedShown < lockedVisibleLimit) {
+            visible = true;
+            lockedShown++;
+          } else {
+            visible = false;
+          }
 
-      if (!visible) {
-        hiddenCount++;
-        continue;
-      }
+          if (!visible) {
+            hiddenCount++;
+            continue;
+          }
 
-      if (i == 0 || i == 6 || i == 11 || i == 18) {
-        widgets.add(Padding(
-          padding: EdgeInsets.only(top: i == 0 ? 0 : 16, bottom: 4),
-          child: Text(
-            switch (i) {
-              0 => 'Zona 1 — Reconhecimento e confiança',
-              6 => 'Zona 2 — Som e sílaba forte',
-              11 => 'Zona 3 — Da palavra à frase',
-              _ => 'Zona 4 — Conversa do dia a dia',
-            },
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ));
-      }
+          if (!trailHeaderShown) {
+            trailHeaderShown = true;
+            widgets.add(_trailHeader(theme, trail, first: widgets.isEmpty));
+          }
+          if (!zoneHeaderShown) {
+            zoneHeaderShown = true;
+            widgets.add(Padding(
+              padding: EdgeInsets.only(top: zoneIndex == 0 ? 0 : 16, bottom: 4),
+              child: Text(
+                zone.title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ));
+          }
 
-      final mission = _missionFor(lesson.id);
-      final String subtitle;
-      if (paywalled) {
-        subtitle = 'Beta Fundador';
-      } else if (!progressionUnlocked) {
-        subtitle = 'Complete a missão anterior para liberar';
-      } else if (lesson.bonus) {
-        subtitle =
-            'Bônus opcional · ${lesson.items.length} tentativas de fala · ~5 min';
-      } else {
-        subtitle = '${lesson.items.length} tentativas de fala · ~5 min';
+          widgets.add(_lessonCard(theme, lesson, numberInTrail,
+              completed: completed,
+              paywalled: paywalled,
+              progressionUnlocked: progressionUnlocked));
+        }
       }
-      final IconData trailing;
-      if (paywalled) {
-        trailing = Icons.workspace_premium_outlined;
-      } else if (!progressionUnlocked) {
-        trailing = Icons.lock_outline;
-      } else {
-        trailing = completed ? Icons.replay : Icons.play_arrow;
-      }
-      widgets.add(Card(
-        child: ListTile(
-          // Paywalled fica tocável para mostrar o aviso do gate.
-          enabled: unlocked || paywalled,
-          leading: CircleAvatar(
-            backgroundColor: completed
-                ? theme.colorScheme.secondary.withValues(alpha: 0.18)
-                : theme.colorScheme.surfaceContainerHighest,
-            foregroundColor: completed
-                ? theme.colorScheme.secondary
-                : theme.colorScheme.onSurface,
-            child: completed
-                ? const Icon(Icons.check, size: 20)
-                : Text('${i + 1}'),
-          ),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(child: Text(lesson.title)),
-              if (lesson.bonus) ...[
-                const SizedBox(width: 6),
-                Icon(Icons.star, size: 16, color: theme.colorScheme.secondary),
-              ],
-            ],
-          ),
-          isThreeLine: mission != null && !completed,
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (mission != null && !completed)
-                Text('Missão atual: $mission',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.secondary,
-                        fontWeight: FontWeight.w600)),
-              Text(subtitle),
-            ],
-          ),
-          trailing: Icon(trailing),
-          onTap: paywalled
-              ? _openPaywall
-              : unlocked
-                  ? () => _openLesson(lesson)
-                  : null,
-        ),
-      ));
     }
 
     if (hiddenCount > 0 && !_showAllLessons) {
@@ -1023,6 +989,98 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return widgets;
+  }
+
+  /// "Trilha N — nome" + subtítulo. A 1ª da lista cola no topo; as seguintes
+  /// ganham respiro para a troca de trilha ficar visível.
+  Widget _trailHeader(ThemeData theme, Trail trail, {required bool first}) =>
+      Padding(
+        padding: EdgeInsets.only(top: first ? 0 : 28, bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Trilha ${trail.number} — ${trail.title}',
+                style: theme.textTheme.titleMedium),
+            Text(trail.subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant)),
+          ],
+        ),
+      );
+
+  Widget _lessonCard(ThemeData theme, Lesson lesson, int number,
+      {required bool completed,
+      required bool paywalled,
+      required bool progressionUnlocked}) {
+    final unlocked = !paywalled && progressionUnlocked;
+    final mission = _missionFor(lesson.id);
+    final String subtitle;
+    if (paywalled) {
+      subtitle = 'Beta Fundador';
+    } else if (!progressionUnlocked) {
+      subtitle = number == 1 && trailOf[lesson.id]!.number > 1
+          ? 'Conclua a trilha anterior para liberar'
+          : 'Complete a missão anterior para liberar';
+    } else if (lesson.bonus) {
+      subtitle =
+          'Bônus opcional · ${lesson.items.length} tentativas de fala · ~5 min';
+    } else {
+      subtitle = '${lesson.items.length} tentativas de fala · ~5 min';
+    }
+    final IconData trailing;
+    if (paywalled) {
+      trailing = Icons.workspace_premium_outlined;
+    } else if (!progressionUnlocked) {
+      trailing = Icons.lock_outline;
+    } else {
+      trailing = completed ? Icons.replay : Icons.play_arrow;
+    }
+    return Card(
+      child: ListTile(
+        // Paywalled fica tocável para mostrar o aviso do gate.
+        enabled: unlocked || paywalled,
+        leading: CircleAvatar(
+          backgroundColor: completed
+              ? theme.colorScheme.secondary.withValues(alpha: 0.18)
+              : theme.colorScheme.surfaceContainerHighest,
+          foregroundColor: completed
+              ? theme.colorScheme.secondary
+              : theme.colorScheme.onSurface,
+          child: completed
+              ? const Icon(Icons.check, size: 20)
+              : Text('$number'),
+        ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(lesson.title)),
+            if (lesson.bonus) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.star, size: 16, color: theme.colorScheme.secondary),
+            ],
+          ],
+        ),
+        isThreeLine: mission != null && !completed,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (mission != null && !completed)
+              Text('Missão atual: $mission',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.w600)),
+            Text(subtitle),
+          ],
+        ),
+        trailing: Icon(trailing),
+        onTap: paywalled
+            ? _openPaywall
+            : unlocked
+                ? () => _openLesson(lesson)
+                : null,
+      ),
+    );
   }
 
   // #10 Card de abandono: aparece quando a pessoa começou mas não fechou o
@@ -1262,12 +1320,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 4),
               ],
               const SizedBox(height: 12),
-              Text('Trilha 1 — Saia do inglês mudo',
-                  style: theme.textTheme.titleMedium),
-              Text('Inglês que você já conhece',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 8),
               ..._lessonList(theme),
             ],
           ),

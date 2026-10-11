@@ -31,3 +31,20 @@ mensagem da biblioteca (ou Claude API para variações, mantendo o mesmo tom).
 Configurável por lição, nunca hardcoded. Fase 1 começa permissiva (gerar
 vitória, não frustração) e o critério sobe gradualmente. Testar com vozes
 brasileiras reais antes de confiar no score.
+
+## Dica de som (Trilha 2)
+
+Na Trilha 2 cada item tem uma `soundTip` — a instrução física contra a
+armadilha que a lição treina (ex.: "Termine com a boca fechada no som final,
+sem soltar vogal"). Ela entra em três lugares:
+
+| Onde | Como |
+|---|---|
+| Livro Aberto | Card "Dica de som", junto da escrita — só depois da 1ª tentativa de ouvido |
+| Feedback fixo | Reprovou por fonema, prosódia ou no caso genérico → a dica substitui a instrução genérica ("Escute de novo…"). Completude cortada continua com a mensagem de completude; aprovado não repete a dica |
+| Feedback da Claude | Vai como `tip` para a Edge Function `feedback`, que a usa como base da instrução quando a tentativa não passou (com as próprias palavras, sem copiar) |
+
+Regras de escrita da dica: no máximo 160 caracteres, PT-BR, imperativo/"você",
+fala de boca/língua/ar/voz/duração — nunca "pronuncie a letra X", nunca
+símbolos de IPA, sem emojis. Pode contrastar com o erro típico entre aspas
+(ex.: big, não "bigui").

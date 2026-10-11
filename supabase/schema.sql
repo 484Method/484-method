@@ -405,6 +405,11 @@ $function$;
 -- Wrapper: mescla o corpo grande (get_dev_stats_base, intocado) + phase0 + a
 -- contagem de cadastro (chave de topo signup_completed, migração
 -- dev_stats_add_signup) — sem editar a função grande.
+-- Migração dev_stats_bonus_all_trails (2026-10-11): as chaves de bônus do corpo
+-- grande listam só 3 ids da Trilha 1 (faltava fase1-licao27, e a Trilha 2 não
+-- existia). O `||` do jsonb faz a chave da direita vencer, então elas são
+-- recalculadas aqui com os bônus das duas trilhas — de novo sem editar a
+-- função grande. Bônus novo = acrescentar o id nas duas listas abaixo.
 create or replace function public.get_dev_stats()
 returns json language sql stable security definer set search_path = public
 as $function$
@@ -413,6 +418,17 @@ as $function$
     || public.get_phase0_activation()::jsonb
     || jsonb_build_object('signup_completed',
          (select count(*) from events where event = 'signup_completed'))
+    || jsonb_build_object(
+         'bonus_lessons_completed',
+         (select count(*) from events where event = 'lesson_completed'
+            and props->>'lesson' in (
+              'fase1-licao07', 'fase1-licao13', 'fase1-licao20', 'fase1-licao27',
+              'fase2-licao07', 'fase2-licao14', 'fase2-licao21', 'fase2-licao28')),
+         'bonus_users',
+         (select count(distinct user_id) from events where event = 'lesson_completed'
+            and props->>'lesson' in (
+              'fase1-licao07', 'fase1-licao13', 'fase1-licao20', 'fase1-licao27',
+              'fase2-licao07', 'fase2-licao14', 'fase2-licao21', 'fase2-licao28')))
   )::json;
 $function$;
 -- SEGURANÇA: só service_role executa (a Edge Function `dev-stats`, atrás da
