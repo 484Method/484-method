@@ -87,5 +87,29 @@ gen2() {
   done
 }
 
-# FASE2_GEN_LINES
+gen2 licao01 "big" "book" "keep" "club" "Good luck."
+gen2 licao02 "stay" "space" "snack" "skip" "Please speak slowly."
+gen2 licao03 "feel" "tell" "file" "people" "I'll call you."
+gen2 licao04 "time" "phone" "young" "going" "I'm leaving soon."
+gen2 licao05 "watched" "played" "moved" "ended" "I cooked and cleaned."
+gen2 licao07 "desk" "next" "changed" "world" "I helped a friend."
+gen2 licao08 "ship" "sheep" "sit" "seat" "Is it cheap to ship?"
+gen2 licao09 "full" "fool" "pull" "pool" "I cook good food."
+gen2 licao10 "bad" "bed" "sad" "said" "I left my bag."
+gen2 licao11 "cup" "cop" "luck" "lock" "I got lucky."
+gen2 licao12 "work" "walk" "shirt" "short" "I walk to work."
+gen2 licao14 "Please sit back in your seat." "His pool is full." "She said she was sad." "One cup is not much." "My shirt was too short."
+gen2 licao15 "red" "right" "really" "run" "It's raining right now."
+gen2 licao16 "car" "more" "very" "corner" "Where is my car?"
+gen2 licao17 "team" "different" "idea" "city" "It's a different city."
+gen2 licao18 "think" "thanks" "nothing" "both" "I think it's nothing."
+gen2 licao19 "they" "this" "other" "together" "This is the other one."
+gen2 licao21 "three" "north" "rather" "birthday" "My brother's birthday is on the third."
+gen2 licao22 "about" "today" "seven" "breakfast" "Breakfast is at seven."
+gen2 licao23 "I need a break." "I work from home." "Let's grab some lunch." "Pick me up at six." "Call me when you land."
+gen2 licao24 "a cup of coffee" "black and white" "I need to go." "It's for you." "I'm at work."
+gen2 licao25 "I can come." "I can't come." "I can wait." "I can't do it." "We can go now."
+gen2 licao26 "Are you hungry?" "Is it far from here?" "Where are you from?" "What time is it?" "Do you like it?"
+gen2 licao28 "I think I'll stay home tonight." "I worked from home all week." "I can't make it to the meeting." "What time does the store open?" "Is there a good place to eat here?"
+# Revisões da Trilha 2 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.
 

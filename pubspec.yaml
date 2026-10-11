@@ -89,6 +89,30 @@ flutter:
     - assets/audio/fase1/bloco4_dia_bonito/
     - assets/audio/fase1/bloco4_planos/
     - assets/audio/fase1/bloco4_bonus/
+    - assets/audio/fase2/licao01/
+    - assets/audio/fase2/licao02/
+    - assets/audio/fase2/licao03/
+    - assets/audio/fase2/licao04/
+    - assets/audio/fase2/licao05/
+    - assets/audio/fase2/licao07/
+    - assets/audio/fase2/licao08/
+    - assets/audio/fase2/licao09/
+    - assets/audio/fase2/licao10/
+    - assets/audio/fase2/licao11/
+    - assets/audio/fase2/licao12/
+    - assets/audio/fase2/licao14/
+    - assets/audio/fase2/licao15/
+    - assets/audio/fase2/licao16/
+    - assets/audio/fase2/licao17/
+    - assets/audio/fase2/licao18/
+    - assets/audio/fase2/licao19/
+    - assets/audio/fase2/licao21/
+    - assets/audio/fase2/licao22/
+    - assets/audio/fase2/licao23/
+    - assets/audio/fase2/licao24/
+    - assets/audio/fase2/licao25/
+    - assets/audio/fase2/licao26/
+    - assets/audio/fase2/licao28/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

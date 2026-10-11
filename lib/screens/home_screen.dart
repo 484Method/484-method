@@ -694,6 +694,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
+  /// Título entre aspas — a menos que ele já traga aspas próprias (vários
+  /// da Trilha 2, ex.: '"ship" × "sheep"'), senão vira aspas dentro de aspas.
+  static String _quoted(String title) =>
+      title.contains('"') ? title : '"$title"';
+
   /// Card de uma única ação clara no topo do dashboard (#8): evita o paradoxo
   /// de escolha — diz o próximo passo e leva direto a ele.
   Widget _nextBestActionCard(ThemeData theme, Lesson next, bool isFirst) {
@@ -712,18 +717,18 @@ class _HomeScreenState extends State<HomeScreen> {
           '(~5 min) e destravar sua meta de hoje.';
     } else if (opensTrail) {
       text = 'Trilha ${trail.number - 1} concluída! Seu próximo passo: abrir '
-          'a Trilha ${trail.number} — ${trail.title} — com "${next.title}" '
-          '(foco: ${next.microSkill}).';
+          'a Trilha ${trail.number} — ${trail.title} — com '
+          '${_quoted(next.title)} (foco: ${next.microSkill}).';
     } else if (!widget.store.reachedFirstMilestone) {
       final remaining = ProgressStore.firstMilestoneSeconds -
           widget.store.totalApproved.inSeconds;
       final remainingMin = (remaining / 60).ceil().clamp(1, 999);
-      text = 'Seu próximo passo: treinar "${next.title}" — foco: '
+      text = 'Seu próximo passo: treinar ${_quoted(next.title)} — foco: '
           '${next.microSkill} (${next.items.length} tentativas de fala) e '
           'chegar mais perto do seu primeiro marco — faltam '
           '~${remainingMin}min aprovados.';
     } else {
-      text = 'Seu próximo passo: treinar "${next.title}" — foco: '
+      text = 'Seu próximo passo: treinar ${_quoted(next.title)} — foco: '
           '${next.microSkill} (${next.items.length} tentativas de fala) e '
           'ganhar mais minutos aprovados na sua jornada.';
     }
