@@ -46,3 +46,8 @@ app.*.map.json
 
 # Segredos locais (chaves de API)
 .env
+
+# Exports do painel do dev têm PII de usuário real (nome/e-mail) — nunca vão
+# pro histórico do git. Só analytics/resumo-*.md (agregado, sem PII) é
+# versionado. Ver analytics/README.md.
+/analytics/raw/

@@ -195,6 +195,16 @@ class Backend {
     } catch (e) {
       debugPrint('[backend] deleteRemoteData falhou: $e');
     }
+    // feedback_quota/assess_quota são RLS-sem-policy (só a função abaixo
+    // mexe nelas, mesmo padrão de consume_feedback_quota/consume_assess_quota)
+    // — bloco próprio pra uma falha aqui não impedir o resto da exclusão.
+    // access_codes.redeemed_by fica de propósito intocado (ver schema.sql):
+    // apagar reabriria o código de Fundador pra resgate via exclusão+recadastro.
+    try {
+      await client.rpc('delete_own_quota_rows');
+    } catch (e) {
+      debugPrint('[backend] deleteRemoteData (quota) falhou: $e');
+    }
   }
 
   /// Painel de uso interno. `get_dev_stats()` não é chamável direto pelo

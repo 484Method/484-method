@@ -153,6 +153,7 @@ class _LessonScreenState extends State<LessonScreen>
     switch (_recPhase) {
       case _RecPhase.idle:
         if (!await _recorder.hasPermission()) {
+          if (!mounted) return;
           setState(() => _error =
               'Sem acesso ao microfone. Clique no ícone de cadeado ou '
               'câmera ao lado do endereço do site, permita o microfone e '
@@ -189,6 +190,7 @@ class _LessonScreenState extends State<LessonScreen>
         'lesson': widget.lesson.id,
         'item': _item.text,
       });
+      if (!mounted) return;
       setState(() {
         _recPhase = _RecPhase.idle;
         _error = 'Não ouvi nada — fale mais perto do microfone.';
@@ -226,7 +228,12 @@ class _LessonScreenState extends State<LessonScreen>
       final srsWord = _item.text;
       final srsStageBefore =
           isFinalAttempt ? widget.store?.srsStageOf(srsWord) : null;
-      setState(() {
+      // Só a chamada de setState em si pode crashar (widget desmontado); os
+      // campos por trás — inclusive o addApproved, o minuto aprovado de
+      // verdade — têm que ser aplicados de qualquer jeito: se a tela fechou
+      // bem no meio do await do assess, o resultado já chegou e é válido,
+      // não pode se perder só porque não há mais UI pra atualizar.
+      void applyResult() {
         _result = result;
         _aiFeedback = null;
         _audioSent += audio.duration;
@@ -243,7 +250,13 @@ class _LessonScreenState extends State<LessonScreen>
           }
           _step = _Step.resultFinal;
         }
-      });
+      }
+
+      if (mounted) {
+        setState(applyResult);
+      } else {
+        applyResult();
+      }
       // Eventos de ativação (Fase 0) — só na 1ª vez (gating no store).
       _logFirst('first_recording_completed');
       if (attempt == 1) {
@@ -284,6 +297,7 @@ class _LessonScreenState extends State<LessonScreen>
         'attempt': attempt,
         'error': e.toString(),
       });
+      if (!mounted) return;
       setState(() {
         _audioSent += audio.duration;
         // PronunciationAssessmentException já distingue erro do servidor
