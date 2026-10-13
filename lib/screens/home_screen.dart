@@ -365,7 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openWordMemory() {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => WordMemoryScreen(onReviewWord: _reviewWord),
+      builder: (_) =>
+          WordMemoryScreen(onReviewWord: _reviewWord, store: widget.store),
     ));
   }
 
