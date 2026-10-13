@@ -265,6 +265,25 @@ class Backend {
     }
   }
 
+  /// Links dos grupos de WhatsApp (app_config 'community', leitura pública):
+  /// {cohort_url, founders_url}. Ficam no banco, não no código, pra trocar o
+  /// convite (WhatsApp permite redefinir) sem novo deploy. Falha/offline ou
+  /// sem config → mapa vazio (a home só não mostra o botão).
+  Future<Map<String, String>> fetchCommunityLinks() async {
+    try {
+      final row = await client
+          .from('app_config')
+          .select('value')
+          .eq('key', 'community')
+          .maybeSingle()
+          .timeout(const Duration(seconds: 4));
+      return parseCommunityLinks(row?['value']);
+    } catch (e) {
+      debugPrint('[backend] fetchCommunityLinks falhou: $e');
+      return const {};
+    }
+  }
+
   /// Resgata um código de acesso (Fundador) via RPC atômica SECURITY DEFINER.
   /// True = código válido e marcado como usado por este usuário; false =
   /// inexistente/já usado. Erro de rede também vira false (o cliente avisa).
@@ -397,4 +416,26 @@ class Backend {
       return const [];
     }
   }
+}
+
+/// Valida o valor de app_config 'community'. Só aceita convite de grupo do
+/// WhatsApp (https://chat.whatsapp.com/...): a linha é editável pelo painel
+/// do Supabase e o app abre o link direto, então nada de URL arbitrária.
+Map<String, String> parseCommunityLinks(Object? value) {
+  if (value is! Map) return const {};
+  final out = <String, String>{};
+  for (final key in const ['cohort_url', 'founders_url']) {
+    final v = value[key];
+    if (v is String) {
+      final uri = Uri.tryParse(v.trim());
+      if (uri != null &&
+          uri.scheme == 'https' &&
+          uri.host == 'chat.whatsapp.com' &&
+          uri.pathSegments.isNotEmpty &&
+          uri.pathSegments.first.isNotEmpty) {
+        out[key] = uri.toString();
+      }
+    }
+  }
+  return out;
 }
