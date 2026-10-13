@@ -88,6 +88,13 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `parseCommunityLinks`; SQL pra ligar no fim do schema.sql). Evento
   `community_group_clicked` (props.group = cohort/founders) — comparar
   retenção de quem entrou vs. quem não.
+- ✅ "Instale o 484" (2026-10-13, caminho 1 antes das lojas): o app web vira
+  ícone na tela de início (PWA; manifest standalone + metas apple já
+  existiam). Linha na home depois da 1ª prática, só em iPhone/Android fora
+  do modo instalado (`device_info.installTarget`/`isInstalledApp`), com
+  passo a passo em bottom sheet; "Não mostrar mais" (`ProgressStore.
+  installHintDismissed`). Eventos `install_hint_opened`/`_dismissed`; adesão
+  medida pelo campo `display` (standalone/browser) do `device_info`.
 - ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
   pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
   sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma

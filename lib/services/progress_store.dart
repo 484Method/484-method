@@ -32,6 +32,7 @@ class ProgressStore {
   static const _kAhaAnswered = 'aha_answered';
   static const _kAbandonAsked = 'abandon_asked';
   static const _kPmfAsked = 'pmf_asked';
+  static const _kInstallHintDismissed = 'install_hint_dismissed';
   static const _kItemIndexPrefix = 'lesson_item_index_';
   static const _kApprovedTodaySeconds = 'approved_seconds_today';
   static const _kApprovedTodayDate = 'approved_seconds_today_date';
@@ -222,6 +223,14 @@ class ProgressStore {
   bool get hasAskedPmf => _prefs.getBool(_kPmfAsked) ?? false;
 
   Future<void> setAskedPmf() => _prefs.setBool(_kPmfAsked, true);
+
+  /// "Instale o 484 na tela de início": a pessoa pediu pra não ver mais.
+  /// Só local — é dica de UX, não métrica (a adesão sai no device_info).
+  bool get installHintDismissed =>
+      _prefs.getBool(_kInstallHintDismissed) ?? false;
+
+  Future<void> dismissInstallHint() =>
+      _prefs.setBool(_kInstallHintDismissed, true);
 
   bool isLessonCompleted(String lessonId) =>
       (_prefs.getStringList(_kCompletedLessons) ?? const [])
