@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/main.dart';
+import 'package:method484/services/backend.dart';
 import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/home_screen.dart';
 import 'package:method484/screens/lesson_screen.dart';
@@ -668,6 +669,23 @@ void main() {
         SpeechCategory.rhythm);
     expect(mem.review.firstWhere((s) => s.word == 'banana').category,
         SpeechCategory.pronunciation); // sem prosódia → pronúncia
+  });
+
+  test('grupos de WhatsApp: só aceita convite do chat.whatsapp.com', () {
+    expect(parseCommunityLinks(null), isEmpty);
+    expect(parseCommunityLinks('x'), isEmpty);
+    final links = parseCommunityLinks({
+      'cohort_url': ' https://chat.whatsapp.com/AbC123 ',
+      'founders_url': 'https://evil.example.com/chat.whatsapp.com/x',
+    });
+    expect(links, {'cohort_url': 'https://chat.whatsapp.com/AbC123'});
+    // http (sem s), sem código do convite ou outro domínio: fora.
+    expect(
+        parseCommunityLinks({
+          'cohort_url': 'http://chat.whatsapp.com/AbC123',
+          'founders_url': 'https://chat.whatsapp.com/',
+        }),
+        isEmpty);
   });
 
   test('recorde pessoal: 1ª nota é ponto de partida; só nota maior bate',

@@ -624,3 +624,14 @@ end;
 $function$;
 revoke all on function public.consume_assess_quota(int) from public;
 grant execute on function public.consume_assess_quota(int) to authenticated, anon;
+
+-- ── Grupos de WhatsApp (2026-10-13) ─────────────────────────────────────────
+-- Comunidade fica FORA do app de propósito (teste barato de accountability).
+-- O app lê app_config 'community' (leitura pública, já coberta pela policy de
+-- app_config) e mostra "Entrar no grupo" só se houver link válido de
+-- https://chat.whatsapp.com/. Sem migração: é uma linha a mais. Pra ligar,
+-- rode no SQL editor trocando os links (founders_url é opcional):
+--   insert into public.app_config (key, value) values ('community',
+--     jsonb_build_object('cohort_url', 'https://chat.whatsapp.com/SEU_CODIGO',
+--                        'founders_url', 'https://chat.whatsapp.com/OUTRO'))
+--   on conflict (key) do update set value = excluded.value, updated_at = now();
