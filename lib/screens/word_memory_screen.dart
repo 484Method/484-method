@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/backend.dart';
+import '../ui/app_style.dart';
 
 /// Categoria do ponto de fala a revisar — derivada de dado real (o app só
 /// mede pronúncia/accuracy e ritmo/prosódia; não há sinal pra "estrutura de
@@ -91,15 +92,18 @@ class _WordMemoryScreenState extends State<WordMemoryScreen> {
   late final Future<List<Map<String, dynamic>>> _future =
       Backend.instance?.fetchAttemptHistory() ?? Future.value(const []);
 
-  Color _colorFor(double accuracy) {
-    if (accuracy >= 80) return Colors.green.shade600;
-    if (accuracy >= 60) return Colors.orange.shade700;
-    return Colors.red.shade600;
+  /// Cor com significado: verde só pra palavra dominada (aprovada); a
+  /// revisar fica vermelha quando a nota é baixa e neutra no meio-termo.
+  Color _colorFor(AppColors c, WordStat s) {
+    if (s.mastered) return c.green;
+    if (s.bestAccuracy < 60) return c.red;
+    return c.label;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = AppColors.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Meu mapa de fala')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -110,17 +114,7 @@ class _WordMemoryScreenState extends State<WordMemoryScreen> {
           }
           final mem = aggregateWordMemory(snap.data ?? const []);
           if (mem.review.isEmpty && mem.mastered.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'Faça alguns treinos e seu mapa de fala aparece aqui — '
-                  'onde você trava (pronúncia, ritmo) e o que já domina.',
-                  style: theme.textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
+            return _empty(theme, c);
           }
           final pron = mem.review
               .where((s) => s.category == SpeechCategory.pronunciation)
@@ -130,19 +124,27 @@ class _WordMemoryScreenState extends State<WordMemoryScreen> {
               .toList();
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints:
+                  const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
               child: ListView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(
+                    AppStyle.pagePadding, 8, AppStyle.pagePadding, 32),
                 children: [
-                  Text(
-                    'Onde você trava na fala — e o que já domina.',
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      widget.onReviewWord != null
+                          ? 'Onde você trava na fala e o que já domina. Toque '
+                              'numa palavra a revisar para treinar de novo.'
+                          : 'Onde você trava na fala e o que já domina.',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: c.secondaryLabel),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  ..._section(theme, 'Pronúncia a revisar', pron),
-                  ..._section(theme, 'Ritmo a revisar', rhythm),
-                  ..._section(theme, 'Palavras dominadas', mem.mastered),
+                  const SizedBox(height: 24),
+                  ..._section(theme, c, 'Pronúncia a revisar', pron),
+                  ..._section(theme, c, 'Ritmo a revisar', rhythm),
+                  ..._section(theme, c, 'Palavras dominadas', mem.mastered),
                 ],
               ),
             ),
@@ -152,39 +154,73 @@ class _WordMemoryScreenState extends State<WordMemoryScreen> {
     );
   }
 
-  List<Widget> _section(ThemeData theme, String label, List<WordStat> items) {
+  Widget _empty(ThemeData theme, AppColors c) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.graphic_eq_rounded, size: 48, color: c.tertiaryLabel),
+              const SizedBox(height: 16),
+              Text('Seu mapa ainda está vazio',
+                  style: theme.textTheme.titleLarge,
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              Text(
+                'Faça alguns treinos. Aqui aparece onde você trava '
+                '(pronúncia, ritmo) e o que já domina.',
+                style:
+                    theme.textTheme.bodyLarge?.copyWith(color: c.secondaryLabel),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _section(
+      ThemeData theme, AppColors c, String label, List<WordStat> items) {
     if (items.isEmpty) return const [];
     return [
-      Text('$label (${items.length})',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(color: theme.colorScheme.secondary)),
-      const SizedBox(height: 8),
-      for (final s in items) _wordTile(theme, s),
-      const SizedBox(height: 24),
+      InsetGroup(
+        header: '$label (${items.length})',
+        children: [for (final s in items) _wordRow(theme, c, s)],
+      ),
+      const SizedBox(height: 28),
     ];
   }
 
-  Widget _wordTile(ThemeData theme, WordStat s) {
-    final color = _colorFor(s.bestAccuracy);
+  Widget _wordRow(ThemeData theme, AppColors c, WordStat s) {
     final canReview = !s.mastered && widget.onReviewWord != null;
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.15),
-          child: Icon(s.mastered ? Icons.check : Icons.refresh,
-              color: color, size: 20),
-        ),
-        title: Text(s.word),
-        subtitle: Text(canReview
-            ? 'Toque para treinar de novo'
-            : '${s.attempts} ${s.attempts == 1 ? "tentativa" : "tentativas"}'),
-        trailing: Text(
-          '${s.bestAccuracy.round()}',
-          style: theme.textTheme.titleMedium
-              ?.copyWith(color: color, fontWeight: FontWeight.bold),
-        ),
-        onTap: canReview ? () => widget.onReviewWord!(s.word) : null,
+    return ListTile(
+      leading: s.mastered
+          ? Icon(Icons.check_circle_rounded, color: c.green)
+          : null,
+      title: Text(s.word),
+      subtitle: Text(
+          '${s.attempts} ${s.attempts == 1 ? "tentativa" : "tentativas"}'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${s.bestAccuracy.round()}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: _colorFor(c, s),
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          if (canReview) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel),
+          ],
+        ],
       ),
+      onTap: canReview ? () => widget.onReviewWord!(s.word) : null,
     );
   }
 }

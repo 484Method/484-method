@@ -117,7 +117,7 @@ void main() {
     expect(find.textContaining('Regra do jogo'), findsOneWidget);
     // Cadastro NÃO aparece antes da 1ª gravação — a pessoa nem chegou lá
     // ainda, então isso não pode travar o autostart pra dentro da lição.
-    expect(find.text('Antes de continuar'), findsNothing);
+    expect(find.text('Salve seu progresso'), findsNothing);
   });
 
   testWidgets(
@@ -133,7 +133,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Antes de continuar'), findsNothing);
+    expect(find.text('Salve seu progresso'), findsNothing);
 
     // Simula quem já fez a 1ª gravação (o firstOnce grava o marcador) mas
     // ainda não se cadastrou — ao reabrir a Home, o gate aparece.
@@ -146,15 +146,15 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Antes de continuar'), findsOneWidget);
+    expect(find.text('Salve seu progresso'), findsOneWidget);
 
     // Completa o cadastro → volta a ver a dashboard normal.
     await tester.enterText(find.byType(TextField).at(0), 'Ana');
     await tester.enterText(find.byType(TextField).at(1), 'ana@exemplo.com');
     await tester.pump();
-    await tester.tap(find.text('Entrar'));
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
-    expect(find.text('Antes de continuar'), findsNothing);
+    expect(find.text('Salve seu progresso'), findsNothing);
     expect(store.hasRegistered, isTrue);
   });
 
@@ -179,17 +179,18 @@ void main() {
     ));
     await tester.pumpAndSettle();
     // #5/#6: nada de "Fase"/"Bloco" — linguagem de treino, não de curso.
-    expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
+    expect(find.textContaining('Saia do inglês mudo'),
         findsOneWidget);
-    expect(find.textContaining('Zona 1 — Reconhecimento e confiança'),
+    expect(find.textContaining('Zona 1 · Reconhecimento e confiança'),
         findsOneWidget);
     expect(find.textContaining('tentativas de fala'), findsWidgets);
     // #7: meta de hoje e primeiro marco aparecem antes da jornada 484h.
     expect(find.textContaining('Meta de hoje'), findsOneWidget);
     expect(find.textContaining('Primeiro marco'), findsOneWidget);
-    // #9: a próxima ação nomeia o treino e a micro-habilidade (foco).
-    expect(find.textContaining('foco: ${licao01.microSkill}'),
-        findsOneWidget);
+    // #9: a próxima ação nomeia o treino (o microSkill é nota interna do
+    // currículo e saiu da tela no visual clean de 2026-10-13).
+    expect(find.text('Seu próximo treino'), findsOneWidget);
+    expect(find.text(licao01.title), findsWidgets);
     // Priorização: "Modo precisão" só aparece depois de 30min aprovados —
     // com 20s aqui ele fica escondido (staging coberto em teste próprio).
     expect(find.text('Modo precisão'), findsNothing);
@@ -210,8 +211,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
     // O caminho único: próxima ação + a trilha de lições.
-    expect(find.textContaining('Próxima melhor ação'), findsOneWidget);
-    expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
+    expect(find.textContaining('Seu próximo treino'), findsOneWidget);
+    expect(find.textContaining('Saia do inglês mudo'),
         findsOneWidget);
     // Medidores e ofertas secundárias NÃO aparecem no dia 0.
     expect(find.textContaining('Meta de hoje'), findsNothing);

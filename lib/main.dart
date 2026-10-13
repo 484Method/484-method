@@ -11,6 +11,7 @@ import 'services/backend_assessor.dart';
 import 'services/device_info.dart';
 import 'services/entitlement_service.dart';
 import 'services/progress_store.dart';
+import 'ui/app_style.dart';
 
 // Injetadas em tempo de build pelos scripts em tool/ (que leem o .env).
 // A chave do Azure NÃO entra aqui: a avaliação passa pela Edge Function
@@ -84,90 +85,250 @@ class Method484App extends StatefulWidget {
 }
 
 class _Method484AppState extends State<Method484App> {
-  static const _navy  = Color(0xFF1B2D4F);
-  static const _gold  = Color(0xFFC9A252);
-  static const _cream = Color(0xFFF5F2EB);
-  // Tons do tema escuro (mantêm a identidade navy/gold da marca).
-  static const _darkBg   = Color(0xFF0F1626);
-  static const _darkCard = Color(0xFF1B2740);
+  // Visual "clean", inspirado nos apps da Apple (2026-10-13): neutros +
+  // um acento só, tipografia fazendo a hierarquia, cartões brancos sem
+  // sombra sobre fundo cinza agrupado, barra superior da cor da página.
+  // A marca fica no acento: navy no claro, dourado no escuro (contraste).
+  // Regras pra telas: ver comentário de AppColors em lib/ui/app_style.dart.
+  static const _navy = AppColors.navy;
+  static const _gold = AppColors.gold;
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final base = ColorScheme.fromSeed(seedColor: _navy, brightness: brightness);
-    final cs = isDark
-        ? base.copyWith(
-            primary: _gold, // no escuro o dourado vira o destaque (contraste)
-            onPrimary: _navy,
-            secondary: _gold,
-            onSecondary: _navy,
-            tertiary: _gold,
-            onTertiary: _navy,
-            surface: _darkBg,
-            onSurface: _cream,
-            surfaceContainerHighest: _darkCard,
-          )
-        : base.copyWith(
-            primary: _navy,
-            onPrimary: Colors.white,
-            secondary: _gold,
-            onSecondary: Colors.white,
-            tertiary: _gold,
-            onTertiary: Colors.white,
-            surface: _cream,
-            onSurface: _navy,
-            surfaceContainerHighest: const Color(0xFFEBE7DE),
-          );
+    final c = isDark ? AppColors.dark : AppColors.light;
+    final cs = ColorScheme(
+      brightness: brightness,
+      primary: isDark ? _gold : _navy,
+      onPrimary: isDark ? _navy : Colors.white,
+      primaryContainer: c.accentFill,
+      onPrimaryContainer: isDark ? _gold : _navy,
+      secondary: _gold,
+      onSecondary: isDark ? _navy : Colors.white,
+      secondaryContainer: c.goldFill,
+      onSecondaryContainer: c.label,
+      tertiary: c.green,
+      onTertiary: Colors.white,
+      tertiaryContainer: c.greenFill,
+      onTertiaryContainer: c.label,
+      error: c.red,
+      onError: Colors.white,
+      errorContainer: c.redFill,
+      onErrorContainer: c.label,
+      surface: c.background,
+      onSurface: c.label,
+      onSurfaceVariant: c.secondaryLabel,
+      surfaceContainerLowest: c.card,
+      surfaceContainerLow: c.card,
+      surfaceContainer: c.card,
+      surfaceContainerHigh: c.fill,
+      surfaceContainerHighest: c.fill,
+      outline: c.tertiaryLabel,
+      outlineVariant: c.separator,
+      inverseSurface: c.label,
+      onInverseSurface: c.background,
+      shadow: Colors.black,
+      scrim: Colors.black,
+    );
+
+    // Inter é a fonte livre mais próxima da SF Pro. Escala da Apple (HIG):
+    // títulos grandes com tracking negativo, corpo 17/15, nota de rodapé 13.
+    final inter = GoogleFonts.interTextTheme();
+    TextStyle? t(TextStyle? s, double size, FontWeight w,
+            {double tracking = 0, double height = 1.25, Color? color}) =>
+        s?.copyWith(
+          fontSize: size,
+          fontWeight: w,
+          letterSpacing: tracking,
+          height: height,
+          color: color ?? c.label,
+        );
+    final textTheme = TextTheme(
+      displayLarge: t(inter.displayLarge, 56, FontWeight.w700, tracking: -1.2, height: 1.05),
+      displayMedium: t(inter.displayMedium, 44, FontWeight.w700, tracking: -0.9, height: 1.08),
+      displaySmall: t(inter.displaySmall, 34, FontWeight.w700, tracking: -0.6, height: 1.12),
+      headlineLarge: t(inter.headlineLarge, 30, FontWeight.w700, tracking: -0.5, height: 1.15),
+      headlineMedium: t(inter.headlineMedium, 26, FontWeight.w700, tracking: -0.4, height: 1.18),
+      headlineSmall: t(inter.headlineSmall, 22, FontWeight.w600, tracking: -0.3, height: 1.2),
+      titleLarge: t(inter.titleLarge, 20, FontWeight.w600, tracking: -0.2),
+      titleMedium: t(inter.titleMedium, 17, FontWeight.w600, tracking: -0.2),
+      titleSmall: t(inter.titleSmall, 15, FontWeight.w600, tracking: -0.1),
+      bodyLarge: t(inter.bodyLarge, 17, FontWeight.w400, tracking: -0.2, height: 1.35),
+      bodyMedium: t(inter.bodyMedium, 15, FontWeight.w400, tracking: -0.1, height: 1.35),
+      bodySmall: t(inter.bodySmall, 13, FontWeight.w400, height: 1.3, color: c.secondaryLabel),
+      labelLarge: t(inter.labelLarge, 17, FontWeight.w600, tracking: -0.2),
+      labelMedium: t(inter.labelMedium, 13, FontWeight.w500, color: c.secondaryLabel),
+      labelSmall: t(inter.labelSmall, 12, FontWeight.w500, tracking: 0.1, color: c.secondaryLabel),
+    );
+
+    final buttonShape =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppStyle.buttonRadius));
+    const buttonSize = Size(64, AppStyle.buttonHeight);
+    final buttonText = textTheme.labelLarge;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: cs,
-      scaffoldBackgroundColor: cs.surface,
+      scaffoldBackgroundColor: c.background,
+      canvasColor: c.background,
       fontFamily: GoogleFonts.inter().fontFamily,
-      textTheme: TextTheme(
-        headlineLarge:  GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
-        headlineMedium: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold, height: 1.2),
-        headlineSmall:  GoogleFonts.playfairDisplay(fontWeight: FontWeight.w600),
-        titleLarge:     GoogleFonts.playfairDisplay(fontWeight: FontWeight.w600),
-        titleMedium:    GoogleFonts.playfairDisplay(fontWeight: FontWeight.w500, fontSize: 16),
-      ),
+      textTheme: textTheme,
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: c.fill,
+      dividerColor: c.separator,
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? _darkCard : _navy,
-        foregroundColor: Colors.white,
+        backgroundColor: c.background,
+        foregroundColor: c.label,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.playfairDisplay(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actionsIconTheme: const IconThemeData(color: Colors.white),
+        centerTitle: true,
+        titleTextStyle: textTheme.titleMedium,
+        iconTheme: IconThemeData(color: cs.primary),
+        actionsIconTheme: IconThemeData(color: cs.primary),
       ),
       cardTheme: CardThemeData(
-        color: isDark ? _darkCard : Colors.white,
+        color: c.card,
         surfaceTintColor: Colors.transparent,
-        elevation: isDark ? 1 : 2,
-        shadowColor: isDark
-            ? Colors.black.withValues(alpha: 0.4)
-            : _navy.withValues(alpha: 0.12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppStyle.cardRadius)),
       ),
+      listTileTheme: ListTileThemeData(
+        tileColor: Colors.transparent,
+        iconColor: cs.primary,
+        titleTextStyle: textTheme.bodyLarge,
+        subtitleTextStyle: textTheme.bodySmall,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        minVerticalPadding: 12,
+      ),
+      dividerTheme: DividerThemeData(
+          color: c.separator, thickness: 0.5, space: 0.5),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: _gold,
-          foregroundColor: Colors.white,
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          backgroundColor: cs.primary,
+          foregroundColor: cs.onPrimary,
+          disabledBackgroundColor: c.fill,
+          disabledForegroundColor: c.tertiaryLabel,
+          textStyle: buttonText,
+          minimumSize: buttonSize,
+          shape: buttonShape,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: cs.primary,
+          foregroundColor: cs.onPrimary,
+          textStyle: buttonText,
+          minimumSize: buttonSize,
+          shape: buttonShape,
+          elevation: 0,
+        ),
+      ),
+      // Botão secundário no estilo iOS "tinted": fundo do acento bem claro,
+      // sem borda — em vez do contorno do Material.
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: c.accentFill,
+          foregroundColor: cs.primary,
+          side: BorderSide.none,
+          textStyle: buttonText,
+          minimumSize: buttonSize,
+          shape: buttonShape,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: cs.primary,
+          textStyle: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+          minimumSize: const Size(44, 44),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(foregroundColor: cs.primary),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: cs.primary,
+        linearTrackColor: c.fill,
+        linearMinHeight: 6,
+        borderRadius: BorderRadius.circular(3),
+        circularTrackColor: c.fill,
+      ),
+      // Switch no padrão iOS: verde quando ligado.
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? _gold : null,
-        ),
+        thumbColor: WidgetStateProperty.all(Colors.white),
         trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? _gold.withValues(alpha: 0.4) : null,
+          (s) => s.contains(WidgetState.selected) ? c.green : c.fill,
         ),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? cs.primary : null,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: c.card,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppStyle.buttonRadius),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppStyle.buttonRadius),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppStyle.buttonRadius),
+          borderSide: BorderSide(color: cs.primary, width: 1.5),
+        ),
+        labelStyle: textTheme.bodyLarge?.copyWith(color: c.secondaryLabel),
+        hintStyle: textTheme.bodyLarge?.copyWith(color: c.tertiaryLabel),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: c.fill,
+        side: BorderSide.none,
+        labelStyle: textTheme.bodyMedium,
+        shape: const StadiumBorder(),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: c.label,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: c.background),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: c.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: textTheme.titleMedium,
+        contentTextStyle: textTheme.bodyMedium,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: c.card,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: c.card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: textTheme.bodyLarge,
+      ),
+      expansionTileTheme: ExpansionTileThemeData(
+        shape: const Border(),
+        collapsedShape: const Border(),
+        iconColor: c.secondaryLabel,
+        collapsedIconColor: c.secondaryLabel,
+        textColor: c.label,
+        collapsedTextColor: c.label,
       ),
     );
   }

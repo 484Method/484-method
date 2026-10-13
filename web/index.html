@@ -20,13 +20,20 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Treino oral de inglês para brasileiros. Escute, repita, grave e receba feedback em português.">
 
-  <!-- Theme color — Android Chrome address bar + task switcher -->
-  <meta name="theme-color" content="#1B2D4F">
+  <!-- Theme color (barra do navegador / task switcher): a MESMA cor de
+       fundo do app (cinza claro no tema claro, preto no escuro), pra barra
+       se fundir com a página em vez de virar uma faixa colorida. Ficam
+       antes de qualquer meta que o Flutter injete em runtime, e o navegador
+       usa a primeira que casar com o media. -->
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 
-  <!-- iOS PWA -->
+  <!-- iOS PWA. "default" (barra opaca, texto escuro) em vez de
+       "black-translucent": com o fundo claro, o texto branco da barra
+       translúcida sumiria em cima da página. -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="484 Method">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -45,32 +52,42 @@
     frame (baixa ~3 MB de bundle e o main() espera o Supabase), e sem isto a
     tela fica BRANCA nesse intervalo — foi o que os testadores viram em
     2026-09-16, quando o projeto Supabase estava pausado e o boot demorava.
-    Navy/creme são as cores da marca (iguais às de main.dart).
+    Cores = fundo/texto do app (AppColors em lib/ui/app_style.dart): cinza
+    claro #F2F2F7 / texto #1C1C1E no claro, preto / branco no escuro. Assim
+    não há "flash" de outra cor entre o splash e o primeiro frame.
   -->
   <style>
-    html, body { margin: 0; padding: 0; background: #1B2D4F; }
+    html, body { margin: 0; padding: 0; background: #F2F2F7; }
     #boot {
       position: fixed; inset: 0; z-index: 9999;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      background: #1B2D4F; color: #F5F2EB;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F2F2F7; color: #1C1C1E;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
       text-align: center; padding: 24px;
+      -webkit-font-smoothing: antialiased;
     }
-    #boot .mark { font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+    #boot .mark { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
     #boot .spin {
-      width: 28px; height: 28px; margin: 20px 0 14px;
-      border: 3px solid rgba(245, 242, 235, 0.25);
-      border-top-color: #C9A252; border-radius: 50%;
+      width: 24px; height: 24px; margin: 22px 0 14px;
+      border: 2.5px solid #E5E5EA;
+      border-top-color: #1B2D4F; border-radius: 50%;
       animation: boot-spin 0.9s linear infinite;
     }
-    #boot .msg { font-size: 15px; opacity: 0.85; }
+    #boot .msg { font-size: 15px; color: #6C6C70; }
     /* Só aparece se o boot demorar — silêncio prolongado assusta mais que
        uma frase honesta. */
-    #boot .slow { font-size: 13px; opacity: 0; margin-top: 10px; max-width: 320px;
+    #boot .slow { font-size: 13px; color: #6C6C70; opacity: 0; margin-top: 10px;
+                  max-width: 320px; line-height: 1.35;
                   transition: opacity 0.4s ease; }
-    #boot.is-slow .slow { opacity: 0.7; }
+    #boot.is-slow .slow { opacity: 1; }
     @keyframes boot-spin { to { transform: rotate(360deg); } }
+    @media (prefers-color-scheme: dark) {
+      html, body, #boot { background: #000000; }
+      #boot { color: #FFFFFF; }
+      #boot .spin { border-color: #2C2C2E; border-top-color: #C9A252; }
+      #boot .msg, #boot .slow { color: #98989F; }
+    }
     @media (prefers-reduced-motion: reduce) {
       #boot .spin { animation: none; }
     }
