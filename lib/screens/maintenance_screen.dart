@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/backend.dart';
+import '../ui/app_style.dart';
 import 'stats_screen.dart';
 
 /// Tela exibida quando o liga/desliga do app (app_config/'maintenance') está
@@ -56,47 +57,72 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final text = Theme.of(context).textTheme;
+    final c = AppColors.of(context);
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
+      body: SafeArea(
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints:
+                const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Acesso oculto do dev: segurar o ícone abre o painel.
-                GestureDetector(
-                  onLongPress: _openDevPanel,
-                  child: Icon(Icons.construction,
-                      size: 64, color: theme.colorScheme.secondary),
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppStyle.pagePadding, vertical: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Acesso oculto do dev: segurar o ícone abre o painel.
+                          GestureDetector(
+                            onLongPress: _openDevPanel,
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: c.fill,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.construction,
+                                  size: 40, color: c.secondaryLabel),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Estamos ajustando o treino',
+                            style: text.headlineLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'O 484 Method está fora do ar por um tempo para '
+                            'melhorias. Seu progresso está guardado. Volte em '
+                            'breve para continuar de onde parou.',
+                            style: text.bodyLarge
+                                ?.copyWith(color: c.secondaryLabel),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Estamos ajustando o treino',
-                  style: theme.textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'O 484 Method está temporariamente fora do ar para '
-                  'melhorias. Seu progresso está guardado — volte em breve '
-                  'para continuar de onde parou.',
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                FilledButton.icon(
-                  onPressed: _checking ? null : _recheck,
-                  icon: _checking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                  label: const Text('Verificar de novo'),
+                BottomActions(
+                  children: [
+                    FilledButton(
+                      onPressed: _checking ? null : _recheck,
+                      child: _checking
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Verificar de novo'),
+                    ),
+                  ],
                 ),
               ],
             ),

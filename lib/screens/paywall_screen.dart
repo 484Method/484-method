@@ -6,6 +6,7 @@ import '../services/backend.dart';
 import '../services/entitlement_service.dart';
 import '../services/pricing.dart';
 import '../services/progress_store.dart';
+import '../ui/app_style.dart';
 
 /// Oferta "Beta Fundador" instrumentada — um teste de willingness-to-pay com
 /// COBRANÇA REAL (Pix manual, memo §13 Opção B). Cada usuário vê uma variante
@@ -69,6 +70,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool _loadingPix = false;
 
   bool _becameFounder = false; // done: virou Fundador vs. só entrou na lista
+
+  /// Preço pra exibir no meio de frase: espaço inseparável entre "R$" e o
+  /// número, pra quebra de linha nunca separar os dois.
+  String get _priceText => _variant.priceLabel.replaceAll(' ', '\u00A0');
 
   Map<String, Object?> get _priceProps => {
         'price_bucket': _variant.bucket,
@@ -176,130 +181,206 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onOffer = _step == _Step.offer;
     return Scaffold(
-      appBar: AppBar(),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: switch (_step) {
-              _Step.offer => _offer(theme),
-              _Step.pix => _pix(theme),
-              _Step.code => _code(theme),
-              _Step.email => _email(theme),
-              _Step.done => _done(theme),
-            },
-          ),
+      // Na oferta, a saída é o "Agora não" no canto (como nas folhas de
+      // oferta do iOS), que registra o `paywall_dismissed`.
+      appBar: AppBar(
+        automaticallyImplyLeading: !onOffer,
+        actions: [
+          if (onOffer)
+            TextButton(onPressed: _dismiss, child: const Text('Agora não')),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: KeyedSubtree(
+          key: ValueKey(_step),
+          child: switch (_step) {
+            _Step.offer => _offer(theme),
+            _Step.pix => _pix(theme),
+            _Step.code => _code(theme),
+            _Step.email => _email(theme),
+            _Step.done => _done(theme),
+          },
         ),
       ),
     );
   }
 
-  Widget _offer(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(Icons.workspace_premium,
-            size: 64, color: theme.colorScheme.primary),
-        const SizedBox(height: 16),
-        Text('Seja um Fundador do 484',
-            style: theme.textTheme.headlineMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+  /// Esqueleto de cada etapa: conteúdo rolável em cima, ações presas embaixo
+  /// (zona do polegar). Ficar no body (e não no bottomNavigationBar) mantém o
+  /// botão acima do teclado nas etapas com campo de texto.
+  Widget _layout({
+    required List<Widget> content,
+    List<Widget> actions = const [],
+  }) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              // Esmaece a borda de baixo: o conteúdo some suave sob as ações
+              // presas, em vez de ser cortado seco.
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (rect) => LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: const [Colors.black, Colors.black, Colors.transparent],
+                  stops: [0, 1 - (24 / rect.height).clamp(0.0, 1.0), 1],
+                ).createShader(rect),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppStyle.pagePadding, 8, AppStyle.pagePadding, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: content,
+                  ),
+                ),
+              ),
+            ),
+            if (actions.isNotEmpty) BottomActions(children: actions),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Cabeçalho centralizado: glifo num círculo, título grande e uma frase.
+  List<Widget> _header(
+    ThemeData theme, {
+    required IconData icon,
+    required Color color,
+    required Color fill,
+    required String title,
+    String? body,
+    TextStyle? titleStyle,
+  }) {
+    final c = AppColors.of(context);
+    return [
+      const SizedBox(height: 8),
+      Center(
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
+          child: Icon(icon, size: 40, color: color),
+        ),
+      ),
+      const SizedBox(height: 20),
+      Text(title,
+          style: titleStyle ?? theme.textTheme.headlineLarge,
+          textAlign: TextAlign.center),
+      if (body != null) ...[
+        const SizedBox(height: 10),
+        Text(body,
+            style: theme.textTheme.bodyLarge?.copyWith(color: c.secondaryLabel),
             textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text(
-          'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador agora '
-          'trava o acesso e o preço de tudo que vem depois — e ajuda a decidir '
-          'o que construir.',
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
+      ],
+    ];
+  }
+
+  Widget _offer(ThemeData theme) {
+    final c = AppColors.of(context);
+    return _layout(
+      content: [
+        ..._header(
+          theme,
+          icon: Icons.workspace_premium_rounded,
+          color: theme.colorScheme.secondary,
+          fill: c.goldFill,
+          // Espaço inseparável: "do 484" nunca fica órfão na 2ª linha.
+          title: 'Seja um Fundador do\u00A0484',
+          titleStyle: theme.textTheme.displaySmall,
+          body: 'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador '
+              'agora trava o acesso e o preço de tudo que vem depois, e ajuda '
+              'a decidir o que construir.',
         ),
-        const SizedBox(height: 24),
-        _benefit(theme, Icons.rocket_launch,
-            'Acesso antecipado às próximas trilhas, à medida que saem'),
-        _benefit(theme, Icons.lock,
-            'Preço de Fundador travado pra sempre — sem mensalidade'),
-        _benefit(theme, Icons.workspace_premium,
-            'Selo de Fundador no app — você esteve aqui desde o começo'),
-        _benefit(theme, Icons.favorite,
-            'Você molda o produto: fala direto com quem constrói'),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(children: [
-            Text(
-              _variant.priceLabel,
-              style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary),
-            ),
-            const SizedBox(height: 4),
-            Text(_variant.cadenceLabel, style: theme.textTheme.bodySmall),
-            const SizedBox(height: 12),
-            Text(
-              'Pagamento único via Pix. Sem assinatura.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ]),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
+        InsetGroup(children: [
+          _benefit(Icons.rocket_launch_rounded,
+              'Acesso antecipado às próximas trilhas, à medida que saem'),
+          _benefit(Icons.lock_rounded,
+              'Preço de Fundador travado pra sempre, sem mensalidade'),
+          _benefit(Icons.workspace_premium_rounded,
+              'Selo de Fundador no app: você esteve aqui desde o começo'),
+          _benefit(Icons.favorite_rounded,
+              'Você molda o produto: fala direto com quem constrói'),
+        ]),
+      ],
+      // O preço fica colado no botão: quem toca em "Quero ser Fundador" já
+      // viu o valor da sua variante (o teste de preço depende disso).
+      actions: [
+        _price(theme),
+        const SizedBox(height: 14),
         FilledButton(
           onPressed: _startCheckout,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Quero ser Fundador'),
-          ),
+          child: const Text('Quero ser Fundador'),
         ),
+        const SizedBox(height: 4),
         TextButton(
           onPressed: () => setState(() => _step = _Step.email),
-          child: const Text('Ainda não posso pagar — me avise depois'),
-        ),
-        TextButton(
-          onPressed: _dismiss,
-          child: const Text('Agora não'),
+          child: const Text('Ainda não posso pagar, me avise depois',
+              textAlign: TextAlign.center),
         ),
       ],
     );
   }
 
+  Widget _price(ThemeData theme) {
+    final small = theme.textTheme.bodySmall;
+    return Column(
+      children: [
+        Text(
+          _priceText,
+          style: theme.textTheme.headlineLarge?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()]),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 2),
+        Text(_variant.cadenceLabel, style: small, textAlign: TextAlign.center),
+        Text('Pagamento único via Pix. Sem assinatura.',
+            style: small, textAlign: TextAlign.center),
+      ],
+    );
+  }
+
+  Widget _benefit(IconData icon, String text) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(text),
+    );
+  }
+
   Widget _pix(ThemeData theme) {
+    final c = AppColors.of(context);
     if (_loadingPix) {
-      return const Padding(
-        padding: EdgeInsets.all(48),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
     // Chave Pix ainda não configurada no servidor → cai no fake door (lista).
     if (_pixConfig == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(Icons.schedule, size: 56, color: theme.colorScheme.primary),
-          const SizedBox(height: 16),
-          Text('Pagamento abrindo',
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(
-            'O Pix está sendo configurado. Deixe seu e-mail e a gente te chama '
-            'pra fechar como Fundador pelo preço de ${_variant.priceLabel}.',
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+      return _layout(
+        content: [
+          const SizedBox(height: 24),
+          ..._header(
+            theme,
+            icon: Icons.schedule_rounded,
+            color: c.secondaryLabel,
+            fill: c.fill,
+            title: 'Pagamento abrindo',
+            body: 'O Pix está sendo configurado. Deixe seu e-mail e a gente te '
+                'chama pra fechar como Fundador pelo preço de '
+                '$_priceText.',
           ),
-          const SizedBox(height: 20),
+        ],
+        actions: [
           FilledButton(
             onPressed: () => setState(() => _step = _Step.email),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('Entrar na lista'),
-            ),
+            child: const Text('Entrar na lista'),
           ),
         ],
       );
@@ -307,60 +388,56 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
     final key = _pixConfig!['key'] as String? ?? '';
     final name = _pixConfig!['name'] as String? ?? '';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(Icons.pix, size: 56, color: theme.colorScheme.primary),
-        const SizedBox(height: 16),
-        Text('Pague ${_variant.priceLabel} via Pix',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Chave Pix', style: theme.textTheme.bodySmall),
-              const SizedBox(height: 4),
-              Row(
+    return _layout(
+      content: [
+        ..._header(
+          theme,
+          icon: Icons.pix_rounded,
+          color: theme.colorScheme.primary,
+          fill: c.accentFill,
+          title: 'Pague $_priceText via Pix',
+        ),
+        const SizedBox(height: 28),
+        InsetGroup(
+          header: 'Chave Pix',
+          footer: name.isNotEmpty ? 'Em nome de $name' : null,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 4, 6),
+              child: Row(
                 children: [
                   Expanded(
                     child: SelectableText(key,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600)),
+                        style: theme.textTheme.titleMedium),
                   ),
                   IconButton(
                     onPressed: _copyPixKey,
-                    icon: const Icon(Icons.copy),
+                    icon: const Icon(Icons.content_copy_rounded),
                     tooltip: 'Copiar chave',
                   ),
                 ],
               ),
-              if (name.isNotEmpty)
-                Text('em nome de $name', style: theme.textTheme.bodySmall),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        _pixStep(theme, '1',
-            'Abra seu banco e faça um Pix de ${_variant.priceLabel} para essa chave.'),
-        _pixStep(theme, '2',
-            'Toque em "Já paguei" — a gente confere e te envia um código de Fundador.'),
-        _pixStep(theme, '3', 'Digite o código aqui para ativar seu acesso.'),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
+        InsetGroup(
+          header: 'Como funciona',
+          children: [
+            _pixStep(theme, '1',
+                'Abra seu banco e faça um Pix de $_priceText para essa chave.'),
+            _pixStep(theme, '2',
+                'Toque em "Já paguei": a gente confere e te envia um código de Fundador.'),
+            _pixStep(theme, '3', 'Digite o código aqui para ativar seu acesso.'),
+          ],
+        ),
+      ],
+      actions: [
         FilledButton(
           onPressed: () => setState(() => _step = _Step.code),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Já paguei / tenho um código'),
-          ),
+          child: const Text('Já paguei / tenho um código'),
         ),
+        const SizedBox(height: 4),
         TextButton(
           onPressed: () => setState(() => _step = _Step.email),
           child: const Text('Prefiro entrar na lista por e-mail'),
@@ -370,65 +447,75 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _pixStep(ThemeData theme, String n, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
-            child: Text(n, style: const TextStyle(fontSize: 12)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
-        ],
+    final c = AppColors.of(context);
+    return ListTile(
+      leading: Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: c.fill, shape: BoxShape.circle),
+        child: Text(n, style: theme.textTheme.titleSmall),
       ),
+      title: Text(text),
     );
   }
 
+  /// Campo sem borda própria: quem desenha o cartão é o [InsetGroup], como
+  /// nos formulários do iOS (mesmo padrão do cadastro).
+  static InputDecoration _field(String hint) => InputDecoration(
+        hintText: hint,
+        filled: false,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      );
+
   Widget _code(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(Icons.vpn_key, size: 56, color: theme.colorScheme.primary),
-        const SizedBox(height: 16),
-        Text('Ativar Fundador',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text('Digite o código de Fundador que você recebeu depois de pagar.',
-            style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _codeController,
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            labelText: 'Código (ex.: FUND-ABC123)',
-            border: const OutlineInputBorder(),
-            errorText: _codeError,
-          ),
-          onChanged: (_) {
-            if (_codeError != null) setState(() => _codeError = null);
-          },
-          onSubmitted: (_) => _redeem(),
+    final c = AppColors.of(context);
+    return _layout(
+      content: [
+        ..._header(
+          theme,
+          icon: Icons.key_rounded,
+          color: theme.colorScheme.primary,
+          fill: c.accentFill,
+          title: 'Ativar Fundador',
+          body: 'Digite o código de Fundador que você recebeu depois de pagar.',
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 28),
+        InsetGroup(children: [
+          TextField(
+            controller: _codeController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            style: theme.textTheme.bodyLarge,
+            decoration: _field('Código (ex.: FUND-ABC123)'),
+            onChanged: (_) {
+              if (_codeError != null) setState(() => _codeError = null);
+            },
+            onSubmitted: (_) => _redeem(),
+          ),
+        ]),
+        if (_codeError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(_codeError!,
+                style: theme.textTheme.bodySmall?.copyWith(color: c.red)),
+          ),
+      ],
+      actions: [
         FilledButton(
           onPressed: _redeeming ? null : _redeem,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: _redeeming
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Ativar meu acesso'),
-          ),
+          child: _redeeming
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Ativar meu acesso'),
         ),
+        const SizedBox(height: 4),
         TextButton(
           onPressed: () => setState(() => _step = _Step.pix),
           child: const Text('Voltar'),
@@ -438,99 +525,87 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _email(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(Icons.mark_email_read_outlined,
-            size: 56, color: theme.colorScheme.primary),
-        const SizedBox(height: 16),
-        Text('Garanta seu preço de Fundador',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text(
-          'Deixe seu e-mail: você entra na lista de Fundadores e trava o preço '
-          'de ${_variant.priceLabel} — a gente te chama primeiro.',
-          style: theme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
+    final c = AppColors.of(context);
+    return _layout(
+      content: [
+        ..._header(
+          theme,
+          icon: Icons.mark_email_read_rounded,
+          color: theme.colorScheme.primary,
+          fill: c.accentFill,
+          title: 'Garanta seu preço de Fundador',
+          body: 'Deixe seu e-mail: você entra na lista de Fundadores e trava o '
+              'preço de $_priceText. A gente te chama primeiro.',
         ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Seu melhor e-mail',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (v) {
-            final valid = _emailRegex.hasMatch(v.trim());
-            if (valid != _emailValid) setState(() => _emailValid = valid);
-          },
-          onSubmitted: (_) {
-            if (_emailValid) _submitEmail();
-          },
+        const SizedBox(height: 28),
+        InsetGroup(
+          footer: 'Só pra te avisar da abertura. Sem spam; você pode sair '
+              'quando quiser.',
+          children: [
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+              style: theme.textTheme.bodyLarge,
+              decoration: _field('Seu melhor e-mail'),
+              onChanged: (v) {
+                final valid = _emailRegex.hasMatch(v.trim());
+                if (valid != _emailValid) setState(() => _emailValid = valid);
+              },
+              onSubmitted: (_) {
+                if (_emailValid) _submitEmail();
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+      ],
+      actions: [
         FilledButton(
           onPressed: _emailValid ? _submitEmail : null,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Garantir minha vaga'),
-          ),
+          child: const Text('Garantir minha vaga'),
         ),
+        const SizedBox(height: 4),
         TextButton(
           onPressed: _dismiss,
           child: const Text('Agora não'),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Só pra te avisar da abertura. Sem spam; você pode sair quando '
-          'quiser.',
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
   Widget _done(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Icon(_becameFounder ? Icons.workspace_premium : Icons.check_circle,
-            size: 64, color: theme.colorScheme.secondary),
-        const SizedBox(height: 16),
-        Text(
-            _becameFounder
-                ? 'Você é Fundador do 484! 🎉'
-                : 'Você está na lista de Fundadores',
-            style: theme.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text(
-          _becameFounder
+    final c = AppColors.of(context);
+    return _layout(
+      content: [
+        const SizedBox(height: 24),
+        ..._header(
+          theme,
+          icon: _becameFounder
+              ? Icons.workspace_premium_rounded
+              : Icons.check_circle_rounded,
+          color: _becameFounder ? theme.colorScheme.secondary : c.green,
+          fill: _becameFounder ? c.goldFill : c.greenFill,
+          title: _becameFounder
+              ? 'Você é Fundador do 484!'
+              : 'Você está na lista de Fundadores',
+          // Um passo menor que as outras etapas: "Fundador do 484!" cabe
+          // numa linha no iPhone, sem "484!" órfão.
+          titleStyle: theme.textTheme.headlineMedium,
+          body: _becameFounder
               ? 'Obrigado por apoiar o 484 desde o começo. Seu acesso de '
-                  'Fundador está ativo — bora treinar.'
+                  'Fundador está ativo. Bora treinar.'
               : 'Assim que abrir a leva, a gente te chama com o preço de '
                   'Fundador garantido. Enquanto isso, continue treinando.',
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
         ),
         if (_becameFounder) ...[
-          const SizedBox(height: 16),
-          _lockedPriceChip(theme),
+          const SizedBox(height: 28),
+          _lockedPrice(theme),
         ],
-        const SizedBox(height: 24),
+      ],
+      actions: [
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Voltar a treinar'),
-          ),
+          child: const Text('Voltar a treinar'),
         ),
       ],
     );
@@ -539,37 +614,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
   /// Torna visível a promessa cumprida: o preço travado que vale pras próximas
   /// trilhas. Lê do store (persistido no resgate), com fallback pra variante
   /// vista caso o resgate tenha ocorrido nesta mesma sessão.
-  Widget _lockedPriceChip(ThemeData theme) {
-    final label = widget.store.founderLockedPriceLabel ?? _variant.priceLabel;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
+  Widget _lockedPrice(ThemeData theme) {
+    final label = (widget.store.founderLockedPriceLabel ?? _variant.priceLabel)
+        .replaceAll(' ', '\u00A0');
+    return InsetGroup(children: [
+      ListTile(
+        leading: Icon(Icons.lock_rounded, color: theme.colorScheme.secondary),
+        title: Text('Preço de Fundador travado: $label pras próximas trilhas'),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.lock, size: 18, color: theme.colorScheme.onSecondaryContainer),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'Preço de Fundador travado: $label pras próximas trilhas',
-            style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontWeight: FontWeight.w600),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _benefit(ThemeData theme, IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        Icon(icon, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
-      ]),
-    );
+    ]);
   }
 }

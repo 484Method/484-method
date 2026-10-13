@@ -179,9 +179,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
     // #5/#6: nada de "Fase"/"Bloco" — linguagem de treino, não de curso.
-    expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
+    expect(find.textContaining('Saia do inglês mudo'),
         findsOneWidget);
-    expect(find.textContaining('Zona 1 — Reconhecimento e confiança'),
+    expect(find.textContaining('Zona 1 · Reconhecimento e confiança'),
         findsOneWidget);
     expect(find.textContaining('tentativas de fala'), findsWidgets);
     // #7: meta de hoje e primeiro marco aparecem antes da jornada 484h.
@@ -211,7 +211,7 @@ void main() {
     await tester.pumpAndSettle();
     // O caminho único: próxima ação + a trilha de lições.
     expect(find.textContaining('Próxima melhor ação'), findsOneWidget);
-    expect(find.textContaining('Trilha 1 — Saia do inglês mudo'),
+    expect(find.textContaining('Saia do inglês mudo'),
         findsOneWidget);
     // Medidores e ofertas secundárias NÃO aparecem no dia 0.
     expect(find.textContaining('Meta de hoje'), findsNothing);
