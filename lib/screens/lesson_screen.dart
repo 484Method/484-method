@@ -164,7 +164,12 @@ class _LessonScreenState extends State<LessonScreen>
           _recPhase = _RecPhase.preparing;
           _error = null;
         });
-        await _recorder.start(onAutoStop: _stopAndAssess);
+        await _recorder.start(
+          onAutoStop: _stopAndAssess,
+          // Frase ganha pausa maior antes do auto-stop (aluno pausa entre
+          // palavras); palavra isolada continua parando rápido.
+          expectedWords: _item.text.trim().split(RegExp(r'\s+')).length,
+        );
         if (mounted && _recPhase == _RecPhase.preparing) {
           setState(() => _recPhase = _RecPhase.recording);
           _pulseController.repeat(reverse: true);
@@ -656,7 +661,9 @@ class _LessonScreenState extends State<LessonScreen>
           Text('Palavra ${_index + 1}',
               style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text('Ouça com atenção — sem ler nada — e repita do seu jeito.',
+          Text(
+              'Ouça com atenção, sem ler nada, e repita o mais parecido '
+              'possível.',
               style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
           const SizedBox(height: 24),
           OutlinedButton.icon(
