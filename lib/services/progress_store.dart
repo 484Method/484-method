@@ -47,6 +47,7 @@ class ProgressStore {
   static const _kBaselineConfidence = 'cohort_baseline_confidence';
   static const _kFinalConfidence = 'cohort_final_confidence';
   static const _kSrsSchedule = 'srs_schedule';
+  static const _kPersonalBests = 'personal_bests';
 
   /// Meta do produto: 484 horas de prática aprovada.
   static const goalSeconds = 484 * 3600;
@@ -442,6 +443,60 @@ class ProgressStore {
     return nextStage;
   }
 
+  // --- Gamificação (2026-10-13): recorde pessoal e nível de domínio ---
+  // Só local, como a agenda de revisão: é motivação de UX, não a métrica
+  // norte. O que vira métrica sai como evento (personal_best_beaten,
+  // word_mastered) — sem migração de coluna.
+
+  /// Melhor accuracy (0–100, arredondada) que a pessoa já tirou em cada
+  /// palavra/frase. Tolera prefs corrompido voltando vazio.
+  Map<String, int> _personalBests() {
+    final raw = _prefs.getString(_kPersonalBests);
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      final out = <String, int>{};
+      decoded.forEach((k, v) {
+        if (k is String && v is num) out[k] = v.round().clamp(0, 100).toInt();
+      });
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Recorde da palavra; null se ela nunca foi avaliada neste aparelho.
+  int? personalBest(String word) => _personalBests()[word];
+
+  /// Registra uma nota. Devolve o recorde ANTERIOR quando esta nota o bateu
+  /// (pra UI dizer "de 78 para 91"); null quando não bateu ou quando é a
+  /// primeira nota da palavra (primeira vez não é recorde, é ponto de
+  /// partida).
+  Future<int?> recordScore(String word, double accuracy) async {
+    final bests = _personalBests();
+    final score = accuracy.round().clamp(0, 100).toInt();
+    final previous = bests[word];
+    if (previous != null && score <= previous) return null;
+    bests[word] = score;
+    await _prefs.setString(_kPersonalBests, jsonEncode(bests));
+    return previous;
+  }
+
+  /// Nível de domínio da palavra, a partir da escada de revisão espaçada:
+  /// sobreviver à revisão de 10 dias (degrau final) é "dominada"; aprovada
+  /// mas ainda sendo testada pelo tempo é "firme"; avaliada e nunca
+  /// aprovada é "aprendendo"; nunca vista é "nova".
+  WordLevel wordLevel(String word) {
+    final stage = srsStageOf(word);
+    if (stage != null) {
+      return stage >= srsIntervalsDays.length - 1
+          ? WordLevel.mastered
+          : WordLevel.firm;
+    }
+    return personalBest(word) != null ? WordLevel.learning : WordLevel.fresh;
+  }
+
   /// Em que item da lição a pessoa estava (pra retomar, não recomeçar do
   /// zero ao reabrir). Só local — é conveniência de UX, não a métrica norte,
   /// não precisa espelhar no Supabase.
@@ -475,4 +530,15 @@ class ProgressStore {
 
   String _ymd(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+}
+
+/// Nível de domínio de uma palavra (ver [ProgressStore.wordLevel]).
+enum WordLevel {
+  fresh('Nova'),
+  learning('Aprendendo'),
+  firm('Firme'),
+  mastered('Dominada');
+
+  const WordLevel(this.label);
+  final String label;
 }

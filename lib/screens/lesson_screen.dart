@@ -74,6 +74,16 @@ class _LessonScreenState extends State<LessonScreen>
   bool _hasListened = false;
   PronunciationResult? _result;
   double? _firstAccuracy; // accuracy da 1ª tentativa, p/ medir a melhora
+
+  // Gamificação (2026-10-13). Recorde da palavra ANTES desta passada (lido
+  // na 1ª tentativa): "novo recorde" é bater o que a pessoa já tinha feito
+  // em outro dia, não a 1ª tentativa de agora (isso é o antes/depois).
+  int? _bestBefore;
+  bool _newRecord = false;
+
+  /// Subiu de nível nesta gravação final (Firme na 1ª aprovação, Dominada ao
+  /// passar na revisão de 10 dias). Null = não mudou.
+  WordLevel? _levelUp;
   String? _error;
 
   /// Feedback gerado pela Claude (Edge Function) para o resultado atual.
@@ -247,6 +257,11 @@ class _LessonScreenState extends State<LessonScreen>
       final srsWord = _item.text;
       final srsStageBefore =
           isFinalAttempt ? widget.store?.srsStageOf(srsWord) : null;
+      if (!isFinalAttempt) _bestBefore = widget.store?.personalBest(srsWord);
+      final bestBefore = _bestBefore;
+      final newRecord = isFinalAttempt &&
+          bestBefore != null &&
+          result.accuracy.round() > bestBefore;
       setState(() {
         _result = result;
         _aiFeedback = null;
@@ -264,6 +279,8 @@ class _LessonScreenState extends State<LessonScreen>
             _lastApprovedDuration = audio.duration;
             widget.store?.addApproved(audio.duration);
           }
+          _newRecord = newRecord;
+          _levelUp = null;
           _step = _Step.resultFinal;
         }
       });
@@ -277,6 +294,22 @@ class _LessonScreenState extends State<LessonScreen>
         if (approved) _logFirst('first_approved_minute_earned');
       }
       _maybeFetchAiFeedback(result, attempt, approved);
+      // Recorde pessoal: toda nota entra; o evento só sai quando a gravação
+      // final bate o recorde de outro dia (e de fato supera o guardado, pra
+      // regravar com a mesma nota não contar duas vezes).
+      try {
+        final beaten = await widget.store?.recordScore(srsWord, result.accuracy);
+        if (newRecord && beaten != null) {
+          widget.analytics?.log('personal_best_beaten', {
+            'lesson': widget.lesson.id,
+            'item': srsWord,
+            'from': bestBefore,
+            'to': result.accuracy.round(),
+          });
+        }
+      } catch (e) {
+        debugPrint('[licao] recorde pessoal falhou: $e');
+      }
       if (isFinalAttempt) {
         // try próprio: a avaliação já deu certo e o minuto já contou. Se
         // gravar a agenda local falhar (cota de storage no web, por exemplo),
@@ -287,6 +320,23 @@ class _LessonScreenState extends State<LessonScreen>
               await widget.store?.recordSrsOutcome(srsWord, approved: approved);
           // Só conta como REVISÃO se a palavra já estava na escada; a primeira
           // aprovação apenas a agenda, não prova que a memória durou.
+          final top = ProgressStore.srsIntervalsDays.length - 1;
+          final WordLevel? levelUp;
+          if (stage != null && srsStageBefore == null) {
+            levelUp = WordLevel.firm; // 1ª aprovação: entrou na escada
+          } else if (stage == top && srsStageBefore != null &&
+              srsStageBefore < top) {
+            levelUp = WordLevel.mastered;
+            widget.analytics?.log('word_mastered', {
+              'lesson': widget.lesson.id,
+              'item': srsWord,
+            });
+          } else {
+            levelUp = null;
+          }
+          if (levelUp != null && mounted && _item.text == srsWord) {
+            setState(() => _levelUp = levelUp);
+          }
           if (stage != null && srsStageBefore != null) {
             widget.analytics?.log('srs_review_done', {
               'item': srsWord,
@@ -390,6 +440,9 @@ class _LessonScreenState extends State<LessonScreen>
         _result = null;
         _aiFeedback = null;
         _firstAccuracy = null;
+        _bestBefore = null;
+        _newRecord = false;
+        _levelUp = null;
         _error = null;
       }
     });
@@ -551,7 +604,18 @@ class _LessonScreenState extends State<LessonScreen>
                       child: Icon(Icons.arrow_forward_rounded,
                           size: 26, color: c.tertiaryLabel),
                     ),
-                    score('Depois', r.accuracy.round(), big: true),
+                    // Conta de "Antes" até "Depois": a melhora é o momento de
+                    // recompensa do método, então ela acontece na frente do
+                    // aluno em vez de só aparecer pronta.
+                    TweenAnimationBuilder<double>(
+                      key: ValueKey(r),
+                      tween: Tween(
+                          begin: _firstAccuracy!, end: r.accuracy),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutCubic,
+                      builder: (_, v, _) =>
+                          score('Depois', v.round(), big: true),
+                    ),
                   ],
                 ),
               )
@@ -559,15 +623,74 @@ class _LessonScreenState extends State<LessonScreen>
               score('Sua nota', r.accuracy.round(), big: true),
             if (_firstAccuracy != null) ...[
               const SizedBox(height: 6),
-              Text(
-                '${gain >= 0 ? "+" : ""}${gain.toStringAsFixed(0)} pontos',
-                style: text.titleMedium?.copyWith(
-                    color: gain > 0 ? c.green : c.secondaryLabel),
+              TweenAnimationBuilder<double>(
+                key: ValueKey(('gain', r)),
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 400),
+                curve: const Interval(0.5, 1, curve: Curves.easeOut),
+                builder: (_, t, child) => Opacity(opacity: t, child: child),
+                child: Text(
+                  '${gain >= 0 ? "+" : ""}${gain.toStringAsFixed(0)} pontos',
+                  style: text.titleMedium?.copyWith(
+                      color: gain > 0 ? c.green : c.secondaryLabel),
+                ),
               ),
+            ],
+            if (_newRecord || _levelUp != null) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_newRecord)
+                    _seal(theme, Icons.emoji_events_rounded,
+                        'Novo recorde (era ${_bestBefore ?? 0})'),
+                  if (_levelUp == WordLevel.mastered)
+                    _seal(theme, Icons.workspace_premium_rounded,
+                        'Palavra dominada')
+                  else if (_levelUp == WordLevel.firm)
+                    _seal(theme, Icons.trending_up_rounded,
+                        'Subiu para Firme'),
+                ],
+              ),
+            ] else if (_bestBefore != null) ...[
+              const SizedBox(height: 10),
+              Text('Seu recorde: $_bestBefore', style: text.bodySmall),
             ],
             // Mapa de sílabas: a escrita já foi liberada no Livro Aberto,
             // então mostrar os grafemas aqui não fere o som-first.
             _SyllableMap(result: r),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Selo de conquista (recorde, nível): dourado discreto, aparece com um
+  /// leve "pop" de escala.
+  Widget _seal(ThemeData theme, IconData icon, String label) {
+    final c = AppColors.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.85, end: 1),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutBack,
+      builder: (_, s, child) => Transform.scale(scale: s, child: child),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: c.goldFill,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: theme.colorScheme.secondary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(label,
+                  style: theme.textTheme.titleSmall?.copyWith(color: c.label)),
+            ),
           ],
         ),
       ),

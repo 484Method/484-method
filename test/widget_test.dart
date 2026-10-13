@@ -789,6 +789,46 @@ void main() {
         SpeechCategory.pronunciation); // sem prosódia → pronúncia
   });
 
+  test('recorde pessoal: 1ª nota é ponto de partida; só nota maior bate',
+      () async {
+    final store = await _emptyStore();
+    expect(store.personalBest('apple'), isNull);
+    // Primeira vez não é recorde (nada a bater), só grava o ponto de partida.
+    expect(await store.recordScore('apple', 63.4), isNull);
+    expect(store.personalBest('apple'), 63);
+    // Igual ou menor: não bate, não muda.
+    expect(await store.recordScore('apple', 62.6), isNull);
+    expect(await store.recordScore('apple', 50), isNull);
+    expect(store.personalBest('apple'), 63);
+    // Maior: devolve o recorde anterior (pra UI dizer "era 63").
+    expect(await store.recordScore('apple', 91.2), 63);
+    expect(store.personalBest('apple'), 91);
+  });
+
+  test('nível de domínio segue a escada de revisão espaçada', () async {
+    final last = ProgressStore.srsIntervalsDays.length - 1;
+    SharedPreferences.setMockInitialValues({
+      'srs_schedule': jsonEncode({
+        'apple': {'stage': 0, 'due': '2999-01-01'},
+        'cinema': {'stage': last, 'due': '2999-01-01'},
+      }),
+      'personal_bests': jsonEncode({'hotel': 55, 'apple': 88}),
+    });
+    final store = await ProgressStore.load();
+    expect(store.wordLevel('banana'), WordLevel.fresh); // nunca avaliada
+    expect(store.wordLevel('hotel'), WordLevel.learning); // nunca aprovada
+    expect(store.wordLevel('apple'), WordLevel.firm); // aprovada, em teste
+    expect(store.wordLevel('cinema'), WordLevel.mastered); // passou os 10 dias
+  });
+
+  test('recorde pessoal: prefs corrompido degrada pra vazio', () async {
+    SharedPreferences.setMockInitialValues({'personal_bests': '{nao json'});
+    final store = await ProgressStore.load();
+    expect(store.personalBest('apple'), isNull);
+    expect(await store.recordScore('apple', 70), isNull);
+    expect(store.personalBest('apple'), 70);
+  });
+
   test('revisão espaçada: 1ª aprovação agenda a palavra, mas não vence hoje',
       () async {
     final store = await _emptyStore();

@@ -91,6 +91,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   `srs_review_done` (props: item, from_stage, to_stage, approved) — só quando a
   palavra JÁ estava na escada, porque a 1ª aprovação apenas agenda e não prova
   que a memória durou.
+- ✅ Gamificação individual (2026-10-13), só em cima de fala APROVADA (nada
+  de XP por tempo de tela, ranking ou "vidas"): (1) resultado da palavra
+  conta a nota de "Antes" até "Depois" com animação; (2) recorde pessoal por
+  palavra (`ProgressStore.recordScore`/`personalBest`, local, chave
+  `personal_bests`) — selo "Novo recorde" quando a gravação final bate o
+  recorde de OUTRO dia (a 1ª tentativa de agora é o antes/depois, não
+  recorde); evento `personal_best_beaten` (props: item, from, to); (3) nível
+  de domínio (`ProgressStore.wordLevel`: Nova/Aprendendo/Firme/Dominada,
+  derivado da escada SRS — Dominada = passou na revisão de 10 dias), selo
+  "Subiu para Firme"/"Palavra dominada" no resultado, placar e grupos por
+  nível no mapa de fala; evento `word_mastered`.
 - ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
   pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
   sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma
