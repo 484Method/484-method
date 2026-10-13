@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../services/analytics_service.dart';
@@ -44,10 +45,10 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
   bool get _isBaseline => widget.kind == 'baseline';
 
   String get _prompt => _isBaseline
-      ? 'Fale por ~30 segundos em inglês. Pode ser simples: diga seu nome, o '
+      ? 'Fale por uns 30 segundos em inglês. Pode ser simples: diga seu nome, o '
           'que você faz, por que quer melhorar seu inglês e uma situação em que '
           'você trava.'
-      : 'Fale por ~30 segundos em inglês. Diga o que você praticou, quais '
+      : 'Fale por uns 30 segundos em inglês. Diga o que você praticou, quais '
           'palavras ficaram mais fáceis e como você se sente falando inglês '
           'agora.';
 
@@ -62,8 +63,15 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
     if (!await _recorder.hasPermission()) {
       setState(() {
         _phase = _Phase.error;
-        _error = 'Sem acesso ao microfone. Libere o microfone no navegador e '
-            'tente de novo.';
+        // Mesma orientação da lição: sem o caminho do "cadeado" do Chrome
+        // de desktop, que não existe no Safari do iPhone.
+        _error = kIsWeb
+            ? 'Sem acesso ao microfone. Recarregue a página e toque em '
+                'Permitir quando o navegador pedir. Se ele não pedir, '
+                'libere o microfone nos ajustes do site (no iPhone, pelo '
+                'menu ao lado do endereço).'
+            : 'Sem acesso ao microfone. Libere o microfone para o 484 '
+                'nos Ajustes do aparelho e grave de novo.';
       });
       return;
     }

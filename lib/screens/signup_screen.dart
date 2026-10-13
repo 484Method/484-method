@@ -34,11 +34,16 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   bool _submitting = false;
 
+  /// Liga as mensagens de erro dos campos só depois da 1ª tentativa de
+  /// enviar: o botão fica sempre ativo e, se faltar algo, a tela diz o quê
+  /// (antes ele ficava cinza sem explicar o motivo).
+  bool _showErrors = false;
+
   static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
-  bool get _valid =>
-      _nameController.text.trim().isNotEmpty &&
-      _emailRegex.hasMatch(_emailController.text.trim());
+  bool get _nameOk => _nameController.text.trim().isNotEmpty;
+  bool get _emailOk => _emailRegex.hasMatch(_emailController.text.trim());
+  bool get _valid => _nameOk && _emailOk;
 
   @override
   void dispose() {
@@ -48,7 +53,11 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_valid || _submitting) return;
+    if (_submitting) return;
+    if (!_valid) {
+      setState(() => _showErrors = true);
+      return;
+    }
     setState(() => _submitting = true);
     await widget.store.setRegistration(
       _nameController.text.trim(),
@@ -63,14 +72,18 @@ class _SignupScreenState extends State<SignupScreen> {
   /// é o [InsetGroup], como nos formulários do iOS. O placeholder é o ÚNICO
   /// rótulo do campo, então usa o cinza secundário (legível nos dois temas)
   /// em vez do terciário do tema, que fica abaixo de 3:1 no escuro.
-  static InputDecoration _field(String hint, AppColors c, TextTheme text) =>
+  static InputDecoration _field(String hint, AppColors c, TextTheme text,
+          {String? error}) =>
       InputDecoration(
         hintText: hint,
+        errorText: error,
         hintStyle: text.bodyLarge?.copyWith(color: c.secondaryLabel),
         filled: false,
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       );
@@ -109,41 +122,55 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text('Antes de continuar',
+                        Text('Salve seu progresso',
                             style: text.headlineLarge,
                             textAlign: TextAlign.center),
                         const SizedBox(height: 10),
                         Text(
-                          'Deixe seu nome e e-mail para guardarmos sua '
-                          'evolução e avisarmos das novidades do beta.',
+                          'Você já começou a falar. Deixe seu nome e e-mail '
+                          'para acompanharmos sua evolução e falarmos com '
+                          'você sobre o 484.',
                           style:
                               text.bodyLarge?.copyWith(color: c.secondaryLabel),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 32),
-                        InsetGroup(
-                          footer: 'Usamos só para falar com você sobre o '
-                              '484. Sem spam, e você pode apagar seus dados '
-                              'quando quiser.',
-                          children: [
-                            TextField(
-                              controller: _nameController,
-                              textCapitalization: TextCapitalization.words,
-                              textInputAction: TextInputAction.next,
-                              style: text.bodyLarge,
-                              decoration: _field('Seu nome', c, text),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                            TextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.done,
-                              style: text.bodyLarge,
-                              decoration: _field('Seu e-mail', c, text),
-                              onChanged: (_) => setState(() {}),
-                              onSubmitted: (_) => _submit(),
-                            ),
-                          ],
+                        // AutofillGroup + autofillHints: no iPhone o teclado
+                        // oferece nome/e-mail do contato (na web vira o
+                        // atributo autocomplete).
+                        AutofillGroup(
+                          child: InsetGroup(
+                            footer: 'Sem spam. Você pode apagar seus dados '
+                                'quando quiser.',
+                            children: [
+                              TextField(
+                                controller: _nameController,
+                                textCapitalization: TextCapitalization.words,
+                                textInputAction: TextInputAction.next,
+                                autofillHints: const [AutofillHints.name],
+                                style: text.bodyLarge,
+                                decoration: _field('Seu nome', c, text,
+                                    error: _showErrors && !_nameOk
+                                        ? 'Falta seu nome'
+                                        : null),
+                                onChanged: (_) => setState(() {}),
+                              ),
+                              TextField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.done,
+                                autofillHints: const [AutofillHints.email],
+                                autocorrect: false,
+                                style: text.bodyLarge,
+                                decoration: _field('Seu e-mail', c, text,
+                                    error: _showErrors && !_emailOk
+                                        ? 'Confira o e-mail (ex.: nome@gmail.com)'
+                                        : null),
+                                onChanged: (_) => setState(() {}),
+                                onSubmitted: (_) => _submit(),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -152,14 +179,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 BottomActions(
                   children: [
                     FilledButton(
-                      onPressed: _valid && !_submitting ? _submit : null,
+                      onPressed: _submitting ? null : _submit,
                       child: _submitting
                           ? const SizedBox(
                               height: 20,
                               width: 20,
                               child:
                                   CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Entrar'),
+                          : const Text('Continuar'),
                     ),
                   ],
                 ),

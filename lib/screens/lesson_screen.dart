@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -95,6 +96,10 @@ class _LessonScreenState extends State<LessonScreen>
   LessonItem get _item => widget.lesson.items[_index];
   bool get _isLastItem => _index == widget.lesson.items.length - 1;
 
+  /// "frase" quando o item tem mais de uma palavra, senão "palavra": lição
+  /// de chunks não chama tudo de palavra. Só diz o tipo, nunca o texto.
+  String get _unit => _item.text.trim().contains(' ') ? 'frase' : 'palavra';
+
   late final AnimationController _pulseController;
   late final Animation<double> _pulseScale;
 
@@ -158,10 +163,16 @@ class _LessonScreenState extends State<LessonScreen>
     switch (_recPhase) {
       case _RecPhase.idle:
         if (!await _recorder.hasPermission()) {
-          setState(() => _error =
-              'Sem acesso ao microfone. Clique no ícone de cadeado ou '
-              'câmera ao lado do endereço do site, permita o microfone e '
-              'toque no botão de gravar de novo.');
+          // Sem caminho de Chrome de desktop ("cadeado"): no Safari do
+          // iPhone esse ícone não existe. Recarregar faz o navegador
+          // perguntar de novo.
+          setState(() => _error = kIsWeb
+              ? 'Sem acesso ao microfone. Recarregue a página e toque em '
+                  'Permitir quando o navegador pedir. Se ele não pedir, '
+                  'libere o microfone nos ajustes do site (no iPhone, pelo '
+                  'menu ao lado do endereço).'
+              : 'Sem acesso ao microfone. Libere o microfone para o 484 '
+                  'nos Ajustes do aparelho e grave de novo.');
           return;
         }
         if (_player?.state == PlayerState.playing) await _player!.stop();
@@ -245,6 +256,9 @@ class _LessonScreenState extends State<LessonScreen>
           _firstAccuracy = result.accuracy;
           _step = _Step.feedbackFirst;
         } else if (_step == _Step.livroAberto) {
+          // Zera antes: sem isso, uma final reprovada herdava o tempo da
+          // palavra anterior (approvedSeconds do evento aha_moment_answered).
+          _lastApprovedDuration = null;
           if (approved) {
             _approved += audio.duration;
             _lastApprovedDuration = audio.duration;
@@ -415,7 +429,11 @@ class _LessonScreenState extends State<LessonScreen>
                   padding: const EdgeInsets.fromLTRB(
                       AppStyle.pagePadding, 4, AppStyle.pagePadding, 0),
                   child: TweenAnimationBuilder<double>(
-                    tween: Tween(end: (_index + 1) / total),
+                    // Item só conta como feito no resultado: a barra não
+                    // marca 100% no começo da última palavra.
+                    tween: Tween(
+                        end: (_index + (_step == _Step.resultFinal ? 1 : 0)) /
+                            total),
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOut,
                     builder: (context, value, _) => LinearProgressIndicator(
@@ -658,6 +676,10 @@ class _LessonScreenState extends State<LessonScreen>
       required bool precisionPending}) {
     final c = AppColors.of(context);
     final l = widget.lesson;
+    final rig = widget.rigorous;
+    final accFloor = rig ? Lesson.rigorousAccuracy : l.approvalThreshold;
+    final phonFloor = rig ? Lesson.rigorousPhoneme : l.minPhoneme;
+    final prosFloor = rig ? Lesson.rigorousProsody : l.minProsody;
     final point = r.worstSyllable?.grapheme;
     Widget line(bool ok, String label, [int? value]) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
@@ -694,15 +716,13 @@ class _LessonScreenState extends State<LessonScreen>
         title: Text('Por que este resultado?',
             style: theme.textTheme.bodyLarge),
         children: [
-          line(r.accuracy >= l.approvalThreshold, 'Clareza geral',
-              r.accuracy.round()),
-          if (r.prosody != null)
-            line(l.minProsody == null || r.prosody! >= l.minProsody!,
-                'Ritmo', r.prosody!.round()),
-          line(r.minPhoneme >= l.minPhoneme, 'Pronúncia (som mais fraco)',
+          // Só as linhas que de fato decidem a aprovação (Lesson.approves),
+          // com o piso do modo em uso: nada de ✓ fixo.
+          line(r.accuracy >= accFloor, 'Clareza geral', r.accuracy.round()),
+          if (r.prosody != null && prosFloor != null)
+            line(r.prosody! >= prosFloor, 'Ritmo', r.prosody!.round()),
+          line(r.minPhoneme >= phonFloor, 'Pronúncia (som mais fraco)',
               r.minPhoneme.round()),
-          line(true, 'Fala completa', r.completeness.round()),
-          line(true, 'Fluidez', r.fluency.round()),
           if (widget.rigorous)
             line(approvedChallenge,
                 'Modo precisão: critério mais exigente de clareza, ritmo e '
@@ -711,11 +731,12 @@ class _LessonScreenState extends State<LessonScreen>
           if (precisionPending)
             note('Você concluiu o treino normal, mas o modo precisão é mais '
                 'exigente. Tente de novo se quiser buscar precisão máxima.'),
+          // Sem promessa de revisão: palavra nunca aprovada não entra na
+          // agenda (recordSrsOutcome devolve null).
           if (!approvedNormal)
-            note('Este som ainda saiu instável. Por isso, a palavra volta '
-                'em revisão amanhã, para fixar melhor.'),
-          note('Só conta como minuto aprovado o trecho em que sua fala '
-              'bateu os critérios do treino.'),
+            note('Este som ainda saiu instável. Vale gravar de novo para '
+                'fixar.'),
+          note('Só a gravação final aprovada soma tempo de prática.'),
         ],
       ),
     );
@@ -788,7 +809,7 @@ class _LessonScreenState extends State<LessonScreen>
           body: _centered([
             Icon(Icons.graphic_eq_rounded, size: 48, color: c.tertiaryLabel),
             const SizedBox(height: 16),
-            Text('Palavra ${_index + 1}',
+            Text('${_unit == 'frase' ? 'Frase' : 'Palavra'} ${_index + 1}',
                 style: text.titleSmall?.copyWith(color: c.secondaryLabel),
                 textAlign: TextAlign.center),
             const SizedBox(height: 4),
@@ -841,7 +862,15 @@ class _LessonScreenState extends State<LessonScreen>
             FilledButton.icon(
               onPressed: () => setState(() => _step = _Step.livroAberto),
               icon: const Icon(Icons.menu_book_rounded),
-              label: const Text('Ver a palavra'),
+              label: Text('Ver a $_unit'),
+            ),
+            // O feedback manda "escute de novo": a 2ª escuta acontece aqui,
+            // ainda sem a escrita na tela.
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: _recPhase == _RecPhase.idle ? _play : null,
+              icon: const Icon(Icons.play_arrow_rounded, size: 22),
+              label: const Text('Ouvir de novo'),
             ),
           ],
         );
@@ -864,18 +893,19 @@ class _LessonScreenState extends State<LessonScreen>
               )
             else
               Text(word, style: wordStyle, textAlign: TextAlign.center),
-            // Fonética: IPA (preciso) + simplificada PT-BR (acessível). Só aqui,
-            // depois da 1ª tentativa de ouvido — nunca antes (regra som-first).
-            if (_item.ipa != null) ...[
+            // Fonética: simplificada PT-BR (acessível, vem primeiro) + IPA
+            // (preciso, só apoio). Só aqui, depois da 1ª tentativa de
+            // ouvido — nunca antes (regra som-first).
+            if (_item.phonetic != null) ...[
               const SizedBox(height: 8),
-              Text(_item.ipa!,
-                  style: text.bodyLarge?.copyWith(color: c.secondaryLabel),
-                  textAlign: TextAlign.center),
-            ],
-            if (_item.phonetic != null)
               Text(_item.phonetic!,
-                  style: text.bodyMedium?.copyWith(color: c.secondaryLabel),
-                  textAlign: TextAlign.center),
+                  style: text.bodyLarge, textAlign: TextAlign.center),
+            ],
+            if (_item.ipa != null) ...[
+              const SizedBox(height: 2),
+              Text(_item.ipa!,
+                  style: text.bodySmall, textAlign: TextAlign.center),
+            ],
             const SizedBox(height: 12),
             Text(_item.translation,
                 style: text.titleMedium, textAlign: TextAlign.center),
@@ -896,6 +926,18 @@ class _LessonScreenState extends State<LessonScreen>
                 ),
               ],
             ),
+            // Lembra o que corrigir antes da gravação que vale minuto; é
+            // também onde a orientação da Claude aparece se chegar atrasada.
+            if (_result != null) ...[
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: Text(_feedbackText(_result!),
+                    key: ValueKey(_feedbackText(_result!)),
+                    style: text.bodyMedium?.copyWith(color: c.secondaryLabel),
+                    textAlign: TextAlign.center),
+              ),
+            ],
           ]),
           actions: [
             _recorderControls(theme,
@@ -932,18 +974,23 @@ class _LessonScreenState extends State<LessonScreen>
           retryLabel = 'Gravar de novo para tentar dominar';
         }
         final message = _feedbackText(r);
-        final nextLabel = _isLastItem ? 'Concluir treino' : 'Próxima palavra';
+        final nextLabel = _isLastItem ? 'Concluir treino' : 'Próxima $_unit';
         return (
           body: _centered([
             _resultHero(theme, r, gain, badge: badge, approved: approved),
-            const SizedBox(height: 16),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: Text(message,
-                  key: ValueKey(message),
-                  style: text.bodyLarge,
-                  textAlign: TextAlign.center),
-            ),
+            // Aprovado: o selo fala por si. A orientação só aparece quando
+            // ainda há o que corrigir (a fixa de aprovado diria "tente mais
+            // uma vez" ao lado de "Próxima palavra").
+            if (!approved) ...[
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: Text(message,
+                    key: ValueKey(message),
+                    style: text.bodyLarge,
+                    textAlign: TextAlign.center),
+              ),
+            ],
             if (!_ahaAnswered) ...[
               const SizedBox(height: 20),
               _ahaQuestion(theme),
@@ -998,7 +1045,7 @@ class _LessonScreenState extends State<LessonScreen>
                   : 'Você completou a lição. Cada repetição treina o ouvido.',
               children: [
                 _statTile(theme, Icons.record_voice_over_rounded,
-                    c.secondaryLabel, 'Palavras praticadas',
+                    c.secondaryLabel, _practicedLabel(),
                     '${widget.lesson.items.length}'),
                 if (avgAccuracy != null)
                   _statTile(theme, Icons.insights_rounded, cs.secondary,
@@ -1011,7 +1058,10 @@ class _LessonScreenState extends State<LessonScreen>
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Ver meu progresso'),
+              // Sem cadastro, a Home abre o formulário: o rótulo já avisa.
+              child: Text(widget.store?.hasRegistered == false
+                  ? 'Salvar meu progresso'
+                  : 'Ver meu progresso'),
             ),
             const SizedBox(height: 4),
             TextButton.icon(
@@ -1038,6 +1088,16 @@ class _LessonScreenState extends State<LessonScreen>
           ],
         );
     }
+  }
+
+  /// Rótulo da contagem na conclusão, conforme a lição tenha palavras,
+  /// frases ou os dois.
+  String _practicedLabel() {
+    final phrases =
+        widget.lesson.items.where((i) => i.text.trim().contains(' ')).length;
+    if (phrases == 0) return 'Palavras praticadas';
+    if (phrases == widget.lesson.items.length) return 'Frases praticadas';
+    return 'Palavras e frases';
   }
 
   Future<void> _shareWhatsApp(double? avgAccuracy) async {

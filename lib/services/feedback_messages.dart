@@ -38,7 +38,9 @@ String _band(double accuracy) {
 /// pedagógica: completude > fonema/sílaba > prosódia > genérico.
 String _diagnostic(PronunciationResult r, Lesson lesson, bool rigorous) {
   if (r.completeness < 100) {
-    return 'Faltou um pedaço — fale a palavra inteira, até o fim.';
+    // Vale pra palavra e pra frase (engolir uma palavra da frase é o caso
+    // mais comum de completude < 100).
+    return 'Faltou um pedaço. Fale tudo, até o fim.';
   }
   // Um som específico de português escapou: aponta o trecho exato.
   final phonemeFloor = rigorous ? Lesson.rigorousPhoneme : lesson.minPhoneme;
@@ -52,9 +54,7 @@ String _diagnostic(PronunciationResult r, Lesson lesson, bool rigorous) {
   // Prosódia: piso da lição (modo normal) ou o do desafio (modo rigoroso).
   final prosodyFloor = rigorous ? Lesson.rigorousProsody : lesson.minProsody;
   if (prosodyFloor != null && (r.prosody ?? 100) < prosodyFloor) {
-    return 'Ouça onde está a força da palavra e copie a música, não as '
-        'letras.';
+    return 'Ouça onde cai a força e copie a música, não as letras.';
   }
-  return 'Copie o ritmo do áudio, não a escrita da palavra, e tente outra '
-      'vez.';
+  return 'Copie o ritmo do áudio, não a escrita, e tente outra vez.';
 }

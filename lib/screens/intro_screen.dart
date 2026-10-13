@@ -12,11 +12,12 @@ class IntroScreen extends StatelessWidget {
   /// CTA → segue para o consentimento e o primeiro treino.
   final VoidCallback onStart;
 
+  // A ordem do método: primeiro o ouvido, depois a boca, só depois os olhos.
+  // ("Repita" e "Grave" eram o mesmo botão no app; viraram um passo só.)
   static const _cycle = <(IconData, String)>[
     (Icons.headphones_rounded, 'Ouça'),
-    (Icons.record_voice_over_rounded, 'Repita'),
-    (Icons.mic_rounded, 'Grave'),
-    (Icons.tune_rounded, 'Corrija'),
+    (Icons.mic_rounded, 'Fale'),
+    (Icons.menu_book_rounded, 'Veja a escrita'),
   ];
 
   @override
@@ -105,30 +106,12 @@ class IntroScreen extends StatelessWidget {
     );
   }
 
-  /// Marca pequena acima da manchete + rótulo discreto de protótipo.
+  /// Marca pequena acima da manchete. (Sem selo de "Protótipo": sinal de
+  /// beta no topo do funil tira confiança, como já foi feito na Home.)
   Widget _brand(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final c = AppColors.of(context);
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 6,
-      children: [
-        Text('484 Method', style: text.titleMedium),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: c.fill,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            'Protótipo',
-            style: text.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    );
+    return Text('484 Method',
+        style: text.titleMedium, textAlign: TextAlign.center);
   }
 
   /// O ciclo do método como uma linha de ícones pequenos e neutros.

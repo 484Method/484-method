@@ -388,6 +388,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// Painel do dev, aberto só pelo long-press no título "484 Method".
+  /// NÃO é controle de acesso (ver comentário no build).
   Future<void> _openStats() async {
     final backend = Backend.instance;
     if (backend == null) return;
@@ -688,8 +690,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// O herói da home (#8): uma única ação clara no topo, sem paradoxo de
-  /// escolha. #9: nomeia o treino (nome grande), a micro-habilidade (foco) e
-  /// a missão; a recompensa concreta (meta de hoje/primeiro marco) aparece
+  /// escolha. #9: nomeia o treino (nome grande), a missão e o tamanho do
+  /// treino; a recompensa concreta (meta de hoje/primeiro marco) aparece
   /// logo abaixo, no cartão de progresso.
   Widget _nextBestActionCard(ThemeData theme, Lesson next) {
     final c = AppColors.of(context);
@@ -702,7 +704,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Próxima melhor ação', style: theme.textTheme.labelMedium),
+            // "Próxima melhor ação" era termo de produto; o aluno lê "treino".
+            Text('Seu próximo treino', style: theme.textTheme.labelMedium),
             const SizedBox(height: 6),
             Text(next.title, style: theme.textTheme.headlineMedium),
             if (mission != null) ...[
@@ -712,7 +715,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ?.copyWith(color: c.secondaryLabel)),
             ],
             const SizedBox(height: 10),
-            Text('~5 min · foco: ${next.microSkill}',
+            // O microSkill é nota interna do currículo ("Progresso visível",
+            // "Molde único, 5 finais"): não vai pra tela do aluno.
+            Text('${next.items.length} tentativas de fala · ~5 min',
                 style: theme.textTheme.bodySmall),
             const SizedBox(height: 20),
             SizedBox(
@@ -781,8 +786,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// #7: a hierarquia de progresso num cartão só, do mais imediato pro mais
-  /// distante: meta de hoje → primeiro marco (some quando alcançado) →
-  /// jornada de 484h, e a sequência de dias no rodapé. Escondido no dia 0 (a
+  /// distante: meta de hoje → primeiro marco, que dá lugar à jornada de 484h
+  /// quando alcançado, e a sequência de dias no rodapé. Escondido no dia 0 (a
   /// barra "0 de 484h" assusta e a sequência ainda é 0 mesmo).
   Widget _progressCard(ThemeData theme) {
     final c = AppColors.of(context);
@@ -818,15 +823,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 fraction: store.firstMilestoneFraction,
                 color: gold,
               ),
+            ] else ...[
+              // A jornada SUBSTITUI o primeiro marco (as duas barras medem o
+              // mesmo total; juntas eram dois medidores do mesmo número).
+              const SizedBox(height: 16),
+              _meter(
+                theme,
+                label: 'Jornada 484h',
+                value: '${_short(total)} de 484h',
+                fraction: store.goalFraction,
+                color: gold,
+              ),
             ],
-            const SizedBox(height: 16),
-            _meter(
-              theme,
-              label: 'Jornada 484h',
-              value: '${_short(total)} de 484h',
-              fraction: store.goalFraction,
-              color: gold,
-            ),
             if (streak > 0) ...[
               const SizedBox(height: 16),
               Divider(height: 0.5, thickness: 0.5, color: c.separator),
@@ -935,7 +943,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// #8: reduz o efeito visual de muitos bloqueios — mostra concluídos, o
   /// treino atual e só os próximos poucos bloqueados; o resto fica atrás de
-  /// um botão "Ver todos os treinos". Cada zona vira um grupo "inset grouped".
+  /// um botão "Ver trilha completa"; zona concluída encolhe pra uma linha.
+  /// Cada zona vira um grupo "inset grouped".
   List<Widget> _lessonList(ThemeData theme) {
     const lockedVisibleLimit = 3;
     final next = _nextLesson();
@@ -944,7 +953,28 @@ class _HomeScreenState extends State<HomeScreen> {
     var lockedShown = 0;
     var hiddenCount = 0;
 
+    // Zonas com todas as lições obrigatórias feitas encolhem pra uma linha
+    // (senão, no meio da trilha, as concluídas empurram o treino atual pra
+    // telas abaixo). Bônus não contam, como na progressão.
+    final completedZones = <int>{
+      for (var z = 0; z < _zones.length; z++)
+        if (fase1Lessons.indexed.every((e) =>
+            _zoneOf(e.$1) != z ||
+            e.$2.bonus ||
+            widget.store.isLessonCompleted(e.$2.id)))
+          z,
+    };
+    final collapsedCount = <int, int>{};
+
     for (final (i, lesson) in fase1Lessons.indexed) {
+      final zone = _zoneOf(i);
+      if (!_showAllLessons && completedZones.contains(zone)) {
+        hiddenCount++;
+        if (widget.store.isLessonCompleted(lesson.id)) {
+          collapsedCount[zone] = (collapsedCount[zone] ?? 0) + 1;
+        }
+        continue;
+      }
       final completed = widget.store.isLessonCompleted(lesson.id);
       final paywalled = _isPaywalled(i);
       final progressionUnlocked = _isProgressionUnlocked(i);
@@ -966,7 +996,7 @@ class _HomeScreenState extends State<HomeScreen> {
         continue;
       }
 
-      rowsByZone.putIfAbsent(_zoneOf(i), () => []).add(_lessonRow(
+      rowsByZone.putIfAbsent(zone, () => []).add(_lessonRow(
             theme,
             lesson,
             completed: completed,
@@ -976,11 +1006,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final widgets = <Widget>[];
+    final c = AppColors.of(context);
     for (final (z, (_, name)) in _zones.indexed) {
-      final rows = rowsByZone[z];
+      var rows = rowsByZone[z];
+      final done = completedZones.contains(z);
+      if (rows == null && done && !_showAllLessons) {
+        final n = collapsedCount[z] ?? 0;
+        rows = [
+          ListTile(
+            leading: SizedBox(
+              width: 30,
+              child: Center(
+                child: Icon(Icons.check_circle_rounded,
+                    size: 28, color: c.green, semanticLabel: 'Concluída'),
+              ),
+            ),
+            title: Text(n == 1 ? '1 treino feito' : '$n treinos feitos'),
+            trailing:
+                Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel),
+            onTap: () => setState(() => _showAllLessons = true),
+          ),
+        ];
+      }
       if (rows == null) continue;
       if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 24));
-      widgets.add(InsetGroup(header: name, children: rows));
+      widgets.add(InsetGroup(
+          header: done ? '$name · concluída' : name, children: rows));
     }
 
     if (hiddenCount > 0 && !_showAllLessons) {
@@ -988,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
       widgets.add(Center(
         child: TextButton(
           onPressed: () => setState(() => _showAllLessons = true),
-          child: const Text('Ver todos os treinos'),
+          child: const Text('Ver trilha completa'),
         ),
       ));
     }
@@ -1135,23 +1186,30 @@ class _HomeScreenState extends State<HomeScreen> {
     // há (nada foi aprovado ainda), então não precisa de gate por isBrandNew.
     final dueReview = _dueReviewWords();
 
-    // Cartões de produto viram linhas de um grupo neutro (mesmas condições).
-    final productRows = <Widget>[
-      if (showCohort) _cohortRow(theme),
+    // Cartões de produto viram linhas de grupos neutros (mesmas condições).
+    // Treino (revisão + desafio de hoje) fica colado no herói: é prática que
+    // rende minuto aprovado e não pode cair abaixo da dobra. Convites
+    // (21 dias, Fundador) vão depois do progresso, sem competir com o herói.
+    final trainingRows = <Widget>[
       if (dueReview.isNotEmpty) _srsReviewRow(theme, dueReview),
       if (showChallenge) _dailyChallengeRow(theme, challenge),
+    ];
+    final inviteRows = <Widget>[
+      if (showCohort) _cohortRow(theme),
       if (showFounderOffer) _founderOfferRow(theme),
     ];
 
-    // Blocos do topo, na ordem: herói → pesquisas → progresso → produto.
+    // Blocos do topo, na ordem: herói → treino extra → pesquisas →
+    // progresso → convites.
     final blocks = <Widget>[
       if (next != null) _nextBestActionCard(theme, next),
+      if (trainingRows.isNotEmpty) InsetGroup(children: trainingRows),
       if (askAbandon) _abandonCard(theme),
       if (showPmf) _pmfCard(theme),
-      // #7: meta de hoje → primeiro marco → jornada 484h. Escondido no dia 0
-      // (o herói já carrega a promessa do primeiro treino).
+      // #7: meta de hoje → primeiro marco (depois jornada 484h). Escondido no
+      // dia 0 (o herói já carrega a promessa do primeiro treino).
       if (!isBrandNew) _progressCard(theme),
-      if (productRows.isNotEmpty) InsetGroup(children: productRows),
+      if (inviteRows.isNotEmpty) InsetGroup(children: inviteRows),
     ];
 
     return Scaffold(
@@ -1159,7 +1217,11 @@ class _HomeScreenState extends State<HomeScreen> {
         title: AnimatedOpacity(
           opacity: _titleCollapsed ? 1 : 0,
           duration: const Duration(milliseconds: 200),
-          child: const Text('484 Method'),
+          // Acesso oculto do painel do dev (mesmo gesto do título grande).
+          child: GestureDetector(
+            onLongPress: _openStats,
+            child: const Text('484 Method'),
+          ),
         ),
         shape: _titleCollapsed
             ? Border(bottom: BorderSide(color: c.separator, width: 0.5))
@@ -1173,7 +1235,6 @@ class _HomeScreenState extends State<HomeScreen> {
               if (v == 'clear') _confirmClearData();
               if (v == 'privacy') _openPrivacyPolicy();
               if (v == 'terms') _openTermsOfUse();
-              if (v == 'stats') _openStats();
               if (v == 'theme') _openThemeChooser();
               if (v == 'words') _openWordMemory();
             },
@@ -1186,11 +1247,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 const PopupMenuItem(
                   value: 'words',
                   child: Text('Meu mapa de fala'),
-                ),
-              if (Backend.instance != null)
-                const PopupMenuItem(
-                  value: 'stats',
-                  child: Text('Painel de uso'),
                 ),
               const PopupMenuItem(
                 value: 'privacy',
@@ -1229,8 +1285,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Semantics(
                   header: true,
-                  child: Text('484 Method',
-                      style: theme.textTheme.displaySmall),
+                  // Painel do dev: segurar o título abre (mesmo padrão de
+                  // maintenance_screen). Isto NÃO é controle de acesso, só
+                  // evita que o aluno caia lá por clique acidental (antes era
+                  // um item do menu ⋮ visível pra todos). O dev-stats segue
+                  // aberto a qualquer sessão; o caminho certo é login real
+                  // com allowlist (ver CLAUDE.md).
+                  child: GestureDetector(
+                    onLongPress: _openStats,
+                    child: Text('484 Method',
+                        style: theme.textTheme.displaySmall),
+                  ),
                 ),
               ),
               for (final (i, block) in blocks.indexed) ...[
