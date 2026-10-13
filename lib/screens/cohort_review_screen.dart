@@ -3,24 +3,47 @@ import 'package:flutter/material.dart';
 import '../data/curriculum.dart';
 import '../services/analytics_service.dart';
 import '../services/progress_store.dart';
+import '../ui/app_style.dart';
 
 /// Escala de autoconfiança pra falar inglês (1–5). É o par SUBJETIVO do
 /// antes/depois do desafio de 21 dias: medimos no começo e no fim pra ver se
 /// a pessoa PERCEBE melhora. O par objetivo (gravação com nota) é a fatia
 /// seguinte (precisa de gravação longa + storage + rating cego).
-const List<(int, String, String)> kConfidenceScale = [
-  (1, '😰', 'Travo, não consigo falar'),
-  (2, '😟', 'Falo com muita dificuldade'),
-  (3, '😐', 'Me viro no básico'),
-  (4, '🙂', 'Falo com alguma segurança'),
-  (5, '😎', 'Falo com tranquilidade'),
+///
+/// Os rótulos são a âncora da escala (iguais desde o começo do desafio); o
+/// número só mostra a ordem. Sem emoji: visual "clean" de 2026-10-13.
+const List<(int, String)> kConfidenceScale = [
+  (1, 'Travo, não consigo falar'),
+  (2, 'Falo com muita dificuldade'),
+  (3, 'Me viro no básico'),
+  (4, 'Falo com alguma segurança'),
+  (5, 'Falo com tranquilidade'),
 ];
 
 String _confidenceLabel(int? score) {
-  for (final (value, _, label) in kConfidenceScale) {
+  for (final (value, label) in kConfidenceScale) {
     if (value == score) return label;
   }
-  return '—';
+  return 'Sem resposta';
+}
+
+/// Número da escala num círculo neutro (só indica a ordem 1–5).
+class _ScaleNumber extends StatelessWidget {
+  const _ScaleNumber(this.value);
+
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: c.fill, shape: BoxShape.circle),
+      child: Text('$value', style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
 }
 
 /// Pergunta a autoconfiança (1–5) num bottom sheet. Devolve o valor escolhido
@@ -33,42 +56,36 @@ Future<int?> showConfidenceSurvey(
   return showModalBottomSheet<int>(
     context: context,
     isScrollControlled: true,
+    // Fundo cinza da página: a lista de opções aparece como grupo branco,
+    // no estilo das folhas do iOS.
+    backgroundColor: AppColors.of(context).background,
     builder: (ctx) {
       final theme = Theme.of(ctx);
+      final c = AppColors.of(ctx);
       return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+              AppStyle.pagePadding, 0, AppStyle.pagePadding, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(title,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(question, style: theme.textTheme.bodyMedium),
-              const SizedBox(height: 16),
-              for (final (value, emoji, label) in kConfidenceScale)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(ctx).pop(value),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Text(emoji, style: const TextStyle(fontSize: 22)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(label,
-                                textAlign: TextAlign.left,
-                                style: theme.textTheme.bodyLarge),
-                          ),
-                        ],
-                      ),
+              Text(title, style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 6),
+              Text(question,
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: c.secondaryLabel)),
+              const SizedBox(height: 20),
+              InsetGroup(
+                children: [
+                  for (final (value, label) in kConfidenceScale)
+                    ListTile(
+                      leading: _ScaleNumber(value),
+                      title: Text(label),
+                      onTap: () => Navigator.of(ctx).pop(value),
                     ),
-                  ),
-                ),
+                ],
+              ),
             ],
           ),
         ),
@@ -98,6 +115,7 @@ class CohortReviewScreen extends StatefulWidget {
 class _CohortReviewScreenState extends State<CohortReviewScreen> {
   final _testimonialController = TextEditingController();
   bool _testimonialSent = false;
+  bool _hasTestimonialText = false;
 
   @override
   void initState() {
@@ -113,12 +131,21 @@ class _CohortReviewScreenState extends State<CohortReviewScreen> {
       'approved_seconds': widget.store.totalApproved.inSeconds,
       'cohort_day': widget.store.cohortDay,
     });
+    // Só redesenha o botão (habilita quando há texto); o envio segue igual.
+    _testimonialController.addListener(_onTestimonialChanged);
   }
 
   @override
   void dispose() {
     _testimonialController.dispose();
     super.dispose();
+  }
+
+  void _onTestimonialChanged() {
+    final has = _testimonialController.text.trim().isNotEmpty;
+    if (has != _hasTestimonialText) {
+      setState(() => _hasTestimonialText = has);
+    }
   }
 
   void _sendTestimonial() {
@@ -142,6 +169,7 @@ class _CohortReviewScreenState extends State<CohortReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = AppColors.of(context);
     final before = widget.store.baselineConfidence;
     final after = widget.store.finalConfidence;
     final delta = (before != null && after != null) ? after - before : 0;
@@ -149,26 +177,50 @@ class _CohortReviewScreenState extends State<CohortReviewScreen> {
       appBar: AppBar(title: const Text('Seu antes e depois')),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: ListView(
-            padding: const EdgeInsets.all(24),
+          constraints:
+              const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('21 dias depois',
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(
-                delta > 0
-                    ? 'Sua confiança pra falar subiu. Veja o caminho que você fez.'
-                    : 'Veja o caminho que você fez nesses dias.',
-                style: theme.textTheme.bodyMedium,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppStyle.pagePadding, 8, AppStyle.pagePadding, 24),
+                  children: [
+                    Text('21 dias depois',
+                        style: theme.textTheme.displaySmall),
+                    const SizedBox(height: 6),
+                    Text(
+                      delta > 0
+                          ? 'Sua confiança pra falar subiu. Veja o caminho que você fez.'
+                          : 'Veja o caminho que você fez nesses dias.',
+                      style: theme.textTheme.bodyLarge
+                          ?.copyWith(color: c.secondaryLabel),
+                    ),
+                    const SizedBox(height: 28),
+                    _confidenceGroup(theme, before, after, delta),
+                    const SizedBox(height: 28),
+                    _practiceStats(theme, c),
+                    const SizedBox(height: 28),
+                    _testimonial(theme, c),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              _confidenceCard(theme, before, after, delta),
-              const SizedBox(height: 12),
-              _practiceCard(theme),
-              const SizedBox(height: 20),
-              _testimonialCard(theme),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                child: _testimonialSent
+                    ? const SizedBox(width: double.infinity)
+                    : BottomActions(
+                        children: [
+                          FilledButton(
+                            onPressed: _hasTestimonialText
+                                ? _sendTestimonial
+                                : null,
+                            child: const Text('Enviar depoimento'),
+                          ),
+                        ],
+                      ),
+              ),
             ],
           ),
         ),
@@ -176,133 +228,142 @@ class _CohortReviewScreenState extends State<CohortReviewScreen> {
     );
   }
 
-  Widget _confidenceCard(ThemeData theme, int? before, int? after, int delta) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Como você se sente falando inglês',
-                style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _confidenceRow(theme, 'No começo', before),
-            const SizedBox(height: 8),
-            _confidenceRow(theme, 'Agora', after),
-            if (delta > 0) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.trending_up, color: theme.colorScheme.secondary),
-                  const SizedBox(width: 8),
-                  Text('+$delta ${delta == 1 ? "nível" : "níveis"} de confiança',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
+  Widget _confidenceGroup(
+      ThemeData theme, int? before, int? after, int delta) {
+    return InsetGroup(
+      header: 'Como você se sente falando inglês',
+      children: [
+        _confidenceRow(theme, 'No começo', before),
+        _confidenceRow(theme, 'Agora', after),
+        if (delta > 0)
+          ListTile(
+            leading: Icon(Icons.trending_up_rounded,
+                color: theme.colorScheme.secondary),
+            title: Text(
+              '+$delta ${delta == 1 ? "nível" : "níveis"} de confiança',
+              style: theme.textTheme.titleMedium,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _confidenceRow(ThemeData theme, String when, int? score) {
-    return Row(
-      children: [
-        SizedBox(
-            width: 80,
-            child: Text(when, style: theme.textTheme.bodySmall)),
-        Expanded(
-          child: Text(_confidenceLabel(score),
-              style: theme.textTheme.bodyLarge),
-        ),
-      ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(when, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 2),
+          Text(_confidenceLabel(score), style: theme.textTheme.bodyLarge),
+        ],
+      ),
     );
   }
 
-  Widget _practiceCard(ThemeData theme) {
-    final total = widget.store.totalApproved;
-    final minutes = total.inMinutes;
+  /// Números grandes lado a lado, como nos resumos do app Fitness.
+  Widget _practiceStats(ThemeData theme, AppColors c) {
+    final minutes = widget.store.totalApproved.inMinutes;
     final lessons = _completedLessonCount();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('O que você treinou', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _statRow(theme, Icons.mic, '$minutes',
-                minutes == 1 ? 'minuto de fala aprovada' : 'minutos de fala aprovada'),
-            const SizedBox(height: 8),
-            _statRow(theme, Icons.check_circle_outline, '$lessons',
-                lessons == 1 ? 'lição concluída' : 'lições concluídas'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statRow(ThemeData theme, IconData icon, String value, String label) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Text(value,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text('O que você treinou',
+              style:
+                  theme.textTheme.titleSmall?.copyWith(color: c.secondaryLabel)),
+        ),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _stat(
+                  theme,
+                  '$minutes',
+                  minutes == 1
+                      ? 'minuto de fala aprovada'
+                      : 'minutos de fala aprovada',
+                  c.green,
+                ),
+              ),
+              const SizedBox(width: AppStyle.gap),
+              Expanded(
+                child: _stat(
+                  theme,
+                  '$lessons',
+                  lessons == 1 ? 'lição concluída' : 'lições concluídas',
+                  c.label,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _testimonialCard(ThemeData theme) {
-    if (_testimonialSent) {
-      return Card(
-        color: theme.colorScheme.secondaryContainer,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            Icon(Icons.favorite, color: theme.colorScheme.secondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text('Obrigado! Seu relato ajuda a construir o 484.',
-                  style: theme.textTheme.bodyMedium),
-            ),
-          ]),
-        ),
-      );
-    }
+  Widget _stat(ThemeData theme, String value, String label, Color color) {
+    final c = AppColors.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Conta pra gente', style: theme.textTheme.titleMedium),
+            Text(value,
+                style: theme.textTheme.displaySmall?.copyWith(
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                )),
             const SizedBox(height: 4),
-            Text('O que mudou na sua fala nesses 21 dias?',
-                style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _testimonialController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Seu relato em uma ou duas frases…',
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _sendTestimonial,
-              child: const Text('Enviar depoimento'),
-            ),
+            Text(label,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: c.secondaryLabel)),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _testimonial(ThemeData theme, AppColors c) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: _testimonialSent
+          ? InsetGroup(
+              key: const ValueKey('sent'),
+              children: [
+                ListTile(
+                  leading: Icon(Icons.check_circle_rounded, color: c.green),
+                  title:
+                      const Text('Obrigado! Seu relato ajuda a construir o 484.'),
+                ),
+              ],
+            )
+          : Column(
+              key: const ValueKey('form'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Conta pra gente', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text('O que mudou na sua fala nesses 21 dias?',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: c.secondaryLabel)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _testimonialController,
+                  minLines: 3,
+                  maxLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    hintText: 'Seu relato em uma ou duas frases…',
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

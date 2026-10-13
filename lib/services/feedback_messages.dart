@@ -44,7 +44,9 @@ String _band(double accuracy) {
 String _diagnostic(
     PronunciationResult r, Lesson lesson, bool rigorous, String? tip) {
   if (r.completeness < 100) {
-    return 'Faltou um pedaço — fale a palavra inteira, até o fim.';
+    // Vale pra palavra e pra frase (engolir uma palavra da frase é o caso
+    // mais comum de completude < 100).
+    return 'Faltou um pedaço. Fale tudo, até o fim.';
   }
   // Um som específico de português escapou: aponta o trecho exato.
   final phonemeFloor = rigorous ? Lesson.rigorousPhoneme : lesson.minPhoneme;
@@ -65,12 +67,9 @@ String _diagnostic(
     final useTip = tip != null && lesson.minProsody != null;
     return useTip
         ? tip
-        : 'Ouça onde está a força da palavra e copie a música, não as '
-            'letras.';
+        : 'Ouça onde cai a força e copie a música, não as letras.';
   }
-  return tip ??
-      'Copie o ritmo do áudio, não a escrita da palavra, e tente outra '
-          'vez.';
+  return tip ?? 'Copie o ritmo do áudio, não a escrita, e tente outra vez.';
 }
 
 /// A dica serve pro trecho que o Azure apontou? Item de uma palavra só: sim

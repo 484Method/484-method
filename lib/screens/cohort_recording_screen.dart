@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../services/analytics_service.dart';
 import '../services/audio_recorder_service.dart';
 import '../services/backend.dart';
 import '../services/progress_store.dart';
+import '../ui/app_style.dart';
 
 /// Gravação de fala aberta (~30s) do desafio de 21 dias: baseline no começo,
 /// final no fim. É o par OBJETIVO do antes/depois — o áudio vai pro Storage
@@ -43,10 +45,10 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
   bool get _isBaseline => widget.kind == 'baseline';
 
   String get _prompt => _isBaseline
-      ? 'Fale por ~30 segundos em inglês. Pode ser simples: diga seu nome, o '
+      ? 'Fale por uns 30 segundos em inglês. Pode ser simples: diga seu nome, o '
           'que você faz, por que quer melhorar seu inglês e uma situação em que '
           'você trava.'
-      : 'Fale por ~30 segundos em inglês. Diga o que você praticou, quais '
+      : 'Fale por uns 30 segundos em inglês. Diga o que você praticou, quais '
           'palavras ficaram mais fáceis e como você se sente falando inglês '
           'agora.';
 
@@ -61,8 +63,15 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
     if (!await _recorder.hasPermission()) {
       setState(() {
         _phase = _Phase.error;
-        _error = 'Sem acesso ao microfone. Libere o microfone no navegador e '
-            'tente de novo.';
+        // Mesma orientação da lição: sem o caminho do "cadeado" do Chrome
+        // de desktop, que não existe no Safari do iPhone.
+        _error = kIsWeb
+            ? 'Sem acesso ao microfone. Recarregue a página e toque em '
+                'Permitir quando o navegador pedir. Se ele não pedir, '
+                'libere o microfone nos ajustes do site (no iPhone, pelo '
+                'menu ao lado do endereço).'
+            : 'Sem acesso ao microfone. Libere o microfone para o 484 '
+                'nos Ajustes do aparelho e grave de novo.';
       });
       return;
     }
@@ -116,6 +125,10 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
     Navigator.of(context).pop(false);
   }
 
+  /// Relógio no formato do Gravador (0:07, 1:02).
+  String _clock(int seconds) =>
+      '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -125,9 +138,10 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+          constraints:
+              const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
             child: switch (_phase) {
               _Phase.done => _doneView(theme),
               _ => _recordView(theme),
@@ -139,93 +153,176 @@ class _CohortRecordingScreenState extends State<CohortRecordingScreen> {
   }
 
   Widget _recordView(ThemeData theme) {
+    final c = AppColors.of(context);
     final recording = _phase == _Phase.recording;
     final busy = _phase == _Phase.preparing || _phase == _Phase.uploading;
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      key: const ValueKey('record'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          _isBaseline
-              ? 'Antes de começar, registre sua fala de hoje. No fim dos 21 '
-                  'dias você grava de novo e compara.'
-              : 'Você chegou ao fim! Registre sua fala agora pra ver o quanto '
-                  'evoluiu desde o começo.',
-          style: theme.textTheme.titleMedium,
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+                AppStyle.pagePadding, 8, AppStyle.pagePadding, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _isBaseline
+                      ? 'Antes de começar, registre sua fala de hoje. No fim '
+                          'dos 21 dias você grava de novo e compara.'
+                      : 'Você chegou ao fim! Registre sua fala agora pra ver o '
+                          'quanto evoluiu desde o começo.',
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: c.secondaryLabel),
+                ),
+                const SizedBox(height: 24),
+                InsetGroup(
+                  header: 'O que falar',
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_prompt, style: theme.textTheme.bodyLarge),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                _micIndicator(theme, c, recording: recording, busy: busy),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: c.red),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        BottomActions(
+          children: [
+            FilledButton.icon(
+              // Vermelho = gravando (como no Gravador); parado, o acento.
+              style: recording
+                  ? FilledButton.styleFrom(
+                      backgroundColor: c.red,
+                      foregroundColor: Colors.white,
+                    )
+                  : null,
+              onPressed: busy
+                  ? null
+                  : recording
+                      ? _stopAndUpload
+                      : _start,
+              icon: Icon(recording
+                  ? Icons.stop_rounded
+                  : Icons.fiber_manual_record_rounded),
+              label: Text(recording ? 'Parar e enviar' : 'Gravar'),
+            ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: busy ? null : _skip,
+              child: const Text('Pular por agora'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Microfone grande no centro: neutro parado, vermelho gravando, com o
+  /// relógio da gravação logo abaixo.
+  Widget _micIndicator(ThemeData theme, AppColors c,
+      {required bool recording, required bool busy}) {
+    return Column(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            color: recording ? c.redFill : c.fill,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            recording ? Icons.mic_rounded : Icons.mic_none_rounded,
+            size: 44,
+            color: recording ? c.red : c.secondaryLabel,
+          ),
         ),
         const SizedBox(height: 16),
-        Card(
-          color: theme.colorScheme.secondaryContainer,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(_prompt, style: theme.textTheme.bodyLarge),
+        if (recording)
+          Text(
+            _clock(_elapsed),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
-        ),
-        const SizedBox(height: 32),
-        Icon(
-          recording ? Icons.mic : Icons.mic_none,
-          size: 72,
-          color: recording ? theme.colorScheme.error : theme.colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
         Text(
           recording
-              ? 'Gravando… ${_elapsed}s'
+              ? 'Gravando'
               : busy
                   ? 'Um instante…'
-                  : 'Toque para gravar',
+                  : 'Toque em Gravar quando estiver pronto',
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium,
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 12),
-          Text(_error!,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.error)),
-        ],
-        const SizedBox(height: 24),
-        FilledButton.icon(
-          onPressed: busy
-              ? null
-              : recording
-                  ? _stopAndUpload
-                  : _start,
-          icon: Icon(recording ? Icons.stop : Icons.fiber_manual_record),
-          label: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(recording ? 'Parar e enviar' : 'Gravar'),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: recording ? c.red : c.secondaryLabel,
           ),
-        ),
-        TextButton(
-          onPressed: busy ? null : _skip,
-          child: const Text('Pular por agora'),
         ),
       ],
     );
   }
 
   Widget _doneView(ThemeData theme) {
+    final c = AppColors.of(context);
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      key: const ValueKey('done'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(Icons.check_circle, size: 72, color: theme.colorScheme.secondary),
-        const SizedBox(height: 16),
-        Text(
-          _isBaseline
-              ? 'Fala registrada! Agora é treinar todo dia.'
-              : 'Fala registrada! Vamos ver seu antes e depois.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Continuar'),
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppStyle.pagePadding, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: c.greenFill,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.check_rounded, size: 44, color: c.green),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Fala registrada',
+                      style: theme.textTheme.headlineLarge,
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  Text(
+                    _isBaseline
+                        ? 'Agora é treinar todo dia.'
+                        : 'Vamos ver seu antes e depois.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge
+                        ?.copyWith(color: c.secondaryLabel),
+                  ),
+                ],
+              ),
+            ),
           ),
+        ),
+        BottomActions(
+          children: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
         ),
       ],
     );

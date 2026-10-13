@@ -10,6 +10,7 @@ import '../services/entitlement_service.dart';
 import '../services/progress_store.dart';
 import '../services/pronunciation_assessor.dart';
 import '../services/backend.dart';
+import '../ui/app_style.dart';
 import 'cohort_recording_screen.dart';
 import 'cohort_review_screen.dart';
 import 'lesson_screen.dart';
@@ -22,7 +23,7 @@ import 'word_memory_screen.dart';
 
 /// Índice palavra → (lição, item) do currículo, montado uma vez. A revisão
 /// espaçada consulta isto a cada build da home e de novo ao abrir a palavra;
-/// varrer o currículo inteiro item a item toda vez era trabalho repetido à toa.
+/// varrer as 25 lições item a item toda vez era trabalho repetido à toa.
 /// Palavra que aparece em mais de uma lição vale pela PRIMEIRA — é a que a
 /// pessoa viu antes, e é sempre uma lição já liberada.
 final Map<String, ({Lesson lesson, int index})> _wordIndex = () {
@@ -38,6 +39,11 @@ final Map<String, ({Lesson lesson, int index})> _wordIndex = () {
 /// Dashboard: a barra das 484 horas, o streak e a porta de entrada das
 /// lições. É a tela que o aluno vê todo dia — precisa mostrar progresso
 /// real em segundos, não conclusão de telas.
+///
+/// Visual "clean" (2026-10-13, inspirado nos apps da Apple): título grande
+/// no corpo, UM herói no topo (o próximo treino, com a única ação grande da
+/// tela), progresso num cartão só, ofertas/instrumentos como linhas neutras
+/// de lista e a trilha em grupos "inset grouped" por zona.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -86,11 +92,16 @@ class _HomeScreenState extends State<HomeScreen> {
   // acontecer: a lição 1 está sempre liberada) ou ainda não resolvido.
   Lesson? _challenge;
 
+  // Título grande no corpo (estilo iOS): quando ele sai de vista ao rolar, o
+  // título pequeno aparece centralizado na barra. Só apresentação.
+  final ScrollController _scroll = ScrollController();
+  bool _titleCollapsed = false;
+
   // #5/#13 Missões: rótulos pras primeiras lições não-bônus (camada leve por
   // cima do currículo). Sem número fixo no texto — o índice da missão não é
   // o mesmo da lição (bônus não contam), então numerar as duas confundia
-  // (ex.: "Missão 7" dentro do card da lição 8). A UI sempre prefixa com
-  // "Missão atual" em vez de expor esse índice.
+  // (ex.: "Missão 7" dentro do card da lição 8). Aparece só no herói (o
+  // próximo treino), como a frase de objetivo abaixo do nome da lição.
   static const _missions = [
     'Fale sem ler pela primeira vez',
     'Melhore sua segunda tentativa',
@@ -111,6 +122,29 @@ class _HomeScreenState extends State<HomeScreen> {
       idx++;
     }
     return null;
+  }
+
+  // Zonas de todas as trilhas, na ordem da fila (lib/data/curriculum.dart):
+  // índice da 1ª lição de cada zona → trilha e nome exibido no cabeçalho.
+  // O nome vem do currículo ("Zona 1 — …"); na tela o travessão vira "·".
+  static final List<(int, Trail, String)> _zones = () {
+    final out = <(int, Trail, String)>[];
+    var i = 0;
+    for (final t in trails) {
+      for (final z in t.zones) {
+        out.add((i, t, z.title.replaceFirst(' — ', ' · ')));
+        i += z.lessons.length;
+      }
+    }
+    return out;
+  }();
+
+  int _zoneOf(int lessonIndex) {
+    var zone = 0;
+    for (final (z, (start, _, _)) in _zones.indexed) {
+      if (lessonIndex >= start) zone = z;
+    }
+    return zone;
   }
 
   // #10 Survey de abandono: opções de motivo (valor p/ evento, rótulo p/ UI).
@@ -135,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_onScroll);
     _ensureDailyChallenge();
     // Conserto do funil: quem acabou de consentir entra direto na 1ª lição,
     // em vez de cair na dashboard vazia ("0 de 484h" assusta e não tem CTA).
@@ -147,21 +182,41 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final collapsed = _scroll.hasClients && _scroll.offset > 40;
+    if (collapsed != _titleCollapsed) {
+      setState(() => _titleCollapsed = collapsed);
+    }
+  }
+
   Future<void> _confirmClearData() async {
+    final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Apagar todos os seus dados?'),
         content: const Text(
-            'Progresso, streak, lições concluídas, o consentimento de '
-            'gravação e as gravações do desafio serão apagados deste '
-            'dispositivo e da nuvem. Essa ação não pode ser desfeita.'),
+            'Progresso, sequência de dias, lições concluídas, o '
+            'consentimento de gravação e as gravações do desafio serão '
+            'apagados deste dispositivo e da nuvem. Essa ação não pode ser '
+            'desfeita.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
+            // Ação destrutiva em vermelho (tokens do tema: error = c.red).
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Apagar tudo'),
           ),
@@ -189,10 +244,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Selo persistente de Fundador na AppBar — torna o status (que hoje é o
-  /// que o Fundador compra, já que as Trilhas 1 e 2 são grátis pra todos)
+  /// Selo persistente de Fundador na barra do topo — torna o status (que hoje
+  /// é o que o Fundador compra, já que as Trilhas 1 e 2 são grátis pra todos)
   /// visível.
   Widget _founderBadge(ThemeData theme) {
+    final c = AppColors.of(context);
     final since = widget.store.founderSince;
     final price = widget.store.founderLockedPriceLabel;
     final tip = StringBuffer('Você é Fundador do 484');
@@ -204,68 +260,67 @@ class _HomeScreenState extends State<HomeScreen> {
     return Tooltip(
       message: tip.toString(),
       child: Center(
-      child: Container(
-        margin: const EdgeInsets.only(right: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.workspace_premium,
-                size: 16, color: theme.colorScheme.onTertiaryContainer),
-            const SizedBox(width: 4),
-            Text('Fundador',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onTertiaryContainer,
-                  fontWeight: FontWeight.w600,
-                )),
-          ],
+        child: Container(
+          margin: const EdgeInsets.only(right: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: c.goldFill,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.workspace_premium_rounded,
+                  size: 16, color: theme.colorScheme.secondary),
+              const SizedBox(width: 4),
+              Text('Fundador',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: c.label,
+                    fontWeight: FontWeight.w600,
+                  )),
+            ],
+          ),
         ),
       ),
-    ));
+    );
+  }
+
+  /// Linha neutra de lista (estilo Ajustes do iOS) para os cartões de
+  /// produto: ícone em quadradinho, título, uma linha de apoio e chevron
+  /// quando tocável.
+  Widget _row({
+    required Widget leading,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    final c = AppColors.of(context);
+    return ListTile(
+      leading: leading,
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: trailing ??
+          (onTap == null
+              ? null
+              : Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel)),
+      onTap: onTap,
+    );
   }
 
   /// CTA da oferta Beta Fundador na dashboard. Aparece no "momento uau" (a
   /// pessoa já viu seu antes/depois → sabe que funciona) e some quando ela
   /// entra na lista de Fundadores. Não bloqueia nada: mede intenção sem
   /// tirar as lições grátis de quem só quer praticar.
-  Widget _founderOfferCard(ThemeData theme) {
-    return Card(
-      color: theme.colorScheme.tertiaryContainer,
-      child: InkWell(
-        onTap: _openPaywall,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Icon(Icons.workspace_premium,
-                  size: 36, color: theme.colorScheme.tertiary),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Seja um Fundador do 484',
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Garanta acesso vitalício e ajude a decidir o que vem '
-                      'nas próximas trilhas.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        ),
-      ),
+  Widget _founderOfferRow(ThemeData theme) {
+    return _row(
+      leading: IconTile(Icons.workspace_premium_rounded,
+          color: theme.colorScheme.secondary),
+      title: 'Seja um Fundador do 484',
+      // "voz no que vem depois" virava trocadilho ambíguo num app de fala;
+      // volta à promessa original (apoio + ajudar a decidir), sem perk oco.
+      subtitle: 'Garanta acesso vitalício e ajude a decidir o que vem depois.',
+      onTap: _openPaywall,
     );
   }
 
@@ -285,28 +340,34 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openThemeChooser() {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tema'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final (mode, label) in const [
-              (ThemeMode.system, 'Sistema'),
-              (ThemeMode.light, 'Claro'),
-              (ThemeMode.dark, 'Escuro'),
-            ])
-              ListTile(
-                title: Text(label),
-                trailing:
-                    widget.themeMode == mode ? const Icon(Icons.check) : null,
-                onTap: () {
-                  widget.onThemeModeChanged?.call(mode);
-                  Navigator.of(ctx).pop();
-                },
-              ),
-          ],
-        ),
-      ),
+      builder: (ctx) {
+        final primary = Theme.of(ctx).colorScheme.primary;
+        return AlertDialog(
+          title: const Text('Tema'),
+          contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (mode, label) in const [
+                (ThemeMode.system, 'Sistema'),
+                (ThemeMode.light, 'Claro'),
+                (ThemeMode.dark, 'Escuro'),
+              ])
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  title: Text(label),
+                  trailing: widget.themeMode == mode
+                      ? Icon(Icons.check_rounded, color: primary)
+                      : null,
+                  onTap: () {
+                    widget.onThemeModeChanged?.call(mode);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -335,6 +396,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// Painel do dev, aberto só pelo long-press no título "484 Method".
+  /// NÃO é controle de acesso (ver comentário no build).
   Future<void> _openStats() async {
     final backend = Backend.instance;
     if (backend == null) return;
@@ -349,12 +412,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ativar modo desafio?'),
+        title: const Text('Ativar modo precisão?'),
         content: const Text(
-            'A partir de agora, toda gravação — inclusive em lições que '
-            'você já concluiu, se refizer — só é aprovada com pronúncia '
-            'bem próxima da nativa. O que já está concluído continua '
-            'concluído; só o critério das próximas tentativas muda.'),
+            'Daqui pra frente, cada gravação passa por um critério mais '
+            'exigente de clareza, ritmo e pronúncia, inclusive se você '
+            'refizer uma lição. O que já está concluído continua concluído.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -421,24 +483,23 @@ class _HomeScreenState extends State<HomeScreen> {
     return picked;
   }
 
-  Widget _dailyChallengeCard(ThemeData theme, Lesson lesson) {
+  Widget _dailyChallengeRow(ThemeData theme, Lesson lesson) {
+    final c = AppColors.of(context);
     final done = widget.store.dailyChallengeCompleted;
     final isReview = widget.store.isLessonCompleted(lesson.id) && !done;
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          done ? Icons.check_circle : Icons.local_fire_department,
-          color: theme.colorScheme.secondary,
-        ),
-        title: const Text('Desafio de hoje'),
-        subtitle: Text(done
-            ? '${lesson.title} — feito! Amanhã tem outro.'
-            : isReview
-                ? '${lesson.title} · revisão'
-                : lesson.title),
-        trailing: done ? null : const Icon(Icons.chevron_right),
-        onTap: done ? null : () => _openLesson(lesson),
-      ),
+    return _row(
+      leading: const IconTile(Icons.bolt_rounded),
+      title: 'Desafio de hoje',
+      subtitle: done
+          ? '${lesson.title}. Feito, amanhã tem outro.'
+          : isReview
+              ? '${lesson.title} · revisão'
+              : lesson.title,
+      trailing: done
+          ? Icon(Icons.check_circle_rounded,
+              color: c.green, semanticLabel: 'Feito')
+          : null,
+      onTap: done ? null : () => _openLesson(lesson),
     );
   }
 
@@ -451,131 +512,73 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
 
   /// Revisão espaçada: o mapa de fala mostra o que a pessoa NUNCA acertou;
-  /// este card traz de volta o que ela JÁ acertou e está na hora de conferir,
+  /// esta linha traz de volta o que ela JÁ acertou e está na hora de conferir,
   /// antes que a memória caia. Cada revisão passa pelo loop normal, então
   /// rende minuto APROVADO — a métrica norte — e não só tempo de tela.
-  Widget _srsReviewCard(ThemeData theme, List<String> due) {
+  Widget _srsReviewRow(ThemeData theme, List<String> due) {
     final n = due.length;
-    return Card(
-      child: ListTile(
-        leading: Icon(Icons.history, color: theme.colorScheme.secondary),
-        title: const Text('Revisar hoje'),
-        subtitle: Text(n == 1
-            ? '1 palavra que você já dominou — veja se ainda sai'
-            : '$n palavras que você já dominou — veja se ainda saem'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => _reviewWord(due.first),
-      ),
+    return _row(
+      leading: const IconTile(Icons.replay_rounded),
+      title: 'Revisar hoje',
+      // Diz POR QUE revisar (já acertou antes), sem travessão.
+      subtitle: n == 1
+          ? '1 palavra que você já acertou. Veja se ainda sai.'
+          : '$n palavras que você já acertou. Veja se ainda saem.',
+      onTap: () => _reviewWord(due.first),
     );
   }
 
   /// Desafio de 21 dias (instrumento de validação do beta): mede outcome, não
-  /// só comportamento — confiança inicial vs. final + o antes/depois. O card
+  /// só comportamento — confiança inicial vs. final + o antes/depois. A linha
   /// muda conforme o estágio: entrar → em andamento → fechar → concluído.
-  Widget _cohortCard(ThemeData theme) {
+  Widget _cohortRow(ThemeData theme) {
     final store = widget.store;
+    final c = AppColors.of(context);
+    final gold = theme.colorScheme.secondary;
 
     if (!store.cohortStarted) {
-      return _cohortCta(
-        theme,
-        color: theme.colorScheme.primaryContainer,
-        accent: theme.colorScheme.primary,
-        icon: Icons.flag,
+      return _row(
+        leading: IconTile(Icons.flag_rounded, color: gold),
         title: 'Desafio de 21 dias',
-        subtitle:
-            'Treine o ouvido e a boca todo dia. No fim, veja seu antes e depois.',
+        subtitle: 'Treine todo dia. No fim, veja seu antes e depois.',
         onTap: _startCohort,
       );
     }
 
     if (store.cohortFinalDone) {
-      return Card(
-        child: ListTile(
-          leading:
-              Icon(Icons.emoji_events, color: theme.colorScheme.secondary),
-          title: const Text('Desafio de 21 dias concluído'),
-          subtitle: const Text('Ver seu antes e depois'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: _openReview,
-        ),
+      return _row(
+        leading: IconTile(Icons.emoji_events_rounded, color: gold),
+        title: 'Desafio de 21 dias concluído',
+        subtitle: 'Ver seu antes e depois',
+        onTap: _openReview,
       );
     }
 
     if (store.cohortFinalUnlocked) {
-      return _cohortCta(
-        theme,
-        color: theme.colorScheme.secondaryContainer,
-        accent: theme.colorScheme.secondary,
-        icon: Icons.emoji_events,
-        title: 'Você chegou ao dia ${store.cohortDay}!',
+      return _row(
+        leading: IconTile(Icons.emoji_events_rounded, color: gold),
+        title: 'Você chegou ao dia ${store.cohortDay}',
         subtitle: 'Feche o desafio e veja seu antes e depois.',
         onTap: _finishCohort,
       );
     }
 
     final day = store.cohortDay.clamp(1, ProgressStore.cohortLength);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-                'Desafio de 21 dias · Dia $day de ${ProgressStore.cohortLength}',
-                style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: day / ProgressStore.cohortLength,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-              color: theme.colorScheme.primary,
-              backgroundColor:
-                  theme.colorScheme.primary.withValues(alpha: 0.15),
-            ),
-            const SizedBox(height: 8),
-            Text('Pratique um pouco hoje pra manter o ritmo.',
-                style: theme.textTheme.bodyMedium),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _cohortCta(
-    ThemeData theme, {
-    required Color color,
-    required Color accent,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      color: color,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Icon(icon, size: 36, color: accent),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: theme.textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
+    return _row(
+      leading: IconTile(Icons.flag_rounded, color: gold),
+      title: 'Desafio de 21 dias',
+      subtitle: 'Dia $day de ${ProgressStore.cohortLength}. '
+          'Pratique um pouco hoje.',
+      trailing: SizedBox(
+        width: 26,
+        height: 26,
+        child: CircularProgressIndicator(
+          value: day / ProgressStore.cohortLength,
+          strokeWidth: 3.5,
+          color: gold,
+          backgroundColor: c.fill,
+          semanticsLabel:
+              'Desafio de 21 dias: dia $day de ${ProgressStore.cohortLength}',
         ),
       ),
     );
@@ -590,11 +593,11 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Guardar suas gravações do desafio?'),
         content: const Text(
-            'Pra você comparar seu antes e depois, o 484 vai GUARDAR duas '
-            'gravações suas (hoje e no fim dos 21 dias) — não só analisar na '
-            'hora, como nas lições. Ficam num espaço privado; você pode apagar '
-            'tudo quando quiser em "Apagar meus dados". Sem isso, o desafio '
-            'segue só com a sua autoavaliação.'),
+            'Pra você comparar seu antes e depois, o 484 vai guardar duas '
+            'gravações suas: uma hoje e outra no fim dos 21 dias. Nas lições '
+            'o áudio só é analisado na hora; aqui ele fica salvo, num espaço '
+            'privado. Você pode apagar tudo quando quiser em "Apagar meus '
+            'dados". Sem isso, o desafio segue só com a sua autoavaliação.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -652,7 +655,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _finishCohort() async {
     final score = await showConfidenceSurvey(
       context,
-      title: 'Você chegou ao fim do desafio!',
+      title: 'Você chegou ao fim do desafio',
       question: 'Agora, como você se sente falando inglês?',
     );
     if (score == null) return;
@@ -694,113 +697,55 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  /// Título entre aspas — a menos que ele já traga aspas próprias (vários
-  /// da Trilha 2, ex.: '"ship" × "sheep"'), senão vira aspas dentro de aspas.
-  static String _quoted(String title) =>
-      title.contains('"') ? title : '"$title"';
-
-  /// Card de uma única ação clara no topo do dashboard (#8): evita o paradoxo
-  /// de escolha — diz o próximo passo e leva direto a ele.
-  Widget _nextBestActionCard(ThemeData theme, Lesson next, bool isFirst) {
-    // #9: a ação precisa nomear o treino, a micro-habilidade e a recompensa
-    // concreta mais próxima — meta de hoje ou primeiro marco, o que fizer
-    // mais sentido pra quem ainda não chegou lá.
-    final String text;
-    // Abertura de trilha: a próxima lição é a 1ª de uma trilha nova, então a
-    // anterior acabou de ser concluída — vale dizer isso, não só "treinar X".
+  /// O herói da home (#8): uma única ação clara no topo, sem paradoxo de
+  /// escolha. #9: nomeia o treino (nome grande), a missão e o tamanho do
+  /// treino; a recompensa concreta (meta de hoje/primeiro marco) aparece
+  /// logo abaixo, no cartão de progresso.
+  Widget _nextBestActionCard(ThemeData theme, Lesson next) {
+    final c = AppColors.of(context);
+    final mission = _missionFor(next.id);
+    // Já gravou algum item desta lição e saiu no meio: retoma de onde parou.
+    final started = widget.store.itemIndexFor(next.id) > 0;
     final trail = trailOf[next.id];
     final opensTrail = trail != null &&
         trail.number > 1 &&
         trail.lessons.first.id == next.id;
-    if (isFirst) {
-      text = 'Seu próximo passo: fazer sua primeira tentativa de fala '
-          '(~5 min) e destravar sua meta de hoje.';
-    } else if (opensTrail) {
-      text = 'Trilha ${trail.number - 1} concluída! Seu próximo passo: abrir '
-          'a Trilha ${trail.number} — ${trail.title} — com '
-          '${_quoted(next.title)} (foco: ${next.microSkill}).';
-    } else if (!widget.store.reachedFirstMilestone) {
-      final remaining = ProgressStore.firstMilestoneSeconds -
-          widget.store.totalApproved.inSeconds;
-      final remainingMin = (remaining / 60).ceil().clamp(1, 999);
-      text = 'Seu próximo passo: treinar ${_quoted(next.title)} — foco: '
-          '${next.microSkill} (${next.items.length} tentativas de fala) e '
-          'chegar mais perto do seu primeiro marco — faltam '
-          '~${remainingMin}min aprovados.';
-    } else {
-      text = 'Seu próximo passo: treinar ${_quoted(next.title)} — foco: '
-          '${next.microSkill} (${next.items.length} tentativas de fala) e '
-          'ganhar mais minutos aprovados na sua jornada.';
-    }
-    final mission = _missionFor(next.id);
-    return Card(
-      color: theme.colorScheme.secondaryContainer,
-      child: InkWell(
-        onTap: () => _openLesson(next),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Próxima melhor ação',
-                        style: theme.textTheme.bodySmall),
-                    const SizedBox(height: 4),
-                    if (mission != null) ...[
-                      Text('Missão atual: $mission',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.secondary,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text(text, style: theme.textTheme.bodyMedium),
-                    ] else
-                      Text(text, style: theme.textTheme.titleMedium),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Icon(Icons.play_circle_fill,
-                  size: 40, color: theme.colorScheme.secondary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// #7: meta curta do dia — o 1º degrau da hierarquia de progresso, antes
-  /// do primeiro marco e da jornada de 484h.
-  Widget _todayGoalCard(ThemeData theme) {
-    final today = widget.store.approvedToday;
-    final goal = ProgressStore.dailyGoalSeconds;
-    final reached = today.inSeconds >= goal;
-    final remaining = (goal - today.inSeconds).clamp(0, goal);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Meta de hoje: ${_format(Duration(seconds: goal))} aprovados',
-                style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: (today.inSeconds / goal).clamp(0.0, 1.0),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-              color: theme.colorScheme.primary,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-            ),
-            const SizedBox(height: 8),
+            // "Próxima melhor ação" era termo de produto; o aluno lê "treino".
+            // Abertura de trilha: a anterior acabou de ser concluída, vale
+            // dizer isso em vez de só "próximo treino".
             Text(
-              reached
-                  ? 'Você bateu sua meta de hoje. 🎉'
-                  : 'Você fez ${_format(today)}. '
-                      'Faltam ${_format(Duration(seconds: remaining))}.',
-              style: theme.textTheme.bodyMedium,
+                opensTrail
+                    ? 'Trilha ${trail.number - 1} concluída. Agora: '
+                        'Trilha ${trail.number} · ${trail.title}'
+                    : 'Seu próximo treino',
+                style: theme.textTheme.labelMedium),
+            const SizedBox(height: 6),
+            Text(next.title, style: theme.textTheme.headlineMedium),
+            if (mission != null) ...[
+              const SizedBox(height: 4),
+              Text(mission,
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: c.secondaryLabel)),
+            ],
+            const SizedBox(height: 10),
+            // O microSkill é nota interna do currículo ("Progresso visível",
+            // "Molde único, 5 finais"): não vai pra tela do aluno.
+            Text('${next.items.length} tentativas de fala · ~5 min',
+                style: theme.textTheme.bodySmall),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _openLesson(next),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(started ? 'Continuar' : 'Começar'),
+              ),
             ),
           ],
         ),
@@ -808,32 +753,127 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// #7: primeiro marco (10min aprovados) — a ponte entre a meta de hoje e a
-  /// jornada de 484h. Some quando alcançado.
-  Widget _firstMilestoneCard(ThemeData theme) {
-    final total = widget.store.totalApproved;
+  /// Uma linha de progresso: rótulo + valor à direita e barra fina embaixo.
+  Widget _meter(
+    ThemeData theme, {
+    required String label,
+    required String value,
+    required double fraction,
+    required Color color,
+    bool done = false,
+  }) {
+    final c = AppColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Wrap em vez de Row: em tela estreita (320pt) ou com fonte grande o
+        // valor desce pra linha de baixo em vez de estourar a largura.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 2,
+          children: [
+            Text(label, style: theme.textTheme.titleSmall),
+            if (done)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: c.green),
+                  const SizedBox(width: 4),
+                  Text('Concluída',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: c.green, fontWeight: FontWeight.w600)),
+                ],
+              )
+            else
+              Text(value, style: theme.textTheme.bodySmall),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: fraction.clamp(0.0, 1.0),
+          minHeight: 6,
+          borderRadius: BorderRadius.circular(3),
+          color: color,
+          backgroundColor: c.fill,
+          // Valor só numérico no semantics da barra; o texto vai no rótulo.
+          semanticsLabel: '$label: ${done ? 'concluída' : value}',
+        ),
+      ],
+    );
+  }
+
+  /// #7: a hierarquia de progresso num cartão só, do mais imediato pro mais
+  /// distante: meta de hoje → primeiro marco, que dá lugar à jornada de 484h
+  /// quando alcançado, e a sequência de dias no rodapé. Escondido no dia 0 (a
+  /// barra "0 de 484h" assusta e a sequência ainda é 0 mesmo).
+  Widget _progressCard(ThemeData theme) {
+    final c = AppColors.of(context);
+    final store = widget.store;
+    final gold = theme.colorScheme.secondary;
+    final today = store.approvedToday;
+    const goal = ProgressStore.dailyGoalSeconds;
+    final reached = today.inSeconds >= goal;
+    final total = store.totalApproved;
+    final streak = store.streakDays;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-                'Primeiro marco: '
-                '${_format(Duration(seconds: ProgressStore.firstMilestoneSeconds))} '
-                'aprovados',
-                style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: widget.store.firstMilestoneFraction,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-              color: theme.colorScheme.secondary,
-              backgroundColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+            _meter(
+              theme,
+              label: 'Meta de hoje',
+              value: '${_short(today)} de '
+                  '${_short(const Duration(seconds: goal))}',
+              fraction: today.inSeconds / goal,
+              color: reached ? c.green : gold,
+              done: reached,
             ),
-            const SizedBox(height: 8),
-            Text('${_format(total)} de ${_format(Duration(seconds: ProgressStore.firstMilestoneSeconds))}',
-                style: theme.textTheme.bodyMedium),
+            if (!store.reachedFirstMilestone) ...[
+              const SizedBox(height: 16),
+              _meter(
+                theme,
+                label: 'Primeiro marco',
+                value: '${_short(total)} de ${_short(const Duration(
+                    seconds: ProgressStore.firstMilestoneSeconds))}',
+                fraction: store.firstMilestoneFraction,
+                color: gold,
+              ),
+            ] else ...[
+              // A jornada SUBSTITUI o primeiro marco (as duas barras medem o
+              // mesmo total; juntas eram dois medidores do mesmo número).
+              const SizedBox(height: 16),
+              _meter(
+                theme,
+                label: 'Jornada 484h',
+                value: '${_short(total)} de 484h',
+                fraction: store.goalFraction,
+                color: gold,
+              ),
+            ],
+            if (streak > 0) ...[
+              const SizedBox(height: 16),
+              Divider(height: 0.5, thickness: 0.5, color: c.separator),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.local_fire_department_rounded,
+                      size: 18, color: gold),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      streak == 1
+                          ? 'Sequência de 1 dia'
+                          : 'Sequência de $streak dias',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -847,148 +887,209 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// #10: "Modo precisão" (ex-"Modo desafio") — copy menos intimidante, sem
   /// prometer "pronúncia nativa". Aparece só depois da base de 30min.
-  Widget _precisionModeCard(ThemeData theme) {
-    return Card(
-      child: SwitchListTile(
-        value: widget.store.rigorousMode,
-        onChanged: (v) async {
-          if (v && !await _confirmEnableRigorous()) return;
-          await widget.store.setRigorousMode(v);
-          setState(() {});
-        },
-        title: const Text('Modo precisão'),
-        subtitle: const Text(
-            'Use quando quiser treinar com critério mais exigente de '
-            'clareza, ritmo e pronúncia. Recomendado depois dos '
-            'primeiros 30 minutos aprovados.'),
-        secondary: const Icon(Icons.fitness_center),
-      ),
+  Widget _precisionModeGroup(ThemeData theme) {
+    return InsetGroup(
+      footer: 'Critério mais exigente de clareza, ritmo e pronúncia.',
+      children: [
+        SwitchListTile(
+          value: widget.store.rigorousMode,
+          onChanged: (v) async {
+            if (v && !await _confirmEnableRigorous()) return;
+            await widget.store.setRigorousMode(v);
+            setState(() {});
+          },
+          title: const Text('Modo precisão'),
+          secondary: const IconTile(Icons.track_changes_rounded),
+        ),
+      ],
     );
   }
 
-  /// #7 (mais distante da hierarquia): a jornada de 484h + streak. Fica abaixo
-  /// da meta de hoje e do primeiro marco; escondida no dia 0 (a barra "0 de
-  /// 484h" assusta e o streak ainda é 0 mesmo).
-  Widget _journeyCard(ThemeData theme) {
-    final total = widget.store.totalApproved;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+  /// Uma lição da trilha como linha de lista: estado à esquerda (check verde
+  /// = concluída, play no acento = liberada, cadeado cinza = bloqueada),
+  /// título, tentativas/duração e chevron quando dá pra abrir.
+  Widget _lessonRow(
+    ThemeData theme,
+    Lesson lesson, {
+    required bool completed,
+    required bool paywalled,
+    required bool progressionUnlocked,
+  }) {
+    final c = AppColors.of(context);
+    final unlocked = !paywalled && progressionUnlocked;
+    final meta = '${lesson.items.length} tentativas de fala · ~5 min';
+    final String subtitle;
+    final trail = trailOf[lesson.id];
+    if (paywalled) {
+      subtitle = 'Beta Fundador';
+    } else if (!progressionUnlocked &&
+        trail != null &&
+        trail.number > 1 &&
+        trail.lessons.first.id == lesson.id) {
+      // A 1ª lição da trilha exige a trilha anterior inteira (não só a
+      // lição de cima): diz isso em vez de só mostrar o cadeado.
+      subtitle = 'Conclua a trilha anterior para liberar';
+    } else if (lesson.bonus) {
+      subtitle = 'Bônus · $meta';
+    } else {
+      subtitle = meta;
+    }
+    final Widget status;
+    if (completed) {
+      status = Icon(Icons.check_circle_rounded,
+          size: 28, color: c.green, semanticLabel: 'Concluída');
+    } else if (paywalled) {
+      status = Icon(Icons.workspace_premium_rounded,
+          size: 26,
+          color: theme.colorScheme.secondary,
+          semanticLabel: 'Beta Fundador');
+    } else if (!progressionUnlocked) {
+      status = Icon(Icons.lock_rounded,
+          size: 22, color: c.tertiaryLabel, semanticLabel: 'Bloqueada');
+    } else {
+      status = Icon(Icons.play_circle_fill_rounded,
+          size: 28, color: theme.colorScheme.primary);
+    }
+    final tappable = unlocked || paywalled;
+    return ListTile(
+      // Paywalled fica tocável para mostrar o aviso do gate.
+      enabled: tappable,
+      leading: SizedBox(width: 30, child: Center(child: status)),
+      title: Text(lesson.title),
+      subtitle: Text(subtitle),
+      trailing: tappable
+          ? Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel)
+          : null,
+      onTap: paywalled
+          ? _openPaywall
+          : unlocked
+              ? () => _openLesson(lesson)
+              : null,
+    );
+  }
+
+  /// Cabeçalho de trilha: nome grande + "Trilha N · subtítulo".
+  Widget _trailHeader(ThemeData theme, Trail trail) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Jornada 484h iniciada',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: widget.store.goalFraction,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-              color: theme.colorScheme.secondary,
-              backgroundColor:
-                  theme.colorScheme.secondary.withValues(alpha: 0.15),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              total.inSeconds > 0
-                  ? '${_format(total)} de treino aprovado no total'
-                  : 'Comece o primeiro treino hoje.',
-              style: theme.textTheme.bodySmall,
-            ),
-            if (widget.store.streakDays > 0) ...[
-              const SizedBox(height: 4),
-              Text(
-                '🔥 ${widget.store.streakDays} '
-                '${widget.store.streakDays == 1 ? "dia" : "dias"} seguidos',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ],
+            Text(trail.title, style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 2),
+            Text('Trilha ${trail.number} · ${trail.subtitle}',
+                style: theme.textTheme.bodySmall),
           ],
         ),
-      ),
-    );
-  }
+      );
 
   /// #8: reduz o efeito visual de muitos bloqueios — mostra concluídos, o
   /// treino atual e só os próximos poucos bloqueados; o resto fica atrás de
-  /// um botão "Ver próximos treinos da trilha".
-  ///
-  /// Trilhas e zonas vêm de lib/data/curriculum.dart; cada cabeçalho entra
-  /// junto da 1ª lição visível do seu grupo (lições escondidas são sempre a
-  /// cauda bloqueada da fila, então grupo sem lição visível some inteiro).
+  /// um botão "Ver trilha completa"; zona concluída encolhe pra uma linha.
+  /// Cada zona vira um grupo "inset grouped".
   List<Widget> _lessonList(ThemeData theme) {
     const lockedVisibleLimit = 3;
     final next = _nextLesson();
     final nextIndex = next == null ? -1 : curriculum.indexOf(next);
-    final widgets = <Widget>[];
+    final rowsByZone = <int, List<Widget>>{};
     var lockedShown = 0;
     var hiddenCount = 0;
-    // Índice na fila inteira (paywall e pré-requisito são por posição na
-    // fila); o número exibido no card é a posição DENTRO da trilha.
-    var i = -1;
 
-    for (final trail in trails) {
-      var trailHeaderShown = false;
-      var numberInTrail = 0;
-      for (final (zoneIndex, zone) in trail.zones.indexed) {
-        var zoneHeaderShown = false;
-        for (final lesson in zone.lessons) {
-          i++;
-          numberInTrail++;
-          final completed = widget.store.isLessonCompleted(lesson.id);
-          final paywalled = _isPaywalled(i);
-          final progressionUnlocked = _isProgressionUnlocked(i);
-          final unlocked = !paywalled && progressionUnlocked;
-          final isCurrent = i == nextIndex;
+    // Zonas com todas as lições obrigatórias feitas encolhem pra uma linha
+    // (senão, no meio da trilha, as concluídas empurram o treino atual pra
+    // telas abaixo). Bônus não contam, como na progressão.
+    final completedZones = <int>{
+      for (var z = 0; z < _zones.length; z++)
+        if (curriculum.indexed.every((e) =>
+            _zoneOf(e.$1) != z ||
+            e.$2.bonus ||
+            widget.store.isLessonCompleted(e.$2.id)))
+          z,
+    };
+    final collapsedCount = <int, int>{};
 
-          bool visible;
-          if (_showAllLessons || completed || isCurrent || unlocked) {
-            visible = true;
-          } else if (lockedShown < lockedVisibleLimit) {
-            visible = true;
-            lockedShown++;
-          } else {
-            visible = false;
-          }
-
-          if (!visible) {
-            hiddenCount++;
-            continue;
-          }
-
-          if (!trailHeaderShown) {
-            trailHeaderShown = true;
-            widgets.add(_trailHeader(theme, trail, first: widgets.isEmpty));
-          }
-          if (!zoneHeaderShown) {
-            zoneHeaderShown = true;
-            widgets.add(Padding(
-              padding: EdgeInsets.only(top: zoneIndex == 0 ? 0 : 16, bottom: 4),
-              child: Text(
-                zone.title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.secondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ));
-          }
-
-          widgets.add(_lessonCard(theme, lesson, numberInTrail,
-              completed: completed,
-              paywalled: paywalled,
-              progressionUnlocked: progressionUnlocked));
+    for (final (i, lesson) in curriculum.indexed) {
+      final zone = _zoneOf(i);
+      if (!_showAllLessons && completedZones.contains(zone)) {
+        hiddenCount++;
+        if (widget.store.isLessonCompleted(lesson.id)) {
+          collapsedCount[zone] = (collapsedCount[zone] ?? 0) + 1;
         }
+        continue;
       }
+      final completed = widget.store.isLessonCompleted(lesson.id);
+      final paywalled = _isPaywalled(i);
+      final progressionUnlocked = _isProgressionUnlocked(i);
+      final unlocked = !paywalled && progressionUnlocked;
+      final isCurrent = i == nextIndex;
+
+      bool visible;
+      if (_showAllLessons || completed || isCurrent || unlocked) {
+        visible = true;
+      } else if (lockedShown < lockedVisibleLimit) {
+        visible = true;
+        lockedShown++;
+      } else {
+        visible = false;
+      }
+
+      if (!visible) {
+        hiddenCount++;
+        continue;
+      }
+
+      rowsByZone.putIfAbsent(zone, () => []).add(_lessonRow(
+            theme,
+            lesson,
+            completed: completed,
+            paywalled: paywalled,
+            progressionUnlocked: progressionUnlocked,
+          ));
+    }
+
+    final widgets = <Widget>[];
+    final c = AppColors.of(context);
+    Trail? shownTrail;
+    for (final (z, (_, trail, name)) in _zones.indexed) {
+      var rows = rowsByZone[z];
+      final done = completedZones.contains(z);
+      if (rows == null && done && !_showAllLessons) {
+        final n = collapsedCount[z] ?? 0;
+        rows = [
+          ListTile(
+            leading: SizedBox(
+              width: 30,
+              child: Center(
+                child: Icon(Icons.check_circle_rounded,
+                    size: 28, color: c.green, semanticLabel: 'Concluída'),
+              ),
+            ),
+            title: Text(n == 1 ? '1 treino feito' : '$n treinos feitos'),
+            trailing:
+                Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel),
+            onTap: () => setState(() => _showAllLessons = true),
+          ),
+        ];
+      }
+      if (rows == null) continue;
+      if (trail != shownTrail) {
+        // Cabeçalho da trilha entra junto do 1º grupo visível dela.
+        shownTrail = trail;
+        if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 36));
+        widgets.add(_trailHeader(theme, trail));
+        widgets.add(const SizedBox(height: 16));
+      } else if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: 24));
+      }
+      widgets.add(InsetGroup(
+          header: done ? '$name · concluída' : name, children: rows));
     }
 
     if (hiddenCount > 0 && !_showAllLessons) {
-      widgets.add(Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: OutlinedButton(
+      widgets.add(const SizedBox(height: 8));
+      widgets.add(Center(
+        child: TextButton(
           onPressed: () => setState(() => _showAllLessons = true),
-          child: const Text('Ver próximos treinos da trilha'),
+          child: const Text('Ver trilha completa'),
         ),
       ));
     }
@@ -996,123 +1097,48 @@ class _HomeScreenState extends State<HomeScreen> {
     return widgets;
   }
 
-  /// "Trilha N — nome" + subtítulo. A 1ª da lista cola no topo; as seguintes
-  /// ganham respiro para a troca de trilha ficar visível.
-  Widget _trailHeader(ThemeData theme, Trail trail, {required bool first}) =>
-      Padding(
-        padding: EdgeInsets.only(top: first ? 0 : 28, bottom: 8),
+  /// Pergunta curta com respostas em chips (pesquisas de abandono e de PMF):
+  /// cartão branco compacto, sem cor de fundo.
+  Widget _surveyCard(
+    ThemeData theme, {
+    required String question,
+    required List<(String, String)> options,
+    required ValueChanged<String> onAnswer,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Trilha ${trail.number} — ${trail.title}',
-                style: theme.textTheme.titleMedium),
-            Text(trail.subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant)),
+            Text('Pergunta rápida', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 4),
+            Text(question, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (val, label) in options)
+                  ActionChip(
+                    label: Text(label),
+                    onPressed: () => onAnswer(val),
+                  ),
+              ],
+            ),
           ],
         ),
-      );
-
-  Widget _lessonCard(ThemeData theme, Lesson lesson, int number,
-      {required bool completed,
-      required bool paywalled,
-      required bool progressionUnlocked}) {
-    final unlocked = !paywalled && progressionUnlocked;
-    final mission = _missionFor(lesson.id);
-    final String subtitle;
-    if (paywalled) {
-      subtitle = 'Beta Fundador';
-    } else if (!progressionUnlocked) {
-      subtitle = number == 1 && trailOf[lesson.id]!.number > 1
-          ? 'Conclua a trilha anterior para liberar'
-          : 'Complete a missão anterior para liberar';
-    } else if (lesson.bonus) {
-      subtitle =
-          'Bônus opcional · ${lesson.items.length} tentativas de fala · ~5 min';
-    } else {
-      subtitle = '${lesson.items.length} tentativas de fala · ~5 min';
-    }
-    final IconData trailing;
-    if (paywalled) {
-      trailing = Icons.workspace_premium_outlined;
-    } else if (!progressionUnlocked) {
-      trailing = Icons.lock_outline;
-    } else {
-      trailing = completed ? Icons.replay : Icons.play_arrow;
-    }
-    return Card(
-      child: ListTile(
-        // Paywalled fica tocável para mostrar o aviso do gate.
-        enabled: unlocked || paywalled,
-        leading: CircleAvatar(
-          backgroundColor: completed
-              ? theme.colorScheme.secondary.withValues(alpha: 0.18)
-              : theme.colorScheme.surfaceContainerHighest,
-          foregroundColor: completed
-              ? theme.colorScheme.secondary
-              : theme.colorScheme.onSurface,
-          child: completed
-              ? const Icon(Icons.check, size: 20)
-              : Text('$number'),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: Text(lesson.title)),
-            if (lesson.bonus) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.star, size: 16, color: theme.colorScheme.secondary),
-            ],
-          ],
-        ),
-        isThreeLine: mission != null && !completed,
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (mission != null && !completed)
-              Text('Missão atual: $mission',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.secondary,
-                      fontWeight: FontWeight.w600)),
-            Text(subtitle),
-          ],
-        ),
-        trailing: Icon(trailing),
-        onTap: paywalled
-            ? _openPaywall
-            : unlocked
-                ? () => _openLesson(lesson)
-                : null,
       ),
     );
   }
 
   // #10 Card de abandono: aparece quando a pessoa começou mas não fechou o
   // 1º ciclo (gravou, mas não chegou ao antes/depois). Pergunta o porquê.
-  Widget _abandonCard(ThemeData theme) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('O que te impediu de continuar?',
-                  style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final (val, label) in _abandonOptions)
-                    ActionChip(
-                      label: Text(label),
-                      onPressed: () => _answerAbandon(val),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+  Widget _abandonCard(ThemeData theme) => _surveyCard(
+        theme,
+        question: 'O que te impediu de continuar?',
+        options: _abandonOptions,
+        onAnswer: _answerAbandon,
       );
 
   void _answerAbandon(String reason) {
@@ -1123,29 +1149,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Teste de PMF (Sean Ellis): uma pergunta a quem já sentiu o valor e voltou.
   /// Mede a INTENSIDADE que a retenção sozinha não captura.
-  Widget _pmfCard(ThemeData theme) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Como você se sentiria se não pudesse mais usar o 484?',
-                  style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final (val, label) in _pmfOptions)
-                    ActionChip(
-                      label: Text(label),
-                      onPressed: () => _answerPmf(val),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+  Widget _pmfCard(ThemeData theme) => _surveyCard(
+        theme,
+        question: 'Como você se sentiria se não pudesse mais usar o 484?',
+        options: _pmfOptions,
+        onAnswer: _answerPmf,
       );
 
   void _answerPmf(String answer) {
@@ -1187,6 +1195,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     final theme = Theme.of(context);
+    final c = AppColors.of(context);
     final total = widget.store.totalApproved;
     final next = _nextLesson();
     final challenge = _challenge;
@@ -1205,7 +1214,7 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.store.streakDays >= 2;
     // Oferta Beta Fundador: só depois do "momento uau" (viu o antes/depois) e
     // enquanto a pessoa não entrou na lista de Fundadores.
-    // Quem já é Fundador não vê mais a oferta (vê o selo na AppBar).
+    // Quem já é Fundador não vê mais a oferta (vê o selo no topo).
     final showFounderOffer = !widget.entitlement.hasFounderAccess &&
         widget.store.hasDone('first_before_after_seen') &&
         !widget.store.hasLeftFounderEmail;
@@ -1226,17 +1235,56 @@ class _HomeScreenState extends State<HomeScreen> {
     // Revisão espaçada: só aparece quando há palavra vencida. No dia 0 nunca
     // há (nada foi aprovado ainda), então não precisa de gate por isBrandNew.
     final dueReview = _dueReviewWords();
+
+    // Cartões de produto viram linhas de grupos neutros (mesmas condições).
+    // Treino (revisão + desafio de hoje) fica colado no herói: é prática que
+    // rende minuto aprovado e não pode cair abaixo da dobra. Convites
+    // (21 dias, Fundador) vão depois do progresso, sem competir com o herói.
+    final trainingRows = <Widget>[
+      if (dueReview.isNotEmpty) _srsReviewRow(theme, dueReview),
+      if (showChallenge) _dailyChallengeRow(theme, challenge),
+    ];
+    final inviteRows = <Widget>[
+      if (showCohort) _cohortRow(theme),
+      if (showFounderOffer) _founderOfferRow(theme),
+    ];
+
+    // Blocos do topo, na ordem: herói → treino extra → pesquisas →
+    // progresso → convites.
+    final blocks = <Widget>[
+      if (next != null) _nextBestActionCard(theme, next),
+      if (trainingRows.isNotEmpty) InsetGroup(children: trainingRows),
+      if (askAbandon) _abandonCard(theme),
+      if (showPmf) _pmfCard(theme),
+      // #7: meta de hoje → primeiro marco (depois jornada 484h). Escondido no
+      // dia 0 (o herói já carrega a promessa do primeiro treino).
+      if (!isBrandNew) _progressCard(theme),
+      if (inviteRows.isNotEmpty) InsetGroup(children: inviteRows),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('484 Method'),
+        title: AnimatedOpacity(
+          opacity: _titleCollapsed ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          // Acesso oculto do painel do dev (mesmo gesto do título grande).
+          child: GestureDetector(
+            onLongPress: _openStats,
+            child: const Text('484 Method'),
+          ),
+        ),
+        shape: _titleCollapsed
+            ? Border(bottom: BorderSide(color: c.separator, width: 0.5))
+            : null,
         actions: [
           if (widget.entitlement.hasFounderAccess) _founderBadge(theme),
           PopupMenuButton<String>(
+            tooltip: 'Mais opções',
+            icon: const Icon(Icons.more_horiz_rounded),
             onSelected: (v) {
               if (v == 'clear') _confirmClearData();
               if (v == 'privacy') _openPrivacyPolicy();
               if (v == 'terms') _openTermsOfUse();
-              if (v == 'stats') _openStats();
               if (v == 'theme') _openThemeChooser();
               if (v == 'words') _openWordMemory();
             },
@@ -1250,11 +1298,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: 'words',
                   child: Text('Meu mapa de fala'),
                 ),
-              if (Backend.instance != null)
-                const PopupMenuItem(
-                  value: 'stats',
-                  child: Text('Painel de uso'),
-                ),
               const PopupMenuItem(
                 value: 'privacy',
                 child: Text('Política de privacidade'),
@@ -1263,69 +1306,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 'terms',
                 child: Text('Termos de Uso'),
               ),
-              const PopupMenuItem(
+              const PopupMenuDivider(),
+              PopupMenuItem(
                 value: 'clear',
-                child: Text('Apagar meus dados'),
+                child: Text('Apagar meus dados',
+                    style: TextStyle(color: c.red)),
               ),
             ],
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+          constraints:
+              const BoxConstraints(maxWidth: AppStyle.maxContentWidth),
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            controller: _scroll,
+            padding: EdgeInsets.fromLTRB(
+              AppStyle.pagePadding,
+              0,
+              AppStyle.pagePadding,
+              32 + MediaQuery.paddingOf(context).bottom,
+            ),
             children: [
-              if (askAbandon) ...[
-                _abandonCard(theme),
-                const SizedBox(height: 12),
+              // Título grande alinhado à esquerda, como nas telas raiz do iOS.
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Semantics(
+                  header: true,
+                  // Painel do dev: segurar o título abre (mesmo padrão de
+                  // maintenance_screen). Isto NÃO é controle de acesso, só
+                  // evita que o aluno caia lá por clique acidental (antes era
+                  // um item do menu ⋮ visível pra todos). O dev-stats segue
+                  // aberto a qualquer sessão; o caminho certo é login real
+                  // com allowlist (ver CLAUDE.md).
+                  child: GestureDetector(
+                    onLongPress: _openStats,
+                    child: Text('484 Method',
+                        style: theme.textTheme.displaySmall),
+                  ),
+                ),
+              ),
+              for (final (i, block) in blocks.indexed) ...[
+                if (i > 0) const SizedBox(height: 16),
+                block,
               ],
-              if (showPmf) ...[
-                _pmfCard(theme),
-                const SizedBox(height: 12),
-              ],
-              if (next != null) ...[
-                _nextBestActionCard(theme, next, isBrandNew),
-                const SizedBox(height: 12),
-              ],
-              if (showCohort) ...[
-                _cohortCard(theme),
-                const SizedBox(height: 12),
-              ],
-              // #7: meta de hoje → primeiro marco → jornada 484h, do mais
-              // imediato pro mais distante. Escondidos no dia 0 (a próxima
-              // ação já carrega a promessa da meta de hoje).
-              if (!isBrandNew) ...[
-                _todayGoalCard(theme),
-                const SizedBox(height: 12),
-              ],
-              if (!isBrandNew && !widget.store.reachedFirstMilestone) ...[
-                _firstMilestoneCard(theme),
-                const SizedBox(height: 12),
-              ],
-              if (dueReview.isNotEmpty) ...[
-                _srsReviewCard(theme, dueReview),
-                const SizedBox(height: 12),
-              ],
-              if (showChallenge) ...[
-                _dailyChallengeCard(theme, challenge),
-                const SizedBox(height: 12),
-              ],
-              if (showFounderOffer) ...[
-                _founderOfferCard(theme),
-                const SizedBox(height: 12),
-              ],
-              if (!isBrandNew) ...[
-                _journeyCard(theme),
-                const SizedBox(height: 12),
-              ],
+              const SizedBox(height: 36),
+..._lessonList(theme),
               if (showPrecision) ...[
-                _precisionModeCard(theme),
-                const SizedBox(height: 4),
+                const SizedBox(height: 32),
+                _precisionModeGroup(theme),
               ],
-              const SizedBox(height: 12),
-              ..._lessonList(theme),
             ],
           ),
         ),
@@ -1333,9 +1365,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _format(Duration d) {
-    if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}min';
-    if (d.inMinutes > 0) return '${d.inMinutes}min ${d.inSeconds % 60}s';
+  /// Duração enxuta pra UI: segundos só quando é pouco (abaixo de 10min),
+  /// pra não virar contagem irrisória ("42min 0s").
+  String _short(Duration d) {
+    if (d.inHours > 0) {
+      final m = d.inMinutes % 60;
+      return m == 0 ? '${d.inHours}h' : '${d.inHours}h ${m}min';
+    }
+    if (d.inMinutes > 0) {
+      final s = d.inSeconds % 60;
+      return (s == 0 || d.inMinutes >= 10)
+          ? '${d.inMinutes}min'
+          : '${d.inMinutes}min ${s}s';
+    }
     return '${d.inSeconds}s';
   }
 }

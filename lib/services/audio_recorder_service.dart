@@ -9,10 +9,10 @@ import 'package:record/record.dart';
 /// devolve um WAV pronto para envio.
 ///
 /// Regras de custo embutidas (o Azure cobra por segundo de áudio enviado):
-/// - auto-stop quando detecta [_silenceStopDelay] de silêncio depois que a
-///   pessoa já começou a falar — dispensa o clique manual de "parar" na
-///   maioria das tentativas, sem precisar adivinhar a duração certa pra
-///   palavra curta vs. frase longa;
+/// - auto-stop quando detecta um trecho de silêncio depois que a pessoa já
+///   começou a falar (0,7 s em palavra, 1,2 s em frase) — dispensa o clique
+///   manual de "parar" na maioria das tentativas. O que é "fala" é decidido
+///   por [SpeechActivityDetector], relativo ao microfone de cada aparelho;
 /// - [maxDuration] é só um teto de segurança (ruído contínuo, mic aberto);
 /// - gravação que é só silêncio retorna null e não deve ser enviada.
 class AudioRecorderService {
@@ -46,10 +46,17 @@ class AudioRecorderService {
 
   static const int sampleRate = 16000;
 
-  /// Silêncio contínuo depois da fala que encerra a gravação sozinha.
-  /// Curto o suficiente pra não atrasar palavras isoladas, longo o
-  /// suficiente pra não cortar pausas naturais dentro de uma frase.
-  static const Duration _silenceStopDelay = Duration(milliseconds: 700);
+  /// Silêncio contínuo depois da fala que encerra a gravação sozinha numa
+  /// palavra isolada: curto pra não atrasar o resultado.
+  static const Duration _wordSilenceStopDelay = Duration(milliseconds: 700);
+
+  /// Em frase, o aluno pausa entre as palavras pra lembrar a próxima — 0,7 s
+  /// cortava a frase no meio (relato de 2026-10-12, iPhone).
+  static const Duration _phraseSilenceStopDelay = Duration(milliseconds: 1200);
+
+  /// Em frase, tempo mínimo de gravação por palavra antes de o auto-stop
+  /// poder disparar — uma pausa logo no começo não encerra a frase.
+  static const Duration _minPerPhraseWord = Duration(milliseconds: 400);
 
   /// RMS mínimo (int16) que a janela mais alta do áudio precisa atingir
   /// para contar como fala. Ruído ambiente fica tipicamente abaixo de ~150;
@@ -58,22 +65,35 @@ class AudioRecorderService {
   static const double _silenceRmsThreshold = 250;
   static const int _windowMs = 100;
 
-  /// Limiar usado em tempo real pra (re)armar o timer de auto-stop. Mais
-  /// alto que [_silenceRmsThreshold] de propósito: ruído de ambiente (fan,
-  /// sala) passa fácil de 250 e nunca deixaria o timer de silêncio disparar.
-  static const double _liveSpeechRmsThreshold = 600;
-
   Future<bool> hasPermission() => _recorder.hasPermission();
 
   DateTime? _startedAt;
+  SpeechActivityDetector _speech = SpeechActivityDetector();
+  Duration _silenceStopDelay = _wordSilenceStopDelay;
+  Duration _minRecording = Duration.zero;
 
   /// Só retorna quando o primeiro chunk de áudio chega — o navegador leva
   /// ~1s para começar a entregar áudio de verdade, e falar antes disso
   /// perde o início da palavra. A UI deve mostrar "fale agora" somente
   /// depois que este future completar.
-  Future<void> start({required void Function() onAutoStop}) async {
+  ///
+  /// [expectedWords] = palavras do texto que a pessoa vai falar: frase ganha
+  /// pausa maior e um tempo mínimo antes do auto-stop (ver as constantes).
+  Future<void> start({
+    required void Function() onAutoStop,
+    int expectedWords = 1,
+  }) async {
     _chunks.clear();
     _liveIsFloat32 = null;
+    _speech = SpeechActivityDetector();
+    // Provisório até o 1º chunk (reatribuído abaixo): o mínimo de gravação
+    // da frase já vale se a fala for detectada logo no primeiro chunk.
+    _startedAt = DateTime.now();
+    final isPhrase = expectedWords > 1;
+    _silenceStopDelay =
+        isPhrase ? _phraseSilenceStopDelay : _wordSilenceStopDelay;
+    _minRecording =
+        isPhrase ? _minPerPhraseWord * expectedWords : Duration.zero;
     final firstChunk = Completer<void>();
     final stream = await _recorder.startStream(const RecordConfig(
       encoder: AudioEncoder.pcm16bits,
@@ -99,9 +119,9 @@ class AudioRecorderService {
     _autoStopTimer = Timer(maxDuration, onAutoStop);
   }
 
-  /// A cada chunk que chega, mede o volume; se passar do limiar de fala,
-  /// (re)arma o timer de silêncio. Sem fala detectada ainda, não arma nada
-  /// — silêncio antes da pessoa começar a falar não deve parar a gravação.
+  /// A cada chunk que chega, mede o volume; se for fala, (re)arma o timer
+  /// de silêncio. Sem fala detectada ainda, não arma nada — silêncio antes
+  /// da pessoa começar a falar não deve parar a gravação.
   void _feedSilenceDetector(
     Uint8List chunk,
     bool isFloat32,
@@ -110,9 +130,15 @@ class AudioRecorderService {
     if (!autoStopOnSilence) return; // fala aberta: só para no manual/teto
     final rms = _chunkRms(chunk, isFloat32);
     if (kDebugMode) debugPrint('[silence-calibration] rms=${rms.round()}');
-    if (rms < _liveSpeechRmsThreshold) return;
+    if (!_speech.feed(rms)) return;
+    // Frase: não encerra antes do mínimo, mesmo com pausa no começo.
+    final elapsed = _startedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(_startedAt!);
+    final untilMin = _minRecording - elapsed;
+    final wait = untilMin > _silenceStopDelay ? untilMin : _silenceStopDelay;
     _silenceStopTimer?.cancel();
-    _silenceStopTimer = Timer(_silenceStopDelay, onAutoStop);
+    _silenceStopTimer = Timer(wait, onAutoStop);
   }
 
   double _chunkRms(Uint8List chunk, bool isFloat32) {
@@ -284,6 +310,59 @@ class AudioRecorderService {
       ..add(header.buffer.asUint8List())
       ..add(pcm);
     return wav.takeBytes();
+  }
+}
+
+/// Decide, chunk a chunk, se a pessoa está falando — com limiar RELATIVO ao
+/// microfone de cada aparelho, não um volume fixo.
+///
+/// Por quê: o limiar fixo antigo (RMS 600, calibrado no MacBook) não servia
+/// pro iPhone, que capta mais baixo (relato de 2026-10-12): numa palavra
+/// curta a fala nunca passava de 600 e a gravação não parava sozinha
+/// ("pizza" exigiu 4 tentativas); numa frase o começo passava e o resto, mais
+/// baixo, não — o auto-stop cortava a frase no meio.
+///
+/// Como decide:
+/// - piso de ruído = percentil 10 dos volumes da própria gravação (resiste a
+///   um chunk anômalo isolado; antes de a pessoa falar, é o ruído da sala);
+/// - fala começa quando o MAIOR volume visto passa de 4× o piso (entre 150
+///   e 600). Retroativo: se a pessoa falou rápido antes de haver silêncio
+///   pra medir o piso, a fala é reconhecida assim que o silêncio chega;
+/// - depois disso, um chunk conta como fala se passar do maior entre 100,
+///   2,5× o piso e 12% do pico da fala (nunca acima do limiar de início) —
+///   assim a sílaba mais baixa do fim da frase não é tomada por silêncio.
+///
+/// Microfone alto num ambiente silencioso se comporta como antes (passar de
+/// 600 continua sendo fala); ambiente barulhento sobe os limiares junto.
+class SpeechActivityDetector {
+  final List<double> _levels = [];
+  double _peak = 0;
+  bool _speaking = false;
+
+  /// Alimenta o volume (RMS int16) de um chunk. Devolve true quando o timer
+  /// de silêncio deve ser (re)armado agora: fala acabou de ser detectada, ou
+  /// este chunk ainda é fala.
+  bool feed(double rms) {
+    if (rms <= 0) return false; // aquecimento do microfone: bytes zerados
+    _levels.add(rms);
+    if (rms > _peak) _peak = rms;
+    final noise = _noiseFloor();
+    final startThreshold = (noise * 4).clamp(150.0, 600.0);
+    if (!_speaking) {
+      if (_peak < startThreshold) return false;
+      _speaking = true;
+      return true;
+    }
+    final keepThreshold = math.min(
+      startThreshold,
+      math.max(100.0, math.max(noise * 2.5, _peak * 0.12)),
+    );
+    return rms >= keepThreshold;
+  }
+
+  double _noiseFloor() {
+    final sorted = [..._levels]..sort();
+    return sorted[(sorted.length * 0.1).floor()];
   }
 }
 
