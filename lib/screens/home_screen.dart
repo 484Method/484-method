@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/curriculum.dart';
 import '../models/lesson.dart';
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Fale sem ler pela primeira vez',
     'Melhore sua segunda tentativa',
     'Corrija seu primeiro som difícil',
-    'Ganhe seus primeiros 5 minutos aprovados',
+    'Ganhe seu primeiro minuto aprovado',
     'Responda mais rápido',
     'Use uma frase real de viagem',
     'Complete seu primeiro bloco de fala ativa',
@@ -171,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _scroll.addListener(_onScroll);
     _ensureDailyChallenge();
+    _loadCommunityLinks();
     // Conserto do funil: quem acabou de consentir entra direto na 1ª lição,
     // em vez de cair na dashboard vazia ("0 de 484h" assusta e não tem CTA).
     // Só no 1º acesso (progresso zero); initState roda 1x, sem repetir.
@@ -305,6 +307,35 @@ class _HomeScreenState extends State<HomeScreen> {
               ? null
               : Icon(Icons.chevron_right_rounded, color: c.tertiaryLabel)),
       onTap: onTap,
+    );
+  }
+
+  /// Convites dos grupos de WhatsApp (app_config 'community'). Vazio até
+  /// chegar (ou pra sempre, sem config/rede): a home só não mostra a linha.
+  Map<String, String> _groupLinks = const {};
+
+  Future<void> _loadCommunityLinks() async {
+    final links = await Backend.instance?.fetchCommunityLinks();
+    if (!mounted || links == null || links.isEmpty) return;
+    setState(() => _groupLinks = links);
+  }
+
+  /// Linha "Entrar no grupo". Comunidade fica FORA do app (WhatsApp) de
+  /// propósito: teste barato de accountability sem moderação nem áudio
+  /// compartilhado no app. O evento mede quem entra; a retenção de quem
+  /// clicou vs. quem não clicou diz se vale construir algo dentro do app.
+  Widget _groupRow(ThemeData theme,
+      {required String group, required String title,
+      required String subtitle}) {
+    return _row(
+      leading: IconTile(Icons.groups_rounded, color: AppColors.of(context).green),
+      title: title,
+      subtitle: subtitle,
+      onTap: () {
+        widget.analytics?.log('community_group_clicked', {'group': group});
+        launchUrl(Uri.parse(_groupLinks['${group}_url']!),
+            mode: LaunchMode.externalApplication);
+      },
     );
   }
 
@@ -881,13 +912,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Só faz sentido mostrar quando já dá pra recomendar (≥30min aprovados) —
-  /// abaixo disso o card virava um aviso "pode ser difícil demais" e só
-  /// competia com a ação principal do iniciante. Ver `_showPrecision`.
-  static const _precisionBaseSeconds = 30 * 60;
+  /// Só faz sentido mostrar quando já dá pra recomendar (≥5 min aprovados,
+  /// ~20 lições: a Trilha 1 quase inteira) — abaixo disso o card virava um
+  /// aviso "pode ser difícil demais" e só competia com a ação principal do
+  /// iniciante. Ver `_showPrecision`. Era 30 min (~120 lições, inalcançável
+  /// com o que uma lição rende — ver ProgressStore.dailyGoalSeconds).
+  static const _precisionBaseSeconds = 5 * 60;
 
   /// #10: "Modo precisão" (ex-"Modo desafio") — copy menos intimidante, sem
-  /// prometer "pronúncia nativa". Aparece só depois da base de 30min.
+  /// prometer "pronúncia nativa". Aparece só depois da base de 5 min.
   Widget _precisionModeGroup(ThemeData theme) {
     return InsetGroup(
       footer: 'Critério mais exigente de clareza, ritmo e pronúncia.',
@@ -1247,6 +1280,18 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
     final inviteRows = <Widget>[
       if (showCohort) _cohortRow(theme),
+      if (showCohort && _groupLinks.containsKey('cohort_url'))
+        _groupRow(theme,
+            group: 'cohort',
+            title: 'Grupo do desafio no WhatsApp',
+            subtitle: 'Treine junto. Cada um conta quando fez o treino do '
+                'dia.'),
+      if (widget.entitlement.hasFounderAccess &&
+          _groupLinks.containsKey('founders_url'))
+        _groupRow(theme,
+            group: 'founders',
+            title: 'Grupo dos Fundadores',
+            subtitle: 'Fale direto com quem constrói o 484.'),
       if (showFounderOffer) _founderOfferRow(theme),
     ];
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:method484/data/curriculum.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/main.dart';
+import 'package:method484/services/backend.dart';
 import 'package:method484/models/lesson.dart';
 import 'package:method484/screens/home_screen.dart';
 import 'package:method484/screens/lesson_screen.dart';
@@ -192,7 +193,7 @@ void main() {
     // currículo e saiu da tela no visual clean de 2026-10-13).
     expect(find.text('Seu próximo treino'), findsOneWidget);
     expect(find.text(licao01.title), findsWidgets);
-    // Priorização: "Modo precisão" só aparece depois de 30min aprovados —
+    // Priorização: "Modo precisão" só aparece depois de 5 min aprovados —
     // com 20s aqui ele fica escondido (staging coberto em teste próprio).
     expect(find.text('Modo precisão'), findsNothing);
   });
@@ -263,10 +264,10 @@ void main() {
     expect(find.textContaining(trilha2.lessons.first.title), findsWidgets);
   });
 
-  testWidgets('priorização: Modo precisão aparece após 30min aprovados',
+  testWidgets('priorização: Modo precisão aparece após 5 min aprovados',
       (tester) async {
     final store = await _emptyStore();
-    await store.addApproved(const Duration(minutes: 31)); // passa dos 30min
+    await store.addApproved(const Duration(minutes: 6)); // passa dos 5 min
     tester.view.physicalSize = const Size(1200, 6000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -573,6 +574,12 @@ void main() {
     await store.addApproved(const Duration(seconds: 5));
     expect(store.totalApproved.inSeconds, 15);
     expect(store.streakDays, 1);
+
+    // Gravação real tem fração de segundo: arredonda, não trunca (2,6 s
+    // contava como 2 e ~20% do tempo aprovado sumia).
+    await store.addApproved(const Duration(milliseconds: 2600));
+    expect(store.totalApproved.inSeconds, 18);
+    expect(store.approvedToday.inSeconds, 18);
   });
 
   test('acesso Beta Fundador começa desligado e persiste quando ligado',
@@ -787,6 +794,23 @@ void main() {
         SpeechCategory.rhythm);
     expect(mem.review.firstWhere((s) => s.word == 'banana').category,
         SpeechCategory.pronunciation); // sem prosódia → pronúncia
+  });
+
+  test('grupos de WhatsApp: só aceita convite do chat.whatsapp.com', () {
+    expect(parseCommunityLinks(null), isEmpty);
+    expect(parseCommunityLinks('x'), isEmpty);
+    final links = parseCommunityLinks({
+      'cohort_url': ' https://chat.whatsapp.com/AbC123 ',
+      'founders_url': 'https://evil.example.com/chat.whatsapp.com/x',
+    });
+    expect(links, {'cohort_url': 'https://chat.whatsapp.com/AbC123'});
+    // http (sem s), sem código do convite ou outro domínio: fora.
+    expect(
+        parseCommunityLinks({
+          'cohort_url': 'http://chat.whatsapp.com/AbC123',
+          'founders_url': 'https://chat.whatsapp.com/',
+        }),
+        isEmpty);
   });
 
   test('recorde pessoal: 1ª nota é ponto de partida; só nota maior bate',

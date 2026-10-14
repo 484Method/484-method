@@ -126,6 +126,15 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   derivado da escada SRS — Dominada = passou na revisão de 10 dias), selo
   "Subiu para Firme"/"Palavra dominada" no resultado, placar e grupos por
   nível no mapa de fala; evento `word_mastered`.
+- ✅ Grupos de WhatsApp (2026-10-13): comunidade fica FORA do app de
+  propósito (sem moderação/áudio compartilhado; `CLAUDE.md` mantém
+  comunidade in-app fora de escopo). Linha "Grupo do desafio no WhatsApp"
+  (junto do convite de 21 dias) e "Grupo dos Fundadores" (só Fundador) na
+  home, só quando `app_config 'community'` tem link válido de
+  https://chat.whatsapp.com/ (`Backend.fetchCommunityLinks` /
+  `parseCommunityLinks`; SQL pra ligar no fim do schema.sql). Evento
+  `community_group_clicked` (props.group = cohort/founders) — comparar
+  retenção de quem entrou vs. quem não.
 - ✅ Teste de PMF (Sean Ellis): card na home pergunta "como se sentiria se não
   pudesse mais usar o 484?" (Muito/Pouco decepcionado, Indiferente) a quem
   sentiu o valor (`first_before_after_seen`) e voltou (`streakDays >= 2`); uma
