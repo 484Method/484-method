@@ -245,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Selo persistente de Fundador na barra do topo — torna o status (que hoje
-  /// é o que o Fundador compra, já que as Trilhas 1, 2 e 3 são grátis pra todos)
+  /// é o que o Fundador compra, já que as Trilhas 1 a 5 são grátis pra todos)
   /// visível.
   Widget _founderBadge(ThemeData theme) {
     final c = AppColors.of(context);

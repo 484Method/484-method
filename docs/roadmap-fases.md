@@ -28,11 +28,14 @@ aprovada. Fonte: `484Method_Plano_Projeto_CORRIGIDO.docx`.
 | 7 | Inglês com Sotaques Globais | 60h | Americano, britânico, australiano, indiano, irlandês |
 | 8 | Fluência Integrada | 40h | Simulações, storytelling, conversa espontânea |
 
-**Fases 1 e 2 estão construídas** — Fase 1 = Trilha 1 (25 microlições, NÃO
-as 40h; as horas são meta de prática, não conteúdo pronto) e Fase 2 = Trilha 2
-"Sons do inglês real" (28 lições organizadas pelas armadilhas de som do
-brasileiro, desde 2026-10-11 — `docs/curriculo-fase2.md`). Grátis pra todos e
-sequencial: a Trilha 2 abre ao concluir a Trilha 1. Fases 3–8 são roadmap de
+**Fases 1 a 5 estão construídas** — Fase 1 = Trilha 1 (25 microlições, NÃO
+as 40h; as horas são meta de prática, não conteúdo pronto); Fase 2 = Trilha 2
+"Sons do inglês real" (28 lições pelas armadilhas de som do brasileiro, desde
+2026-10-11 — `docs/curriculo-fase2.md`); Fases 3, 4 e 5 = Trilhas 3 "Frases
+prontas do dia a dia", 4 "Estruturas em fala" e 5 "Inglês para
+sobrevivência" (28 lições cada, desde 2026-10-14 — `docs/curriculo-fase3.md`,
+`curriculo-fase4.md`, `curriculo-fase5.md`). Grátis pra todos por ora e
+sequencial: cada trilha abre ao concluir a anterior. Fases 6–8 são roadmap de
 conteúdo futuro, **fora de escopo** hoje (ver `CLAUDE.md`).
 
 ## 2. Roadmap de negócio (GTM) — 4 fases

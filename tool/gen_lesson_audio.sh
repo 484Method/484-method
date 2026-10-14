@@ -34,6 +34,8 @@ gen() {
 }
 gen2() { gen_trail fase2 "$@"; }
 gen3() { gen_trail fase3 "$@"; }
+gen4() { gen_trail fase4 "$@"; }
+gen5() { gen_trail fase5 "$@"; }
 
 gen licao01 "apple" "cinema" "hotel" "internet" "pizza"
 gen licao02 "app" "online" "email" "login" "video"
@@ -144,3 +146,61 @@ gen3 licao25 "I'm kind of tired." "That's a lot of work." "Can I get a cup of te
 gen3 licao26 "Nice to meet you." "Thanks for coming." "Have a good weekend." "Let me know by Friday." "Sorry, I'm running late."
 gen3 licao28 "I'm going to pick it up after work." "What do you want to do tonight?" "Did you get a lot of work done?" "I have to get up at six tomorrow." "It was kind of a long day."
 # Revisões da Trilha 3 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.
+
+# ---------------------------------------------------------------------------
+# Trilha 4 — Estruturas em fala (lib/data/fase4.dart)
+# ---------------------------------------------------------------------------
+gen4 licao01 "Do you cook?" "Does it hurt?" "Do you have kids?" "Does she live near here?" "Do they speak English?"
+gen4 licao02 "Are you okay?" "Is this yours?" "Are you new here?" "Is she your sister?" "Is it always this busy?"
+gen4 licao03 "Who's that?" "Where do you live?" "When does it start?" "Which one do you want?" "What time do you get up?"
+gen4 licao04 "How much do you need?" "How long does it take?" "How far is your office?" "How often do you work out?" "How many languages do you speak?"
+gen4 licao05 "Is that right?" "Which one is better?" "What does this word mean?" "How do you spell that?" "How do you say this in English?"
+gen4 licao07 "Do you know where she lives?" "Do you know if he's here today?" "Could you tell me how this works?" "Can you tell me what time it opens?" "Do you mind if I ask what you do?"
+gen4 licao08 "I don't drink coffee." "I don't live here." "They don't know each other." "We don't work on Sundays." "You don't need a car here."
+gen4 licao09 "It doesn't work." "He doesn't drive." "It doesn't matter." "She doesn't eat meat." "My boss doesn't speak Portuguese."
+gen4 licao10 "I'm not sure." "It isn't far." "They aren't ready." "I'm not from around here." "There isn't any milk left."
+gen4 licao11 "I can't hear you." "It won't take long." "You don't have to pay." "I can't make it tonight." "You shouldn't walk alone at night."
+gen4 licao12 "Not really." "I'm not done yet." "I never eat breakfast." "There's nothing to worry about." "Nobody uses cash anymore."
+gen4 licao14 "That's not exactly what I mean." "I don't think that's a good idea." "I can't stay long, I work early tomorrow." "I see your point, but I don't agree." "I'd rather not talk about it right now."
+gen4 licao15 "I went home early." "I found my keys." "She told me everything." "We made it on time." "They left without me."
+gen4 licao16 "Where were you?" "It was amazing." "How was the trip?" "We were at home." "The traffic was terrible."
+gen4 licao17 "Did you see it?" "Did you sleep well?" "How did it go?" "When did you get here?" "Where did you buy it?"
+gen4 licao18 "I didn't know." "It wasn't my fault." "They weren't home." "We didn't have time." "I didn't sleep at all."
+gen4 licao19 "It happened last night." "I saw her yesterday." "After that, we got lost." "First we ate, then we left." "I called you two days ago."
+gen4 licao21 "What did you do after the meeting?" "I didn't see your message until this morning." "I missed the bus, so I took a taxi." "When I got home, I found the door open." "We got there late, but it was worth it."
+gen4 licao22 "I'm driving." "What are you doing?" "It's raining again." "I'm working on it." "Are you still waiting outside?"
+gen4 licao23 "I'm leaving tomorrow." "We're flying on Monday." "I'm meeting a client at five." "Are you coming on Friday?" "We're going to move next year."
+gen4 licao24 "I'll do it." "I'll call you back." "I'll send it tonight." "Don't worry, I'll be there." "I think I'll stay home today."
+gen4 licao25 "I've been there." "I've never tried it." "Have you ever seen snow?" "I've been to New York twice." "Have you ever been to Canada?"
+gen4 licao26 "I just got here." "I've already done it." "I've known her for years." "How long have you been waiting?" "I've lived here since last year."
+gen4 licao28 "Have you seen it yet? You'll love it." "I've never been there, but I'd love to go." "I'm still at work, so I'll text you later." "We got here on Monday and we're leaving tomorrow." "I've already made plans, so I'll pass this time."
+# Revisões da Trilha 4 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.
+
+# ---------------------------------------------------------------------------
+# Trilha 5 — Inglês para sobrevivência (lib/data/fase5.dart)
+# ---------------------------------------------------------------------------
+gen5 licao01 "Table for two, please." "We have a reservation." "Is there a table by the window?" "Can we sit outside?" "How long is the wait?"
+gen5 licao02 "What do you recommend?" "What comes with that?" "Could I see the menu?" "I'll have the chicken, please." "I need a few more minutes."
+gen5 licao03 "No onions, please." "Is it spicy?" "Does this have dairy?" "I'm allergic to peanuts." "Can I get it without cheese?"
+gen5 licao04 "I didn't order this." "This is a little cold." "Could we get some napkins?" "Could I get a clean fork?" "We're still waiting on our food."
+gen5 licao05 "Keep the change." "Separate checks, please." "Is the tip included?" "Can we split the check?" "Do you take credit cards?"
+gen5 licao07 "Can I get a large iced coffee to go?" "Could I get a medium latte with oat milk?" "Can I have the dressing on the side?" "Could you put the rest in a box?" "Excuse me, is there a restroom I can use?"
+gen5 licao08 "Window seat, please." "Just one bag." "Is the flight on time?" "Is this bag too heavy?" "Can I get an aisle seat?"
+gen5 licao09 "Here's my passport." "I'm here on vacation." "I have nothing to declare." "I'll be here for two weeks." "Should I take my shoes off?"
+gen5 licao10 "Where's gate twelve?" "Is my flight delayed?" "When does boarding start?" "I have a connecting flight." "Am I going to miss my connection?"
+gen5 licao11 "My bag didn't arrive." "My suitcase is damaged." "It's a big black suitcase." "Where do I report lost luggage?" "Can you send it to my hotel?"
+gen5 licao12 "To this address, please." "How much to the airport?" "Where can I buy a ticket?" "Does this bus go downtown?" "Which stop should I get off at?"
+gen5 licao14 "Is there any way we could sit together?" "I'm here on business for about a week." "My flight was canceled. What are my options?" "Could you let me know when we get there?" "Can you call me when you find my bag?"
+gen5 licao15 "I'm checking in." "It's under Silva." "Is breakfast included?" "What time is checkout?" "Can I check in early?"
+gen5 licao16 "There's no hot water." "The room is too noisy." "Could I get more towels?" "The air conditioner isn't working." "Could I move to another room?"
+gen5 licao17 "Excuse me, I'm lost." "Can I walk there?" "Is it on the left?" "How do I get to the museum?" "Can you show me on the map?"
+gen5 licao18 "I'm just looking, thanks." "Can I try this on?" "Where are the fitting rooms?" "It's a little too big." "Do you have this in a medium?"
+gen5 licao19 "How much is this jacket?" "Is this one on sale too?" "Can I pay with cash?" "I'd like to return this, please." "Could I get a gift receipt, please?"
+gen5 licao21 "Can I leave my bags here until three?" "Could someone come up and take a look?" "How long does it take to walk there?" "Do you have the same one in black?" "I'd like to exchange this for a smaller size."
+gen5 licao22 "Is there a pharmacy nearby?" "I need something for a headache." "Do I need a prescription?" "How often should I take it?" "Do you have cough syrup?"
+gen5 licao23 "I have a fever." "My stomach hurts." "I feel dizzy." "It hurts right here." "I've been sick since yesterday."
+gen5 licao24 "Is it serious?" "I need to see a doctor." "I have travel insurance." "Can I see someone today?" "Could you write that down, please?"
+gen5 licao25 "Call an ambulance!" "It's an emergency." "Please call nine one one!" "Where's the nearest hospital?" "Does anyone here speak Portuguese?"
+gen5 licao26 "I lost my wallet." "Someone stole my phone." "My passport was stolen." "I need to report a theft." "I need a police report for insurance."
+gen5 licao28 "I've had a bad headache since this morning." "Can you recommend something for a sore throat?" "I'm allergic to penicillin. Is this medicine okay?" "My friend passed out and won't wake up." "Can you tell me where the police station is?"
+# Revisões da Trilha 5 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.

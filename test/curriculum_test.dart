@@ -5,14 +5,18 @@ import 'package:method484/data/curriculum.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/data/fase2.dart';
 import 'package:method484/data/fase3.dart';
+import 'package:method484/data/fase4.dart';
+import 'package:method484/data/fase5.dart';
 
 /// Integridade do currículo (Trilhas 1 e 2). Roda no `flutter test` do CI de
 /// deploy, então currículo quebrado — áudio faltando, id repetido — não vai
 /// pro ar.
 void main() {
   test('Trilha 1 da Home = fase1Lessons, na mesma ordem', () {
-    expect(trilha1.lessons.map((l) => l.id).toList(),
-        fase1Lessons.map((l) => l.id).toList());
+    expect(
+      trilha1.lessons.map((l) => l.id).toList(),
+      fase1Lessons.map((l) => l.id).toList(),
+    );
   });
 
   test('ids únicos no currículo inteiro', () {
@@ -41,18 +45,28 @@ void main() {
         if (!pubspec.contains('- $dir\n')) undeclaredDirs.add(dir);
       }
     }
-    expect(undeclaredDirs, isEmpty,
-        reason: 'pasta de áudio fora do pubspec.yaml (o asset não entra no '
-            'build)');
-    expect(missingFiles, isEmpty,
-        reason: '${missingFiles.length} áudio(s) faltando — rode '
-            './tool/gen_lesson_audio.sh (gera só o que falta) e commite os '
-            'MP3. Primeiro: ${missingFiles.take(3).join(', ')}');
+    expect(
+      undeclaredDirs,
+      isEmpty,
+      reason:
+          'pasta de áudio fora do pubspec.yaml (o asset não entra no '
+          'build)',
+    );
+    expect(
+      missingFiles,
+      isEmpty,
+      reason:
+          '${missingFiles.length} áudio(s) faltando — rode '
+          './tool/gen_lesson_audio.sh (gera só o que falta) e commite os '
+          'MP3. Primeiro: ${missingFiles.take(3).join(', ')}',
+    );
   });
 
   for (final (trail, zones, prefix, previous) in [
     (trilha2, fase2Zones, 'fase2', [trilha1]),
     (trilha3, fase3Zones, 'fase3', [trilha1, trilha2]),
+    (trilha4, fase4Zones, 'fase4', [trilha1, trilha2, trilha3]),
+    (trilha5, fase5Zones, 'fase5', [trilha1, trilha2, trilha3, trilha4]),
   ]) {
     group('Trilha ${trail.number}', () {
       test('4 zonas de 7 lições: 5 obrigatórias, revisão, bônus', () {
@@ -83,12 +97,18 @@ void main() {
             expect(item.ipa, isNotNull, reason: where);
             expect(item.phonetic, isNotNull, reason: where);
             expect(item.soundTip, isNotNull, reason: where);
-            expect(item.soundTip!.length, lessThanOrEqualTo(160),
-                reason: where);
+            expect(
+              item.soundTip!.length,
+              lessThanOrEqualTo(160),
+              reason: where,
+            );
             // Dica é instrução física em português — símbolo IPA não ajuda
             // o falso iniciante (o IPA já aparece separado no Livro Aberto).
-            expect(item.soundTip,
-                isNot(matches(RegExp('[ˈˌːəɪʊæʌɜɔθðŋʃʒ]'))), reason: where);
+            expect(
+              item.soundTip,
+              isNot(matches(RegExp('[ˈˌːəɪʊæʌɜɔθðŋʃʒ]'))),
+              reason: where,
+            );
           }
         }
       });
@@ -101,8 +121,11 @@ void main() {
               if (l != review) ...l.items.map((i) => i.audioAsset),
           };
           for (final item in review.items) {
-            expect(zoneAudio, contains(item.audioAsset),
-                reason: '${review.id} / ${item.text}');
+            expect(
+              zoneAudio,
+              contains(item.audioAsset),
+              reason: '${review.id} / ${item.text}',
+            );
           }
         }
       });
@@ -115,8 +138,11 @@ void main() {
         };
         for (final l in trail.lessons) {
           for (final item in l.items) {
-            expect(before, isNot(contains(item.text)),
-                reason: '${l.id}: ${item.text}');
+            expect(
+              before,
+              isNot(contains(item.text)),
+              reason: '${l.id}: ${item.text}',
+            );
           }
         }
       });

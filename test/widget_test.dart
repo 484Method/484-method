@@ -589,7 +589,7 @@ void main() {
     expect(ent2.hasFounderAccess, isTrue);
   });
 
-  test('regra de produto: Trilhas 1, 2 e 3 inteiras são grátis (2026-10-14)',
+  test('regra de produto: Trilhas 1 a 5 inteiras são grátis (2026-10-14)',
       () {
     expect(kFreeLessonCount, curriculum.length);
   });

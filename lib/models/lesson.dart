@@ -1,4 +1,4 @@
-/// Modelo das microlições do currículo (Trilhas 1, 2 e 3 — ver
+/// Modelo das microlições do currículo (Trilhas 1 a 5 — ver
 /// lib/data/curriculum.dart).
 ///
 /// O threshold de aprovação é POR LIÇÃO (regra de produto: configurável,

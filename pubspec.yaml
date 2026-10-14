@@ -137,6 +137,54 @@ flutter:
     - assets/audio/fase3/licao25/
     - assets/audio/fase3/licao26/
     - assets/audio/fase3/licao28/
+    - assets/audio/fase4/licao01/
+    - assets/audio/fase4/licao02/
+    - assets/audio/fase4/licao03/
+    - assets/audio/fase4/licao04/
+    - assets/audio/fase4/licao05/
+    - assets/audio/fase4/licao07/
+    - assets/audio/fase4/licao08/
+    - assets/audio/fase4/licao09/
+    - assets/audio/fase4/licao10/
+    - assets/audio/fase4/licao11/
+    - assets/audio/fase4/licao12/
+    - assets/audio/fase4/licao14/
+    - assets/audio/fase4/licao15/
+    - assets/audio/fase4/licao16/
+    - assets/audio/fase4/licao17/
+    - assets/audio/fase4/licao18/
+    - assets/audio/fase4/licao19/
+    - assets/audio/fase4/licao21/
+    - assets/audio/fase4/licao22/
+    - assets/audio/fase4/licao23/
+    - assets/audio/fase4/licao24/
+    - assets/audio/fase4/licao25/
+    - assets/audio/fase4/licao26/
+    - assets/audio/fase4/licao28/
+    - assets/audio/fase5/licao01/
+    - assets/audio/fase5/licao02/
+    - assets/audio/fase5/licao03/
+    - assets/audio/fase5/licao04/
+    - assets/audio/fase5/licao05/
+    - assets/audio/fase5/licao07/
+    - assets/audio/fase5/licao08/
+    - assets/audio/fase5/licao09/
+    - assets/audio/fase5/licao10/
+    - assets/audio/fase5/licao11/
+    - assets/audio/fase5/licao12/
+    - assets/audio/fase5/licao14/
+    - assets/audio/fase5/licao15/
+    - assets/audio/fase5/licao16/
+    - assets/audio/fase5/licao17/
+    - assets/audio/fase5/licao18/
+    - assets/audio/fase5/licao19/
+    - assets/audio/fase5/licao21/
+    - assets/audio/fase5/licao22/
+    - assets/audio/fase5/licao23/
+    - assets/audio/fase5/licao24/
+    - assets/audio/fase5/licao25/
+    - assets/audio/fase5/licao26/
+    - assets/audio/fase5/licao28/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
