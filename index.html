@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/484-method/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Treino oral de inglês para brasileiros. Escute, repita, grave e receba feedback em português.">
+
+  <!-- Theme color (barra do navegador / task switcher): a MESMA cor de
+       fundo do app (cinza claro no tema claro, preto no escuro), pra barra
+       se fundir com a página em vez de virar uma faixa colorida. Ficam
+       antes de qualquer meta que o Flutter injete em runtime, e o navegador
+       usa a primeira que casar com o media. -->
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+
+  <!-- iOS PWA. "default" (barra opaca, texto escuro) em vez de
+       "black-translucent": com o fundo claro, o texto branco da barra
+       translúcida sumiria em cima da página. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="484 Method">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>484 Method</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!--
+    Splash de boot. O app Flutter leva alguns segundos pra pintar o primeiro
+    frame (baixa ~3 MB de bundle e o main() espera o Supabase), e sem isto a
+    tela fica BRANCA nesse intervalo — foi o que os testadores viram em
+    2026-09-16, quando o projeto Supabase estava pausado e o boot demorava.
+    Cores = fundo/texto do app (AppColors em lib/ui/app_style.dart): cinza
+    claro #F2F2F7 / texto #1C1C1E no claro, preto / branco no escuro. Assim
+    não há "flash" de outra cor entre o splash e o primeiro frame.
+  -->
+  <style>
+    html, body { margin: 0; padding: 0; background: #F2F2F7; }
+    #boot {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #F2F2F7; color: #1C1C1E;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      text-align: center; padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+    #boot .mark { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    #boot .spin {
+      width: 24px; height: 24px; margin: 22px 0 14px;
+      border: 2.5px solid #E5E5EA;
+      border-top-color: #1B2D4F; border-radius: 50%;
+      animation: boot-spin 0.9s linear infinite;
+    }
+    #boot .msg { font-size: 15px; color: #6C6C70; }
+    /* Só aparece se o boot demorar — silêncio prolongado assusta mais que
+       uma frase honesta. */
+    #boot .slow { font-size: 13px; color: #6C6C70; opacity: 0; margin-top: 10px;
+                  max-width: 320px; line-height: 1.35;
+                  transition: opacity 0.4s ease; }
+    #boot.is-slow .slow { opacity: 1; }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    @media (prefers-color-scheme: dark) {
+      html, body, #boot { background: #000000; }
+      #boot { color: #FFFFFF; }
+      #boot .spin { border-color: #2C2C2E; border-top-color: #C9A252; }
+      #boot .msg, #boot .slow { color: #98989F; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot .spin { animation: none; }
+    }
+  </style>
+
+  <div id="boot">
+    <div class="mark">484 Method</div>
+    <div class="spin"></div>
+    <div class="msg">Carregando seu treino…</div>
+    <div class="slow">Está demorando mais que o normal. Se não abrir, confira
+      sua conexão e recarregue a página.</div>
+  </div>
+
+  <script>
+    // Listener registrado ANTES do bootstrap (que é async), então não há
+    // corrida: o primeiro frame nunca chega antes daqui.
+    (function () {
+      var boot = document.getElementById('boot');
+      if (!boot) return;
+      var slow = setTimeout(function () { boot.classList.add('is-slow'); }, 10000);
+      window.addEventListener('flutter-first-frame', function () {
+        clearTimeout(slow);
+        boot.remove();
+      });
+    })();
+  </script>
+
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
