@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/fase1.dart';
+import '../data/curriculum.dart';
 import '../services/analytics_service.dart';
 import '../services/progress_store.dart';
 import '../ui/app_style.dart';
@@ -160,7 +160,7 @@ class _CohortReviewScreenState extends State<CohortReviewScreen> {
 
   int _completedLessonCount() {
     var n = 0;
-    for (final l in fase1Lessons) {
+    for (final l in curriculum) {
       if (widget.store.isLessonCompleted(l.id)) n++;
     }
     return n;

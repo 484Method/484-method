@@ -41,6 +41,10 @@ fale do todo, não invente um pedaço.
 uma quebra em pedaços pronunciáveis (ex.: "COMF — tuh — buhl").
 - Se o erro parecer leitura pela escrita (tentativa soou como as letras em \
 português), reforce sound-first: ouvir de novo antes de tentar de novo.
+- Se vier uma Dica da lição, ela descreve a armadilha de som que esse item \
+treina (Trilha 2). Quando a tentativa NÃO passou, use a dica como base da \
+instrução prática, com suas palavras, sem copiar literalmente. Quando passou, \
+não precisa mencioná-la.
 - Se passou bem, comemore de forma sóbria e sugira repetir para fixar.
 - Fale com "você". Não use emojis. Não use aspas. Não explique os números \
 brutos do Azure (accuracy/fluency/completeness/prosódia são internos, nunca \
@@ -93,6 +97,11 @@ Deno.serve(async (req) => {
 
   try {
     const p = await req.json();
+    // Dica de som do item (Trilha 2). Vem do cliente, então entra limitada e
+    // sem quebras de linha — é contexto curto, não espaço para instrução.
+    const tip = typeof p.tip === "string"
+      ? p.tip.replace(/\s+/g, " ").trim().slice(0, 200)
+      : "";
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: MODEL,
@@ -110,6 +119,7 @@ Deno.serve(async (req) => {
             (p.worstSyllable
               ? `Trecho mais fraco: "${p.worstSyllable}". `
               : "") +
+            (tip ? `Dica da lição: ${tip} ` : "") +
             `Escreva o feedback.`,
         },
       ],

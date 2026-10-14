@@ -3,8 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../data/fase1.dart';
+import '../data/curriculum.dart';
 import '../models/lesson.dart';
+import '../models/trail.dart';
 import '../services/analytics_service.dart';
 import '../services/entitlement_service.dart';
 import '../services/progress_store.dart';
@@ -28,7 +29,7 @@ import 'word_memory_screen.dart';
 /// pessoa viu antes, e é sempre uma lição já liberada.
 final Map<String, ({Lesson lesson, int index})> _wordIndex = () {
   final out = <String, ({Lesson lesson, int index})>{};
-  for (final lesson in fase1Lessons) {
+  for (final lesson in curriculum) {
     for (var i = 0; i < lesson.items.length; i++) {
       out.putIfAbsent(lesson.items[i].text, () => (lesson: lesson, index: i));
     }
@@ -114,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _missionFor(String lessonId) {
     var idx = 0;
-    for (final l in fase1Lessons) {
+    for (final l in curriculum) {
       if (l.bonus) continue;
       if (l.id == lessonId) {
         return idx < _missions.length ? _missions[idx] : null;
@@ -124,18 +125,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return null;
   }
 
-  // Zonas da Trilha 1: índice da 1ª lição de cada zona → nome exibido como
-  // cabeçalho do grupo.
-  static const _zones = [
-    (0, 'Zona 1 · Reconhecimento e confiança'),
-    (6, 'Zona 2 · Som e sílaba forte'),
-    (11, 'Zona 3 · Da palavra à frase'),
-    (18, 'Zona 4 · Conversa do dia a dia'),
-  ];
+  // Zonas de todas as trilhas, na ordem da fila (lib/data/curriculum.dart):
+  // índice da 1ª lição de cada zona → trilha e nome exibido no cabeçalho.
+  // O nome vem do currículo ("Zona 1 — …"); na tela o travessão vira "·".
+  static final List<(int, Trail, String)> _zones = () {
+    final out = <(int, Trail, String)>[];
+    var i = 0;
+    for (final t in trails) {
+      for (final z in t.zones) {
+        out.add((i, t, z.title.replaceFirst(' — ', ' · ')));
+        i += z.lessons.length;
+      }
+    }
+    return out;
+  }();
 
   int _zoneOf(int lessonIndex) {
     var zone = 0;
-    for (final (z, (start, _)) in _zones.indexed) {
+    for (final (z, (start, _, _)) in _zones.indexed) {
       if (lessonIndex >= start) zone = z;
     }
     return zone;
@@ -172,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (widget.autostartFirstLesson &&
         widget.store.totalApproved == Duration.zero) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _openLesson(fase1Lessons.first);
+        if (mounted) _openLesson(curriculum.first);
       });
     }
   }
@@ -240,7 +247,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Selo persistente de Fundador na barra do topo — torna o status (que hoje
-  /// é o que o Fundador compra, já que a Trilha 1 é grátis pra todos) visível.
+  /// é o que o Fundador compra, já que as Trilhas 1 a 5 são grátis pra todos)
+  /// visível.
   Widget _founderBadge(ThemeData theme) {
     final c = AppColors.of(context);
     final since = widget.store.founderSince;
@@ -463,11 +471,11 @@ class _HomeScreenState extends State<HomeScreen> {
   /// bloqueiam (nem precisam de) progressão.
   bool _isProgressionUnlocked(int i) {
     int prereq = i - 1;
-    while (prereq >= 0 && fase1Lessons[prereq].bonus) {
+    while (prereq >= 0 && curriculum[prereq].bonus) {
       prereq--;
     }
     return prereq < 0 ||
-        widget.store.isLessonCompleted(fase1Lessons[prereq].id);
+        widget.store.isLessonCompleted(curriculum[prereq].id);
   }
 
   /// Resolve o desafio de hoje em [_challenge]. Tem efeito colateral (persiste
@@ -478,9 +486,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _ensureDailyChallenge() {
     final savedId = widget.store.dailyChallengeLessonId;
     if (savedId != null) {
-      final idx = fase1Lessons.indexWhere((l) => l.id == savedId);
+      final idx = curriculum.indexWhere((l) => l.id == savedId);
       if (idx >= 0 && !_isPaywalled(idx) && _isProgressionUnlocked(idx)) {
-        _challenge = fase1Lessons[idx];
+        _challenge = curriculum[idx];
         return;
       }
     }
@@ -493,7 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// (não troca a cada rebuild; expira sozinho ao virar o dia).
   Lesson? _pickDailyChallenge() {
     final unlocked = [
-      for (final (i, l) in fase1Lessons.indexed)
+      for (final (i, l) in curriculum.indexed)
         if (!_isPaywalled(i) && _isProgressionUnlocked(i)) l,
     ];
     if (unlocked.isEmpty) return null;
@@ -714,7 +722,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// A "próxima melhor ação": a 1ª lição não-bônus ainda não concluída (o
   /// caminho principal é linear). Null = concluiu tudo.
   Lesson? _nextLesson() {
-    for (final l in fase1Lessons) {
+    for (final l in curriculum) {
       if (l.bonus) continue;
       if (!widget.store.isLessonCompleted(l.id)) return l;
     }
@@ -730,6 +738,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final mission = _missionFor(next.id);
     // Já gravou algum item desta lição e saiu no meio: retoma de onde parou.
     final started = widget.store.itemIndexFor(next.id) > 0;
+    final trail = trailOf[next.id];
+    final opensTrail = trail != null &&
+        trail.number > 1 &&
+        trail.lessons.first.id == next.id;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -737,7 +749,14 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // "Próxima melhor ação" era termo de produto; o aluno lê "treino".
-            Text('Seu próximo treino', style: theme.textTheme.labelMedium),
+            // Abertura de trilha: a anterior acabou de ser concluída, vale
+            // dizer isso em vez de só "próximo treino".
+            Text(
+                opensTrail
+                    ? 'Trilha ${trail.number - 1} concluída. Agora: '
+                        'Trilha ${trail.number} · ${trail.title}'
+                    : 'Seu próximo treino',
+                style: theme.textTheme.labelMedium),
             const SizedBox(height: 6),
             Text(next.title, style: theme.textTheme.headlineMedium),
             if (mission != null) ...[
@@ -934,8 +953,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final unlocked = !paywalled && progressionUnlocked;
     final meta = '${lesson.items.length} tentativas de fala · ~5 min';
     final String subtitle;
+    final trail = trailOf[lesson.id];
     if (paywalled) {
       subtitle = 'Beta Fundador';
+    } else if (!progressionUnlocked &&
+        trail != null &&
+        trail.number > 1 &&
+        trail.lessons.first.id == lesson.id) {
+      // A 1ª lição da trilha exige a trilha anterior inteira (não só a
+      // lição de cima): diz isso em vez de só mostrar o cadeado.
+      subtitle = 'Conclua a trilha anterior para liberar';
     } else if (lesson.bonus) {
       subtitle = 'Bônus · $meta';
     } else {
@@ -975,6 +1002,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Cabeçalho de trilha: nome grande + "Trilha N · subtítulo".
+  Widget _trailHeader(ThemeData theme, Trail trail) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(trail.title, style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 2),
+            Text('Trilha ${trail.number} · ${trail.subtitle}',
+                style: theme.textTheme.bodySmall),
+          ],
+        ),
+      );
+
   /// #8: reduz o efeito visual de muitos bloqueios — mostra concluídos, o
   /// treino atual e só os próximos poucos bloqueados; o resto fica atrás de
   /// um botão "Ver trilha completa"; zona concluída encolhe pra uma linha.
@@ -982,7 +1023,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _lessonList(ThemeData theme) {
     const lockedVisibleLimit = 3;
     final next = _nextLesson();
-    final nextIndex = next == null ? -1 : fase1Lessons.indexOf(next);
+    final nextIndex = next == null ? -1 : curriculum.indexOf(next);
     final rowsByZone = <int, List<Widget>>{};
     var lockedShown = 0;
     var hiddenCount = 0;
@@ -992,7 +1033,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // telas abaixo). Bônus não contam, como na progressão.
     final completedZones = <int>{
       for (var z = 0; z < _zones.length; z++)
-        if (fase1Lessons.indexed.every((e) =>
+        if (curriculum.indexed.every((e) =>
             _zoneOf(e.$1) != z ||
             e.$2.bonus ||
             widget.store.isLessonCompleted(e.$2.id)))
@@ -1000,7 +1041,7 @@ class _HomeScreenState extends State<HomeScreen> {
     };
     final collapsedCount = <int, int>{};
 
-    for (final (i, lesson) in fase1Lessons.indexed) {
+    for (final (i, lesson) in curriculum.indexed) {
       final zone = _zoneOf(i);
       if (!_showAllLessons && completedZones.contains(zone)) {
         hiddenCount++;
@@ -1041,7 +1082,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final widgets = <Widget>[];
     final c = AppColors.of(context);
-    for (final (z, (_, name)) in _zones.indexed) {
+    Trail? shownTrail;
+    for (final (z, (_, trail, name)) in _zones.indexed) {
       var rows = rowsByZone[z];
       final done = completedZones.contains(z);
       if (rows == null && done && !_showAllLessons) {
@@ -1063,7 +1105,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ];
       }
       if (rows == null) continue;
-      if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 24));
+      if (trail != shownTrail) {
+        // Cabeçalho da trilha entra junto do 1º grupo visível dela.
+        shownTrail = trail;
+        if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 36));
+        widgets.add(_trailHeader(theme, trail));
+        widgets.add(const SizedBox(height: 16));
+      } else if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: 24));
+      }
       widgets.add(InsetGroup(
           header: done ? '$name · concluída' : name, children: rows));
     }
@@ -1349,21 +1399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 block,
               ],
               const SizedBox(height: 36),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Saia do inglês mudo',
-                        style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: 2),
-                    Text('Trilha 1 · Inglês que você já conhece',
-                        style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              ..._lessonList(theme),
+..._lessonList(theme),
               if (showPrecision) ...[
                 const SizedBox(height: 32),
                 _precisionModeGroup(theme),

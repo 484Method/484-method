@@ -374,7 +374,9 @@ class _LessonScreenState extends State<LessonScreen>
   /// Mensagem a exibir: a da Claude quando chegou, senão a fixa (fallback
   /// imediato e offline). Mantém a regra de produto mesmo sem rede/chave.
   String _feedbackText(PronunciationResult r) =>
-      _aiFeedback ?? feedbackFor(r, widget.lesson, rigorous: widget.rigorous);
+      _aiFeedback ??
+      feedbackFor(r, widget.lesson,
+          rigorous: widget.rigorous, tip: _item.soundTip);
 
   /// Dispara o feedback da Claude em segundo plano. Só busca quando a
   /// mensagem realmente será mostrada (1ª tentativa sempre; tentativa final
@@ -396,6 +398,10 @@ class _LessonScreenState extends State<LessonScreen>
       'prosody': r.prosody?.round(),
       'minPhoneme': r.minPhoneme.round(),
       'worstSyllable': r.worstSyllable?.grapheme,
+      // Armadilha de som que o item treina (Trilha 2): a function usa como
+      // base da instrução quando a tentativa não passou. Versões antigas da
+      // function ignoram o campo — o deploy delas é manual.
+      if (_item.soundTip != null) 'tip': _item.soundTip,
     }).then((msg) {
       if (!mounted || token != _feedbackToken || msg == null) return;
       setState(() => _aiFeedback = msg);
@@ -865,6 +871,32 @@ class _LessonScreenState extends State<LessonScreen>
     );
   }
 
+  /// Dica de som (Trilha 2): cartão branco com o ícone no dourado, no
+  /// padrão "clean" (sem fundo colorido).
+  Widget _soundTipCard(ThemeData theme, String tip) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconTile(Icons.hearing_rounded,
+                  color: theme.colorScheme.secondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Dica de som', style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(tip, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
   _StepView _buildStep(ThemeData theme) {
     final c = AppColors.of(context);
     final cs = theme.colorScheme;
@@ -1032,6 +1064,12 @@ class _LessonScreenState extends State<LessonScreen>
             const SizedBox(height: 12),
             Text(_item.translation,
                 style: text.titleMedium, textAlign: TextAlign.center),
+            // Dica de som (Trilha 2): o zoom no ponto difícil, junto com a
+            // escrita — depois da 1ª tentativa de ouvido, como o resto do Livro.
+            if (_item.soundTip != null) ...[
+              const SizedBox(height: 20),
+              _soundTipCard(theme, _item.soundTip!),
+            ],
             const SizedBox(height: 28),
             InsetGroup(
               header: 'Exemplo',
@@ -1051,7 +1089,12 @@ class _LessonScreenState extends State<LessonScreen>
             ),
             // Lembra o que corrigir antes da gravação que vale minuto; é
             // também onde a orientação da Claude aparece se chegar atrasada.
-            if (_result != null) ...[
+            // A orientação do feedback reaparece aqui, salvo quando ela é a
+            // própria dica de som (feedback fixo com `tip`): o cartão "Dica
+            // de som" logo acima já diz isso, e repetir vira ruído.
+            if (_result != null &&
+                !(_item.soundTip != null &&
+                    _feedbackText(_result!).contains(_item.soundTip!))) ...[
               const SizedBox(height: 16),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),

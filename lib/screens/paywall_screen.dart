@@ -296,9 +296,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
           // Espaço inseparável: "do 484" nunca fica órfão na 2ª linha.
           title: 'Seja um Fundador do\u00A0484',
           titleStyle: theme.textTheme.displaySmall,
-          body: 'A Trilha 1 é grátis pra todo mundo. Quem entra como Fundador '
-              'agora trava o acesso e o preço de tudo que vem depois, e ajuda '
-              'a decidir o que construir.',
+          body: 'As Trilhas 1 a 5 são grátis pra todo mundo. Quem entra '
+              'como Fundador agora trava o acesso e o preço de tudo que vem '
+              'depois, e ajuda a decidir o que construir.',
         ),
         const SizedBox(height: 28),
         InsetGroup(children: [
