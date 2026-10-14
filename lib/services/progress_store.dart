@@ -53,11 +53,17 @@ class ProgressStore {
   static const goalSeconds = 484 * 3600;
 
   /// Meta curta do dia (#7): mais tangível que a jornada de 484h.
-  static const dailyGoalSeconds = 3 * 60;
+  ///
+  /// Calibrada pelo que uma lição REALMENTE rende (2026-10-14): só conta a
+  /// gravação final aprovada, ~2–4 s por item → ~12–18 s por lição de 5
+  /// itens. A meta antiga (3 min) pedia ~12 lições num dia e quase ninguém
+  /// batia; 30 s ≈ 2 lições, o hábito diário que se quer criar.
+  static const dailyGoalSeconds = 30;
 
   /// Primeiro marco (#7): entre a meta diária e as 484h, um objetivo
   /// alcançável em poucos dias que dá a primeira sensação real de progresso.
-  static const firstMilestoneSeconds = 10 * 60;
+  /// 2 min ≈ uma zona (6–7 lições). Era 10 min (~40 lições).
+  static const firstMilestoneSeconds = 2 * 60;
 
   final SharedPreferences _prefs;
 
@@ -117,16 +123,18 @@ class ProgressStore {
 
   /// Soma tempo aprovado e atualiza o streak conforme o dia da prática.
   Future<void> addApproved(Duration d) async {
-    await _prefs.setInt(
-        _kApprovedSeconds, totalApproved.inSeconds + d.inSeconds);
+    // Arredonda em vez de truncar: gravações têm 2–4 s, e o `inSeconds`
+    // jogava fora até 0,99 s de cada uma (~20% do tempo aprovado sumia).
+    final secs = (d.inMilliseconds / 1000).round();
+    await _prefs.setInt(_kApprovedSeconds, totalApproved.inSeconds + secs);
 
     final today = _ymd(DateTime.now());
     if (_prefs.getString(_kApprovedTodayDate) != today) {
-      await _prefs.setInt(_kApprovedTodaySeconds, d.inSeconds);
+      await _prefs.setInt(_kApprovedTodaySeconds, secs);
       await _prefs.setString(_kApprovedTodayDate, today);
     } else {
       await _prefs.setInt(
-          _kApprovedTodaySeconds, approvedToday.inSeconds + d.inSeconds);
+          _kApprovedTodaySeconds, approvedToday.inSeconds + secs);
     }
     final lastDay = _prefs.getString(_kLastPracticeDay);
     if (lastDay != today) {

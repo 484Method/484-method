@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Fale sem ler pela primeira vez',
     'Melhore sua segunda tentativa',
     'Corrija seu primeiro som difícil',
-    'Ganhe seus primeiros 5 minutos aprovados',
+    'Ganhe seu primeiro minuto aprovado',
     'Responda mais rápido',
     'Use uma frase real de viagem',
     'Complete seu primeiro bloco de fala ativa',
@@ -893,13 +893,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Só faz sentido mostrar quando já dá pra recomendar (≥30min aprovados) —
-  /// abaixo disso o card virava um aviso "pode ser difícil demais" e só
-  /// competia com a ação principal do iniciante. Ver `_showPrecision`.
-  static const _precisionBaseSeconds = 30 * 60;
+  /// Só faz sentido mostrar quando já dá pra recomendar (≥5 min aprovados,
+  /// ~20 lições: a Trilha 1 quase inteira) — abaixo disso o card virava um
+  /// aviso "pode ser difícil demais" e só competia com a ação principal do
+  /// iniciante. Ver `_showPrecision`. Era 30 min (~120 lições, inalcançável
+  /// com o que uma lição rende — ver ProgressStore.dailyGoalSeconds).
+  static const _precisionBaseSeconds = 5 * 60;
 
   /// #10: "Modo precisão" (ex-"Modo desafio") — copy menos intimidante, sem
-  /// prometer "pronúncia nativa". Aparece só depois da base de 30min.
+  /// prometer "pronúncia nativa". Aparece só depois da base de 5 min.
   Widget _precisionModeGroup(ThemeData theme) {
     return InsetGroup(
       footer: 'Critério mais exigente de clareza, ritmo e pronúncia.',
