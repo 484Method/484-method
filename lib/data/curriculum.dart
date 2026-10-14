@@ -2,13 +2,15 @@ import '../models/lesson.dart';
 import '../models/trail.dart';
 import 'fase1.dart';
 import 'fase2.dart';
+import 'fase3.dart';
 
 /// O currículo como o aluno vê: trilhas → zonas → lições, na ordem de
 /// progressão. Fonte única da estrutura da Home — as zonas eram índices
 /// fixos dentro de home_screen.dart, o que quebraria ao entrar a Trilha 2.
 ///
 /// Trilha 1 = "Fase 1 do currículo" (docs/curriculo-fase1.md); Trilha 2 =
-/// "Fase 2 do currículo" (docs/curriculo-fase2.md). A Trilha 2 abre quando
+/// "Fase 2 do currículo" (docs/curriculo-fase2.md); Trilha 3 = "Fase 3 do
+/// currículo" (docs/curriculo-fase3.md). A Trilha 2 abre quando
 /// a última lição obrigatória da Trilha 1 é concluída (decisão de
 /// 2026-10-11): é a mesma regra linear de sempre, aplicada à fila inteira.
 const trilha1 = Trail(
@@ -34,7 +36,14 @@ const trilha2 = Trail(
   zones: fase2Zones,
 );
 
-const trails = [trilha1, trilha2];
+const trilha3 = Trail(
+  number: 3,
+  title: 'Frases prontas do dia a dia',
+  subtitle: 'Responda no automático, sem travar',
+  zones: fase3Zones,
+);
+
+const trails = [trilha1, trilha2, trilha3];
 
 /// Todas as lições, na ordem de progressão (Trilha 1 inteira, depois a 2).
 final List<Lesson> curriculum = [for (final t in trails) ...t.lessons];

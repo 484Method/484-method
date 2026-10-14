@@ -113,6 +113,30 @@ flutter:
     - assets/audio/fase2/licao25/
     - assets/audio/fase2/licao26/
     - assets/audio/fase2/licao28/
+    - assets/audio/fase3/licao01/
+    - assets/audio/fase3/licao02/
+    - assets/audio/fase3/licao03/
+    - assets/audio/fase3/licao04/
+    - assets/audio/fase3/licao05/
+    - assets/audio/fase3/licao07/
+    - assets/audio/fase3/licao08/
+    - assets/audio/fase3/licao09/
+    - assets/audio/fase3/licao10/
+    - assets/audio/fase3/licao11/
+    - assets/audio/fase3/licao12/
+    - assets/audio/fase3/licao14/
+    - assets/audio/fase3/licao15/
+    - assets/audio/fase3/licao16/
+    - assets/audio/fase3/licao17/
+    - assets/audio/fase3/licao18/
+    - assets/audio/fase3/licao19/
+    - assets/audio/fase3/licao21/
+    - assets/audio/fase3/licao22/
+    - assets/audio/fase3/licao23/
+    - assets/audio/fase3/licao24/
+    - assets/audio/fase3/licao25/
+    - assets/audio/fase3/licao26/
+    - assets/audio/fase3/licao28/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -23,9 +23,11 @@ abstract interface class EntitlementService {
 /// ainda (RevenueCat bloqueado por conta Apple), priorizar conseguir os
 /// primeiros usuários reais de teste em vez de gatear conteúdo.
 /// 2026-10-11: a Trilha 2 (28 lições) também entrou grátis pra todos, por
-/// decisão do dono — 25 + 28. O teste "Trilhas 1 e 2 inteiras são grátis"
+/// decisão do dono — 25 + 28. O teste "Trilhas 1, 2 e 3 inteiras são grátis"
 /// acusa se o currículo mudar de tamanho sem revisar esta decisão.
-const int kFreeLessonCount = 53;
+/// 2026-10-14: a Trilha 3 (28 lições) também entrou grátis pra todos, por
+/// decisão do dono ("grátis pra todos, por ora") — 25 + 28 + 28.
+const int kFreeLessonCount = 81;
 
 /// Implementação local (web/dev): persiste o acesso em SharedPreferences,
 /// permitindo testar os dois estados sem loja. Default: sem acesso.

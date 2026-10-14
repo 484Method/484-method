@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:method484/data/curriculum.dart';
 import 'package:method484/data/fase1.dart';
 import 'package:method484/data/fase2.dart';
+import 'package:method484/data/fase3.dart';
 
 /// Integridade do currículo (Trilhas 1 e 2). Roda no `flutter test` do CI de
 /// deploy, então currículo quebrado — áudio faltando, id repetido — não vai
@@ -49,66 +50,76 @@ void main() {
             'MP3. Primeiro: ${missingFiles.take(3).join(', ')}');
   });
 
-  group('Trilha 2', () {
-    test('4 zonas de 7 lições: 5 obrigatórias, revisão, bônus', () {
-      expect(fase2Zones.length, 4);
-      for (final z in fase2Zones) {
-        expect(z.lessons.length, 7, reason: z.title);
-        expect(z.lessons.where((l) => l.bonus).length, 1, reason: z.title);
-        expect(z.lessons.last.bonus, isTrue, reason: z.title);
-        expect(z.lessons[5].title, startsWith('Revisão'), reason: z.title);
-      }
-    });
-
-    test('ids sequenciais fase2-licao01..28', () {
-      final ids = trilha2.lessons.map((l) => l.id).toList();
-      expect(ids, [
-        for (var n = 1; n <= 28; n++)
-          'fase2-licao${n.toString().padLeft(2, '0')}',
-      ]);
-    });
-
-    test('todo item tem IPA, fonética e dica de som (curta, sem IPA)', () {
-      for (final lesson in trilha2.lessons) {
-        expect(lesson.items.length, 5, reason: lesson.id);
-        final texts = lesson.items.map((i) => i.text).toSet();
-        expect(texts.length, 5, reason: '${lesson.id}: item repetido');
-        for (final item in lesson.items) {
-          final where = '${lesson.id} / ${item.text}';
-          expect(item.ipa, isNotNull, reason: where);
-          expect(item.phonetic, isNotNull, reason: where);
-          expect(item.soundTip, isNotNull, reason: where);
-          expect(item.soundTip!.length, lessThanOrEqualTo(160), reason: where);
-          // Dica é instrução física em português — símbolo IPA não ajuda o
-          // falso iniciante (o IPA já aparece separado no Livro Aberto).
-          expect(item.soundTip, isNot(matches(RegExp('[ˈˌːəɪʊæʌɜɔθðŋʃʒ]'))),
-              reason: where);
+  for (final (trail, zones, prefix, previous) in [
+    (trilha2, fase2Zones, 'fase2', [trilha1]),
+    (trilha3, fase3Zones, 'fase3', [trilha1, trilha2]),
+  ]) {
+    group('Trilha ${trail.number}', () {
+      test('4 zonas de 7 lições: 5 obrigatórias, revisão, bônus', () {
+        expect(zones.length, 4);
+        for (final z in zones) {
+          expect(z.lessons.length, 7, reason: z.title);
+          expect(z.lessons.where((l) => l.bonus).length, 1, reason: z.title);
+          expect(z.lessons.last.bonus, isTrue, reason: z.title);
+          expect(z.lessons[5].title, startsWith('Revisão'), reason: z.title);
         }
-      }
-    });
+      });
 
-    test('revisão reaproveita áudio das lições da própria zona', () {
-      for (final z in fase2Zones) {
-        final review = z.lessons[5];
-        final zoneAudio = {
-          for (final l in z.lessons)
-            if (l != review) ...l.items.map((i) => i.audioAsset),
+      test('ids sequenciais $prefix-licao01..28', () {
+        final ids = trail.lessons.map((l) => l.id).toList();
+        expect(ids, [
+          for (var n = 1; n <= 28; n++)
+            '$prefix-licao${n.toString().padLeft(2, '0')}',
+        ]);
+      });
+
+      test('todo item tem IPA, fonética e dica de som (curta, sem IPA)', () {
+        for (final lesson in trail.lessons) {
+          expect(lesson.items.length, 5, reason: lesson.id);
+          final texts = lesson.items.map((i) => i.text).toSet();
+          expect(texts.length, 5, reason: '${lesson.id}: item repetido');
+          for (final item in lesson.items) {
+            final where = '${lesson.id} / ${item.text}';
+            expect(item.ipa, isNotNull, reason: where);
+            expect(item.phonetic, isNotNull, reason: where);
+            expect(item.soundTip, isNotNull, reason: where);
+            expect(item.soundTip!.length, lessThanOrEqualTo(160),
+                reason: where);
+            // Dica é instrução física em português — símbolo IPA não ajuda
+            // o falso iniciante (o IPA já aparece separado no Livro Aberto).
+            expect(item.soundTip,
+                isNot(matches(RegExp('[ˈˌːəɪʊæʌɜɔθðŋʃʒ]'))), reason: where);
+          }
+        }
+      });
+
+      test('revisão reaproveita áudio das lições da própria zona', () {
+        for (final z in zones) {
+          final review = z.lessons[5];
+          final zoneAudio = {
+            for (final l in z.lessons)
+              if (l != review) ...l.items.map((i) => i.audioAsset),
+          };
+          for (final item in review.items) {
+            expect(zoneAudio, contains(item.audioAsset),
+                reason: '${review.id} / ${item.text}');
+          }
+        }
+      });
+
+      test('não repete item das trilhas anteriores (a revisão espaçada '
+          'indexa por texto)', () {
+        final before = {
+          for (final t in previous)
+            for (final l in t.lessons) ...l.items.map((i) => i.text),
         };
-        for (final item in review.items) {
-          expect(zoneAudio, contains(item.audioAsset),
-              reason: '${review.id} / ${item.text}');
+        for (final l in trail.lessons) {
+          for (final item in l.items) {
+            expect(before, isNot(contains(item.text)),
+                reason: '${l.id}: ${item.text}');
+          }
         }
-      }
+      });
     });
-
-    test('não repete item da Trilha 1 (a revisão espaçada indexa por texto)',
-        () {
-      final t1 = {for (final l in fase1Lessons) ...l.items.map((i) => i.text)};
-      for (final l in trilha2.lessons) {
-        for (final item in l.items) {
-          expect(t1, isNot(contains(item.text)), reason: '${l.id}: ${item.text}');
-        }
-      }
-    });
-  });
+  }
 }

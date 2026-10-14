@@ -61,6 +61,17 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   pontua vogal INSERIDA (o "i" fantasma não é fonema do texto de referência),
   então a Zona 1 depende da dica + prosódia; calibrar com vozes brasileiras
   reais antes de confiar no critério.
+- ✅ **Trilha 3 "Frases prontas do dia a dia" (Fase 3 do currículo) —
+  construída em 2026-10-14**, no mesmo formato da Trilha 2: 28 lições (24 +
+  4 bônus) em 4 zonas — respostas automáticas; pedir, oferecer e combinar;
+  puxar e manter conversa; a fala ligada (connected speech, prosódia ≥ 70).
+  Matriz em docs/curriculo-fase3.md; dados em `lib/data/fase3.dart`
+  (gerado), registrada em `curriculum.dart`. Decisões do dono: grátis pra
+  todos por ora (`kFreeLessonCount` = 81) e sequencial (exige a última
+  obrigatória da Trilha 2). O `text` usa grafia padrão ("I'm going to");
+  só IPA/fonética/dica mostram a forma reduzida. ⚠️ MP3 via
+  `./tool/gen_lesson_audio.sh` (`gen3`); o teste de integridade falha
+  enquanto faltar áudio, de propósito. Fases 4–8 seguem fora de escopo.
 - ✅ Loop core completo: áudio pré-gerado → gravação → Azure Pronunciation
   Assessment → feedback pedagógico em PT-BR → liberação da escrita → regravação
 - ✅ Feedback gerado pela Claude API via Edge Function (fallback p/ mensagens
@@ -113,7 +124,8 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Paywall (oferta "Beta Fundador" — acesso à Fase 1): gating das lições atrás
   de `EntitlementService` JÁ implementado, fake local na web. 2026-06: todas
   as lições estão grátis (`kFreeLessonCount` = currículo inteiro: 25 da
-  Trilha 1 + 28 da Trilha 2 desde 2026-10-11) até ter usuários reais e
+  Trilha 1 + 28 da Trilha 2 desde 2026-10-11 + 28 da Trilha 3 desde
+  2026-10-14) até ter usuários reais e
   monetização ativa — falta a impl real com RevenueCat, bloqueada por conta
   Apple (ver Stack).
 - ✅ Desafio de 21 dias (instrumento de validação — mede OUTCOME, não só
@@ -173,8 +185,7 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
   aparecer.
 
 ## Fora de escopo (NÃO implementar)
-- Fases 3–8, múltiplos sotaques, connected speech (ligação entre palavras —
-  fica pra Fase 3, "Frases Prontas", primeiro como treino de escuta), ensino
+- Fases 4–8, múltiplos sotaques, ensino
   de IPA (o IPA só aparece como apoio no Livro Aberto). Pares mínimos entraram
   na Trilha 2 (2026-10-11), sempre em palavra/frase útil, nunca como drill
   abstrato
@@ -324,7 +335,7 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 - Feedback nunca diz só "errado" — sempre indica o que tentar corrigir. A
   mensagem fixa aparece na hora e é trocada pela da Claude quando chega; sem
   rede/chave fica a fixa (o app nunca depende da Claude para funcionar)
-- Paywall: as lições das Trilhas 1 e 2 são grátis hoje (`kFreeLessonCount`,
+- Paywall: as lições das Trilhas 1, 2 e 3 são grátis hoje (`kFreeLessonCount`,
   ver Stack) enquanto não há monetização real ativa; o gate volta a valer quando
   RevenueCat entrar. Gating passa SEMPRE pela interface `EntitlementService` —
   nunca checar compra direto da UI
@@ -339,5 +350,6 @@ Métrica norte do produto: **minutos de prática oral APROVADA**, nunca tempo de
 ## Docs
 - docs/curriculo-fase1.md — as 25 lições da Trilha 1 com palavras, foco e critérios
 - docs/curriculo-fase2.md — as 28 lições da Trilha 2 (armadilhas de som)
+- docs/curriculo-fase3.md — as 28 lições da Trilha 3 (frases prontas)
 - docs/feedback-library.md — mensagens de feedback por tipo de erro
 - Plano completo: ~/Downloads/484Method_Plano_Projeto_CORRIGIDO.docx

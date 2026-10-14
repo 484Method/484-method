@@ -32,6 +32,8 @@ gen() {
     echo "gerado: $file"
   done
 }
+gen2() { gen_trail fase2 "$@"; }
+gen3() { gen_trail fase3 "$@"; }
 
 gen licao01 "apple" "cinema" "hotel" "internet" "pizza"
 gen licao02 "app" "online" "email" "login" "video"
@@ -67,9 +69,10 @@ gen bloco4_bonus "How have you been doing lately" "I've been pretty busy, but I'
 # ("Are you ready?" -> Are_you_ready.mp3). Essa regra precisa bater com o
 # `audioAsset` de cada item; o teste de integridade
 # (test/curriculum_test.dart) acusa qualquer arquivo faltando.
-gen2() {
-  local licao="$1"; shift
-  local outdir="assets/audio/fase2/$licao"
+# Trilha 3 usa a mesma regra (gen3 → assets/audio/fase3/).
+gen_trail() {
+  local fase="$1"; local licao="$2"; shift 2
+  local outdir="assets/audio/$fase/$licao"
   mkdir -p "$outdir"
   for w in "$@"; do
     local stem
@@ -113,3 +116,31 @@ gen2 licao26 "Are you hungry?" "Is it far from here?" "Where are you from?" "Wha
 gen2 licao28 "I think I'll stay home tonight." "I worked from home all week." "I can't make it to the meeting." "What time does the store open?" "Is there a good place to eat here?"
 # Revisões da Trilha 2 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.
 
+# ---------------------------------------------------------------------------
+# Trilha 3 — Frases prontas do dia a dia (lib/data/fase3.dart)
+# ---------------------------------------------------------------------------
+gen3 licao01 "Sounds good." "Sure thing." "Works for me." "Let's do it." "Count me in."
+gen3 licao02 "Thanks a lot." "I really appreciate it." "You're welcome." "No worries." "My pleasure."
+gen3 licao03 "Sorry, what was that?" "Could you say that again?" "I didn't catch that." "What do you mean?" "Can you slow down a bit?"
+gen3 licao04 "My bad." "Sorry about that." "Sorry I'm late." "Don't worry about it." "It's all good."
+gen3 licao05 "No way!" "Good for you!" "That's too bad." "I'm so sorry to hear that." "That's awesome!"
+gen3 licao07 "Sounds like a plan to me." "Thanks so much, I owe you one." "Sorry, could you say that one more time?" "No worries at all, it happens." "Wow, that's great news. Congratulations!"
+gen3 licao08 "Could you close the door, please?" "Could you send me the file?" "Can you give me a ride?" "Would you mind waiting a second?" "Could I get the check, please?"
+gen3 licao09 "Do you want me to help?" "Let me get that for you." "Do you need a hand?" "I can drive you home." "Let me know if you need anything."
+gen3 licao10 "Do you mind if I sit here?" "Is it okay if I leave early?" "Can I borrow your pen?" "Mind if I open the window?" "May I ask you something?"
+gen3 licao11 "Does Friday work for you?" "How about tomorrow morning?" "What time works for you?" "Let's meet at six." "I'm free after three."
+gen3 licao12 "I'd love to, but I can't." "Maybe next time." "Can we do it another day?" "I'm a bit busy right now." "I'll get back to you."
+gen3 licao14 "Would you mind sending me the details later?" "Do you want me to pick you up?" "Is it okay if I bring a friend?" "How does next Tuesday afternoon sound to you?" "I'd love to, but can we make it Saturday?"
+gen3 licao15 "What do you do?" "Where do you work?" "Where did you grow up?" "How long have you lived here?" "What brings you here?"
+gen3 licao16 "How was your weekend?" "Did you do anything fun?" "What are you up to?" "How's your week going?" "What do you do for fun?"
+gen3 licao17 "What about you?" "Me too." "Me neither." "Same here." "That makes sense."
+gen3 licao18 "Let me think." "Good question." "Hold on a second." "How can I put it?" "It's hard to say."
+gen3 licao19 "I should get going." "Talk to you later." "It was nice talking to you." "Let's keep in touch." "Have a good one."
+gen3 licao21 "How did you get into that?" "What do you like most about it?" "How long have you been doing that?" "What was the best part of the trip?" "Oh really? What happened next?"
+gen3 licao22 "I'm going to call you later." "I want to go home." "I have to work tomorrow." "Do you want to come?" "We're going to be late."
+gen3 licao23 "What do you think?" "Did you get my message?" "Do you need anything?" "What did you say?" "Did you have lunch?"
+gen3 licao24 "Turn it off." "Pick it up." "Come on in." "Check it out." "Fill it out."
+gen3 licao25 "I'm kind of tired." "That's a lot of work." "Can I get a cup of tea?" "Salt and pepper, please." "I'm out of time."
+gen3 licao26 "Nice to meet you." "Thanks for coming." "Have a good weekend." "Let me know by Friday." "Sorry, I'm running late."
+gen3 licao28 "I'm going to pick it up after work." "What do you want to do tonight?" "Did you get a lot of work done?" "I have to get up at six tomorrow." "It was kind of a long day."
+# Revisões da Trilha 3 (06, 13, 20, 27) reusam áudios da própria zona — nada a gerar.
