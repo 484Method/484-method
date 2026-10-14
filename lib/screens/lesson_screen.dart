@@ -1089,7 +1089,12 @@ class _LessonScreenState extends State<LessonScreen>
             ),
             // Lembra o que corrigir antes da gravação que vale minuto; é
             // também onde a orientação da Claude aparece se chegar atrasada.
-            if (_result != null) ...[
+            // A orientação do feedback reaparece aqui, salvo quando ela é a
+            // própria dica de som (feedback fixo com `tip`): o cartão "Dica
+            // de som" logo acima já diz isso, e repetir vira ruído.
+            if (_result != null &&
+                !(_item.soundTip != null &&
+                    _feedbackText(_result!).contains(_item.soundTip!))) ...[
               const SizedBox(height: 16),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
