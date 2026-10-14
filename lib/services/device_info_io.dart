@@ -8,4 +8,11 @@ Map<String, String> collectDeviceInfo() => {
       'os': Platform.operatingSystem,
       'locale': Platform.localeName,
       'source': 'app',
+      'display': 'native',
     };
+
+/// App nativo (loja) já é "instalado".
+bool isInstalledApp() => true;
+
+/// Nada a sugerir: quem roda o build nativo já tem o app.
+String? installTarget() => null;

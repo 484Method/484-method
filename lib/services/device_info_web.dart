@@ -1,3 +1,6 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+
 import 'package:web/web.dart' as web;
 
 /// Browser/SO/idioma agregados — nunca a string de user-agent crua, só as
@@ -10,6 +13,9 @@ Map<String, String> collectDeviceInfo() {
   return {
     'browser': _detectBrowser(ua),
     'os': _detectOs(ua),
+    // Aberto pelo ícone da tela de início (app instalado) ou no navegador:
+    // é o que mede se o "Instale o 484" pegou.
+    'display': isInstalledApp() ? 'standalone' : 'browser',
     'locale': web.window.navigator.language,
     'source': _detectSource(),
   };
@@ -54,4 +60,32 @@ String _detectOs(String ua) {
   if (ua.contains('Windows')) return 'Windows';
   if (ua.contains('Linux')) return 'Linux';
   return 'Outro';
+}
+
+/// Rodando como app instalado (ícone na tela de início), não numa aba.
+/// iOS antigo só expõe `navigator.standalone`; os demais respondem à media
+/// query `display-mode: standalone` (manifest.json pede "standalone").
+bool isInstalledApp() {
+  try {
+    if (web.window.matchMedia('(display-mode: standalone)').matches) {
+      return true;
+    }
+    final v = (web.window.navigator as JSObject)
+        .getProperty<JSAny?>('standalone'.toJS);
+    return v.isA<JSBoolean>() && (v as JSBoolean).toDart;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Onde dá pra "instalar" o app web na tela de início, pra a home mostrar o
+/// passo a passo certo: 'ios' (Safari: Compartilhar → Adicionar à Tela de
+/// Início), 'android' (Chrome: menu → Instalar app) ou null (desktop, ou já
+/// instalado — aí não há o que sugerir).
+String? installTarget() {
+  if (isInstalledApp()) return null;
+  final ua = web.window.navigator.userAgent;
+  if (RegExp('iPhone|iPad|iPod').hasMatch(ua)) return 'ios';
+  if (ua.contains('Android')) return 'android';
+  return null;
 }

@@ -241,6 +241,44 @@ void main() {
     expect(find.textContaining('Modo desafio'), findsNothing); // renomeado
   });
 
+  testWidgets('instalar na tela de início: só após a 1ª prática, some ao dispensar',
+      (tester) async {
+    final store = await _emptyStore();
+    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    Future<void> pump(String? Function() target) async {
+      await tester.pumpWidget(MaterialApp(
+        home: HomeScreen(
+          store: store,
+          entitlement: await LocalEntitlementService.load(),
+          assessor: _FakeAssessor(),
+          installTargetOf: target,
+        ),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    // Dia 0: nada a sugerir ainda.
+    await pump(() => 'ios');
+    expect(find.text('Instale o 484 no iPhone'), findsNothing);
+
+    await store.addApproved(const Duration(minutes: 1));
+    // Já instalado / desktop (null): não aparece.
+    await pump(() => null);
+    expect(find.text('Instale o 484 no iPhone'), findsNothing);
+
+    await pump(() => 'ios');
+    expect(find.text('Instale o 484 no iPhone'), findsOneWidget);
+    await tester.tap(find.text('Instale o 484 no iPhone'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Adicionar à Tela de Início'), findsOneWidget);
+    await tester.tap(find.text('Não mostrar mais'));
+    await tester.pumpAndSettle();
+    expect(find.text('Instale o 484 no iPhone'), findsNothing);
+    expect(store.installHintDismissed, isTrue);
+  });
+
   testWidgets('Fundador vê o selo na AppBar e a oferta some', (tester) async {
     final store = await _emptyStore();
     await store.addApproved(const Duration(minutes: 2));

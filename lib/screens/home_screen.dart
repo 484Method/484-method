@@ -10,6 +10,7 @@ import '../services/entitlement_service.dart';
 import '../services/progress_store.dart';
 import '../services/pronunciation_assessor.dart';
 import '../services/backend.dart';
+import '../services/device_info.dart' as device;
 import '../ui/app_style.dart';
 import 'cohort_recording_screen.dart';
 import 'cohort_review_screen.dart';
@@ -55,7 +56,12 @@ class HomeScreen extends StatefulWidget {
     this.autostartFirstLesson = false,
     this.themeMode = ThemeMode.system,
     this.onThemeModeChanged,
+    this.installTargetOf = device.installTarget,
   });
+
+  /// Onde o app web pode ser instalado na tela de início ('ios', 'android'
+  /// ou null). Injetável pros testes; no app vem do navegador.
+  final String? Function() installTargetOf;
 
   final ProgressStore store;
   final EntitlementService entitlement;
@@ -327,6 +333,99 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.analytics?.log('community_group_clicked', {'group': group});
         launchUrl(Uri.parse(_groupLinks['${group}_url']!),
             mode: LaunchMode.externalApplication);
+      },
+    );
+  }
+
+  /// "Instale o 484": o app web vira ícone na tela de início e abre em tela
+  /// cheia, sem barra do navegador (caminho 1 antes das lojas). Linha some
+  /// quando a pessoa já abre pelo ícone ou pede pra não ver mais.
+  Widget _installRow(ThemeData theme, String target) {
+    return _row(
+      leading: IconTile(Icons.add_to_home_screen_rounded,
+          color: theme.colorScheme.primary),
+      title: target == 'ios'
+          ? 'Instale o 484 no iPhone'
+          : 'Instale o 484 no celular',
+      subtitle: 'Abra pelo ícone, em tela cheia, como um app.',
+      onTap: () => _openInstallSheet(target),
+    );
+  }
+
+  void _openInstallSheet(String target) {
+    widget.analytics?.log('install_hint_opened', {'target': target});
+    final steps = target == 'ios'
+        ? const [
+            (Icons.ios_share_rounded,
+                'No Safari, toque em Compartilhar (o quadrado com a seta, '
+                    'na barra de baixo).'),
+            (Icons.add_box_outlined,
+                'Role e toque em "Adicionar à Tela de Início".'),
+            (Icons.check_circle_outline_rounded,
+                'Toque em "Adicionar". O ícone do 484 aparece na sua tela.'),
+          ]
+        : const [
+            (Icons.more_vert_rounded,
+                'No Chrome, toque no menu (os três pontinhos, no canto de '
+                    'cima).'),
+            (Icons.install_mobile_rounded,
+                'Toque em "Instalar app" ou "Adicionar à tela inicial".'),
+            (Icons.check_circle_outline_rounded,
+                'Confirme. O ícone do 484 aparece na sua tela.'),
+          ];
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Instale o 484', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 6),
+                Text(
+                  'Leva 10 segundos. Seu progresso continua o mesmo.',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: AppColors.of(ctx).secondaryLabel),
+                ),
+                const SizedBox(height: 20),
+                for (final (i, (icon, text)) in steps.indexed) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(icon, color: theme.colorScheme.primary),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text('${i + 1}. $text',
+                            style: theme.textTheme.bodyLarge),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Entendi'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    widget.analytics
+                        ?.log('install_hint_dismissed', {'target': target});
+                    widget.store.dismissInstallHint();
+                    Navigator.of(ctx).pop();
+                    setState(() {});
+                  },
+                  child: const Text('Não mostrar mais'),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
@@ -1228,7 +1327,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (dueReview.isNotEmpty) _srsReviewRow(theme, dueReview),
       if (showChallenge) _dailyChallengeRow(theme, challenge),
     ];
+    // Instalar na tela de início: depois da 1ª prática (quem ainda não
+    // treinou nada não tem por que instalar) e só onde faz sentido.
+    final installTarget = isBrandNew || widget.store.installHintDismissed
+        ? null
+        : widget.installTargetOf();
     final inviteRows = <Widget>[
+      if (installTarget != null) _installRow(theme, installTarget),
       if (showCohort) _cohortRow(theme),
       if (showCohort && _groupLinks.containsKey('cohort_url'))
         _groupRow(theme,
