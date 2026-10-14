@@ -192,7 +192,7 @@ void main() {
     // currículo e saiu da tela no visual clean de 2026-10-13).
     expect(find.text('Seu próximo treino'), findsOneWidget);
     expect(find.text(licao01.title), findsWidgets);
-    // Priorização: "Modo precisão" só aparece depois de 30min aprovados —
+    // Priorização: "Modo precisão" só aparece depois de 5 min aprovados —
     // com 20s aqui ele fica escondido (staging coberto em teste próprio).
     expect(find.text('Modo precisão'), findsNothing);
   });
@@ -222,10 +222,10 @@ void main() {
     expect(find.text('Modo precisão'), findsNothing);
   });
 
-  testWidgets('priorização: Modo precisão aparece após 30min aprovados',
+  testWidgets('priorização: Modo precisão aparece após 5 min aprovados',
       (tester) async {
     final store = await _emptyStore();
-    await store.addApproved(const Duration(minutes: 31)); // passa dos 30min
+    await store.addApproved(const Duration(minutes: 6)); // passa dos 5 min
     tester.view.physicalSize = const Size(1200, 6000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -456,6 +456,12 @@ void main() {
     await store.addApproved(const Duration(seconds: 5));
     expect(store.totalApproved.inSeconds, 15);
     expect(store.streakDays, 1);
+
+    // Gravação real tem fração de segundo: arredonda, não trunca (2,6 s
+    // contava como 2 e ~20% do tempo aprovado sumia).
+    await store.addApproved(const Duration(milliseconds: 2600));
+    expect(store.totalApproved.inSeconds, 18);
+    expect(store.approvedToday.inSeconds, 18);
   });
 
   test('acesso Beta Fundador começa desligado e persiste quando ligado',
