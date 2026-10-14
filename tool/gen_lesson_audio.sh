@@ -15,21 +15,35 @@ fi
 
 voice="en-US-JennyNeural"
 
+# Baixa num arquivo temporário e só move quando veio áudio de verdade: se a
+# rede cair ou a chave estiver errada no meio, não sobra MP3 vazio (que a
+# próxima rodada pularia como "já existe" e viraria lição muda).
+tts() {
+  local w="$1" file="$2" tmp="$2.tmp"
+  local ssml="<speak version='1.0' xml:lang='en-US'><voice name='$voice'><prosody rate='-10%'>$w</prosody></voice></speak>"
+  if curl -sf -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1" \
+      -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
+      -H "Content-Type: application/ssml+xml" \
+      -H "X-Microsoft-OutputFormat: audio-16khz-64kbitrate-mono-mp3" \
+      -H "User-Agent: method484" \
+      --data "$ssml" -o "$tmp" && [[ -s "$tmp" ]]; then
+    mv "$tmp" "$file"
+    echo "gerado: $file"
+  else
+    rm -f "$tmp"
+    echo "ERRO ao gerar: $file — confira AZURE_SPEECH_KEY/AZURE_SPEECH_REGION no .env e a internet, e rode de novo (continua de onde parou)." >&2
+    exit 1
+  fi
+}
+
 gen() {
   local licao="$1"; shift
   local outdir="assets/audio/fase1/$licao"
   mkdir -p "$outdir"
   for w in "$@"; do
     local file="$outdir/${w// /_}.mp3"
-    [[ -f "$file" ]] && { echo "já existe: $file"; continue; }
-    local ssml="<speak version='1.0' xml:lang='en-US'><voice name='$voice'><prosody rate='-10%'>$w</prosody></voice></speak>"
-    curl -sf -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1" \
-      -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
-      -H "Content-Type: application/ssml+xml" \
-      -H "X-Microsoft-OutputFormat: audio-16khz-64kbitrate-mono-mp3" \
-      -H "User-Agent: method484" \
-      --data "$ssml" -o "$file"
-    echo "gerado: $file"
+    [[ -s "$file" ]] && { echo "já existe: $file"; continue; }
+    tts "$w" "$file"
   done
 }
 gen2() { gen_trail fase2 "$@"; }
@@ -80,15 +94,8 @@ gen_trail() {
     local stem
     stem="$(printf '%s' "$w" | tr -cd "A-Za-z0-9' " | tr ' ' '_')"
     local file="$outdir/$stem.mp3"
-    [[ -f "$file" ]] && { echo "já existe: $file"; continue; }
-    local ssml="<speak version='1.0' xml:lang='en-US'><voice name='$voice'><prosody rate='-10%'>$w</prosody></voice></speak>"
-    curl -sf -X POST "https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1" \
-      -H "Ocp-Apim-Subscription-Key: $AZURE_SPEECH_KEY" \
-      -H "Content-Type: application/ssml+xml" \
-      -H "X-Microsoft-OutputFormat: audio-16khz-64kbitrate-mono-mp3" \
-      -H "User-Agent: method484" \
-      --data "$ssml" -o "$file"
-    echo "gerado: $file"
+    [[ -s "$file" ]] && { echo "já existe: $file"; continue; }
+    tts "$w" "$file"
   done
 }
 
